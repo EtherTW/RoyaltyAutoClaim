@@ -1,18 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-contract UUPSProxy is ERC1967Proxy {
-    constructor(address _implementation, bytes memory _data) payable ERC1967Proxy(_implementation, _data) {
-        (bool success,) = _implementation.delegatecall(_data);
-        require(success, "Initialization failed");
-    }
-}
-
-contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable {
+contract MockV2 is UUPSUpgradeable, OwnableUpgradeable {
     string internal constant RENUNCIATION_DISABLED = "Renouncing ownership is disabled";
 
     address public admin;
@@ -25,7 +17,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable {
 
     function initialize(address _owner, address _admin, address _token, address[] memory _reviewers)
         public
-        initializer
+        reinitializer(2)
     {
         __Ownable_init(_owner);
         admin = _admin;

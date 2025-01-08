@@ -9,6 +9,9 @@ contract CounterTest is Test {
 
     function setUp() public {
         counter = new Counter();
+
+        vm.expectEmit(true, false, false, true, address(counter));
+        emit Counter.SetNumber(0);
         counter.setNumber(0);
     }
 
