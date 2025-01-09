@@ -30,10 +30,10 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable {
     error SubmissionNotExist();
     error NotClaimable();
 
-    uint256 public constant ROYALTY_LEVEL_20 = 20;
-    uint256 public constant ROYALTY_LEVEL_40 = 40;
-    uint256 public constant ROYALTY_LEVEL_60 = 60;
-    uint256 public constant ROYALTY_LEVEL_80 = 80;
+    uint8 public constant ROYALTY_LEVEL_20 = 20;
+    uint8 public constant ROYALTY_LEVEL_40 = 40;
+    uint8 public constant ROYALTY_LEVEL_60 = 60;
+    uint8 public constant ROYALTY_LEVEL_80 = 80;
 
     address public admin;
     address public token; // 稿費幣種
@@ -42,8 +42,8 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable {
 
     struct Submission {
         address royaltyRecipient;
-        uint256 reviewCount;
-        uint256 totalRoyaltyLevel;
+        uint8 reviewCount;
+        uint16 totalRoyaltyLevel;
     }
 
     mapping(string => Submission) public submissions;
@@ -129,7 +129,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable {
 
     // ================================ Reviewer ================================
 
-    function reviewSubmission(string memory title, uint256 royaltyLevel) public onlyReviewer {
+    function reviewSubmission(string memory title, uint16 royaltyLevel) public onlyReviewer {
         require(
             royaltyLevel == ROYALTY_LEVEL_20 || royaltyLevel == ROYALTY_LEVEL_40 || royaltyLevel == ROYALTY_LEVEL_60
                 || royaltyLevel == ROYALTY_LEVEL_80,
