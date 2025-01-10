@@ -40,11 +40,6 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     uint8 public constant ROYALTY_LEVEL_60 = 60;
     uint8 public constant ROYALTY_LEVEL_80 = 80;
 
-    uint256 constant ERC4337_VALIDATION_SUCCESS = 0;
-    uint256 constant ERC4337_VALIDATION_FAILED = 1;
-    bytes4 constant ERC1271_MAGICVALUE = 0x1626ba7e;
-    bytes4 constant ERC1271_INVALID = 0xffffffff;
-
     address public admin;
     address public token; // 稿費幣種
 
@@ -222,7 +217,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     // ================================ ERC-4337 ================================
 
     /**
-     * @dev Ensure that userOp.sender has the appropriate permissions of Owner, Admin, or Reviewer.
+     * @dev Ensure that signer has the appropriate permissions of Owner, Admin, or Reviewer.
      * @dev Forbid to use paymaster
      * TODO: 檢查手續費最多不能超過 X ETH（X 的值待定）
      */
@@ -236,62 +231,33 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
             revert ForbiddenPaymaster();
         }
 
-        // validate permission of userOp.sender
         bytes4 selector = bytes4(userOp.callData[0:4]);
+        bytes32 ethHash = ECDSA.toEthSignedMessageHash(userOpHash);
+        address signer = ECDSA.recover(ethHash, userOp.signature);
 
         if (
             // Owner
             selector == this.upgradeToAndCall.selector || selector == this.changeAdmin.selector
                 || selector == this.changeRoyaltyToken.selector || selector == this.transferOwnership.selector
         ) {
-            if (userOp.sender != owner()) {
-                revert Unauthorized(userOp.sender);
+            if (signer != owner()) {
+                revert Unauthorized(signer);
             }
         } else if (
             // Admin
             selector == this.updateReviewers.selector || selector == this.registerSubmission.selector
                 || selector == this.updateRoyaltyRecipient.selector || selector == this.revokeSubmission.selector
         ) {
-            if (userOp.sender != admin) {
-                revert Unauthorized(userOp.sender);
+            if (signer != admin) {
+                revert Unauthorized(signer);
             }
             // Reviewer
         } else if (selector == this.reviewSubmission.selector) {
-            if (!reviewers[userOp.sender]) {
-                revert Unauthorized(userOp.sender);
+            if (!reviewers[signer]) {
+                revert Unauthorized(signer);
             }
         }
 
-        // validate signature
-        bool isValid = _validateSignature(userOp.sender, userOpHash, userOp.signature);
-        if (!isValid) {
-            return ERC4337_VALIDATION_FAILED;
-        }
-        return ERC4337_VALIDATION_SUCCESS;
-    }
-
-    function _validateSignature(address signer, bytes32 hash, bytes calldata signature) internal view returns (bool) {
-        if (signer == ECDSA.recover(hash, signature)) {
-            return true;
-        }
-        bytes32 ethHash = ECDSA.toEthSignedMessageHash(hash);
-        address recovered = ECDSA.recover(ethHash, signature);
-        if (signer != recovered) {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * @dev ERC-1271 (optional)
-     * @param data 0-20: signer, 20-: signature
-     */
-    function isValidSignature(bytes32 hash, bytes calldata data) external view returns (bytes4) {
-        address signer = address(bytes20(data[0:20]));
-        bool isValid = _validateSignature(signer, hash, data[20:]);
-        if (isValid) {
-            return ERC1271_MAGICVALUE;
-        }
-        return ERC1271_INVALID;
+        return 0;
     }
 }
