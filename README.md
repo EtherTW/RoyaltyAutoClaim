@@ -23,5 +23,6 @@ Submitter
 - 領取稿費
 
 ## Reference
-- erc7579-imple
-- ecdsavalidator
+
+- https://github.com/consenlabs/ethtaipei2023-aa-workshop
+- https://github.com/erc7579/erc7579-implementation

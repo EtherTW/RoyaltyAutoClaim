@@ -31,9 +31,9 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     error AlreadyClaimed();
     error RenounceOwnershipDisabled();
     error SubmissionNotExist();
-    error NotClaimable();
     error NotFromEntryPoint();
     error ForbiddenPaymaster();
+    error ZeroRoyalty();
 
     uint8 public constant ROYALTY_LEVEL_20 = 20;
     uint8 public constant ROYALTY_LEVEL_40 = 40;
@@ -52,7 +52,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     }
 
     mapping(string => Submission) public submissions;
-    mapping(string => bool) public claimed;
+    mapping(string => bool) public isClaimed;
 
     constructor() {
         _disableInitializers();
@@ -178,10 +178,13 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     // TODO: add ReentrancyGuard
     function claimRoyalty(string memory title) public {
         require(isSubmissionExist(title), SubmissionNotExist());
-        require(isSubmissionClaimable(title), NotClaimable());
-        uint256 royaltyAmount = getRoyalty(title);
-        claimed[title] = true;
-        IERC20(token).safeTransfer(submissions[title].royaltyRecipient, royaltyAmount);
+        require(!isClaimed[title], AlreadyClaimed());
+        require(isSubmissionClaimable(title), NotEnoughReviews());
+        uint256 amount = getRoyalty(title);
+        require(amount > 0, ZeroRoyalty());
+
+        isClaimed[title] = true;
+        IERC20(token).safeTransfer(submissions[title].royaltyRecipient, amount);
     }
 
     // ================================ View ================================
@@ -191,20 +194,17 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     }
 
     function isSubmissionClaimable(string memory title) public view returns (bool) {
-        if (!isSubmissionExist(title) || claimed[title]) {
+        if (!isSubmissionExist(title) || isClaimed[title]) {
             return false;
         }
-        return submissions[title].reviewCount >= 2 && getRoyalty(title) > 0;
+        return submissions[title].reviewCount >= 2;
     }
 
     function getRoyalty(string memory title) public view returns (uint256 royalty) {
-        require(isSubmissionExist(title), SubmissionNotExist());
-        Submission memory submission = submissions[title];
-        if (submission.reviewCount == 0) {
-            return 0;
-        }
+        if (!isSubmissionClaimable(title)) return 0;
+
         // TODO: add multiplier variable or just use 1e18?
-        return (submission.totalRoyaltyLevel * 1e18) / submission.reviewCount;
+        return (uint256(submissions[title].totalRoyaltyLevel) * 1e18) / submissions[title].reviewCount;
     }
 
     /**
