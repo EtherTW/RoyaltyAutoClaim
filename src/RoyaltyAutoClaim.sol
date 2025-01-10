@@ -33,6 +33,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     error SubmissionNotExist();
     error NotClaimable();
     error NotFromEntryPoint();
+    error ForbiddenPaymaster();
 
     uint8 public constant ROYALTY_LEVEL_20 = 20;
     uint8 public constant ROYALTY_LEVEL_40 = 40;
@@ -222,6 +223,8 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
 
     /**
      * @dev Ensure that userOp.sender has the appropriate permissions of Owner, Admin, or Reviewer.
+     * @dev Forbid to use paymaster
+     * TODO: 檢查手續費最多不能超過 X ETH（X 的值待定）
      */
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
@@ -229,6 +232,10 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
         payPrefund(missingAccountFunds)
         returns (uint256 validationData)
     {
+        if (userOp.paymasterAndData.length > 0) {
+            revert ForbiddenPaymaster();
+        }
+
         // validate permission of userOp.sender
         bytes4 selector = bytes4(userOp.callData[0:4]);
 
