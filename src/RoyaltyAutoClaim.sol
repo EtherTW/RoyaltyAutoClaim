@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,13 +8,6 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
-
-contract UUPSProxy is ERC1967Proxy {
-    constructor(address _implementation, bytes memory _data) payable ERC1967Proxy(_implementation, _data) {
-        (bool success,) = _implementation.delegatecall(_data);
-        require(success, "Initialization failed");
-    }
-}
 
 contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     using SafeERC20 for IERC20;

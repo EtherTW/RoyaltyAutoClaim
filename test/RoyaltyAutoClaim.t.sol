@@ -2,6 +2,7 @@
 pragma solidity ^0.8.27;
 
 import "../src/RoyaltyAutoClaim.sol";
+import "../src/RoyaltyAutoClaimProxy.sol";
 import "./MockV2.sol";
 import "./AATest.t.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -18,7 +19,7 @@ contract RoyaltyAutoClaimTest is AATest {
     address[] reviewers = new address[](3);
 
     RoyaltyAutoClaim royaltyAutoClaim;
-    UUPSProxy proxy;
+    RoyaltyAutoClaimProxy proxy;
     IERC20 token;
 
     function setUp() public override {
@@ -30,7 +31,7 @@ contract RoyaltyAutoClaimTest is AATest {
         token = new MockERC20(owner);
 
         royaltyAutoClaim = new RoyaltyAutoClaim();
-        proxy = new UUPSProxy(
+        proxy = new RoyaltyAutoClaimProxy(
             address(royaltyAutoClaim),
             abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(token), reviewers))
         );

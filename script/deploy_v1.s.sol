@@ -2,7 +2,8 @@
 pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
-import {UUPSProxy, RoyaltyAutoClaim} from "../src/RoyaltyAutoClaim.sol";
+import {RoyaltyAutoClaim} from "../src/RoyaltyAutoClaim.sol";
+import {RoyaltyAutoClaimProxy} from "../src/RoyaltyAutoClaimProxy.sol";
 
 // forge script script/deploy_v1.s.sol --account dev --rpc-url $sepolia --broadcast --verify
 
@@ -16,7 +17,7 @@ contract DeployV1Script is Script {
         vm.startBroadcast();
 
         RoyaltyAutoClaim royaltyAutoClaim = new RoyaltyAutoClaim();
-        UUPSProxy proxy = new UUPSProxy(
+        RoyaltyAutoClaimProxy proxy = new RoyaltyAutoClaimProxy(
             address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, token, reviewers))
         );
 
