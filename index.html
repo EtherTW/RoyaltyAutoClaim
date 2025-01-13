@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Royalty Auto Claim Dashboard</title>
+		<style>
+			/* Base styles */
+			body {
+				font-family: 'Inter', sans-serif;
+				margin: 0;
+				padding: 20px;
+				background: #f5f5f5;
+			}
+
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+			}
+
+			/* Header */
+			.header {
+				background: #fff;
+				padding: 20px;
+				border-radius: 10px;
+				margin-bottom: 20px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			}
+
+			.wallet-info {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			/* Role-based sections */
+			.role-section {
+				background: #fff;
+				padding: 20px;
+				border-radius: 10px;
+				margin-bottom: 20px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			}
+
+			.role-title {
+				color: #1a1a1a;
+				border-bottom: 2px solid #eee;
+				padding-bottom: 10px;
+				margin-bottom: 20px;
+			}
+
+			/* Forms */
+			.form-group {
+				margin-bottom: 15px;
+			}
+
+			label {
+				display: block;
+				margin-bottom: 5px;
+				color: #666;
+			}
+
+			input,
+			select {
+				width: 100%;
+				padding: 8px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				margin-bottom: 10px;
+			}
+
+			button {
+				background: #3498db;
+				color: white;
+				border: none;
+				padding: 10px 20px;
+				border-radius: 4px;
+				cursor: pointer;
+			}
+
+			button:hover {
+				background: #2980b9;
+			}
+
+			/* Submission list */
+			.submission-list {
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				padding: 10px;
+			}
+
+			.submission-item {
+				padding: 10px;
+				border-bottom: 1px solid #eee;
+			}
+
+			/* Status badges */
+			.status-badge {
+				display: inline-block;
+				padding: 4px 8px;
+				border-radius: 12px;
+				font-size: 12px;
+				font-weight: 500;
+			}
+
+			.status-registered {
+				background: #e1f5fe;
+				color: #0288d1;
+			}
+
+			.status-claimed {
+				background: #e8f5e9;
+				color: #2e7d32;
+			}
+
+			/* Review controls */
+			.review-controls {
+				display: flex;
+				gap: 10px;
+				margin: 10px 0;
+			}
+
+			.review-controls select {
+				width: auto;
+				margin-bottom: 0;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<!-- Header with Wallet Connection -->
+			<div class="header">
+				<div class="wallet-info">
+					<h1>Royalty Auto Claim</h1>
+					<button>Connect Wallet</button>
+				</div>
+			</div>
+
+			<!-- Owner Section -->
+			<div class="role-section">
+				<h2 class="role-title">Owner Controls</h2>
+				<div class="form-group">
+					<label>Change Admin Address</label>
+					<input type="text" placeholder="New admin address" />
+					<button>Update Admin</button>
+				</div>
+				<div class="form-group">
+					<label>Change Royalty Token</label>
+					<input type="text" placeholder="New token address" />
+					<button>Update Token</button>
+				</div>
+			</div>
+
+			<!-- Admin Section -->
+			<div class="role-section">
+				<h2 class="role-title">Admin Controls</h2>
+				<div class="form-group">
+					<label>Manage Reviewers</label>
+					<input type="text" placeholder="Reviewer address" />
+					<select>
+						<option value="true">Enable</option>
+						<option value="false">Disable</option>
+					</select>
+					<button>Update Reviewer</button>
+				</div>
+				<div class="form-group">
+					<label>Register New Submission</label>
+					<input type="text" placeholder="Title" />
+					<input type="text" placeholder="Royalty recipient address" />
+					<button>Register</button>
+				</div>
+			</div>
+
+			<!-- Reviewer Section -->
+			<div class="role-section">
+				<h2 class="role-title">Reviewer</h2>
+				<div class="form-group">
+					<label>Review Submission</label>
+					<select>
+						<option value="">Select a submission</option>
+						<option value="title-a">Title A</option>
+						<option value="title-b">Title B</option>
+						<option value="title-c">Title C</option>
+					</select>
+					<select>
+						<option value="20">20% Royalty Level</option>
+						<option value="40">40% Royalty Level</option>
+						<option value="60">60% Royalty Level</option>
+						<option value="80">80% Royalty Level</option>
+					</select>
+					<button>Submit Review</button>
+				</div>
+			</div>
+
+			<!-- Submitter Section -->
+			<div class="role-section">
+				<h2 class="role-title">Submissions</h2>
+				<div class="submission-list">
+                    <div class="submission-item"></div>
+						<h3>Title A</h3>
+						<p>Recipient: 0x1234...5678</p>
+						<p>Reviews: 1</p>
+						<p>Total Royalty Level: 20</p>
+						<span class="status-badge status-registered">Registered</span>
+						<div class="review-controls">
+							<select>
+								<option value="20">20% Royalty Level</option>
+								<option value="40">40% Royalty Level</option>
+								<option value="60">60% Royalty Level</option>
+								<option value="80">80% Royalty Level</option>
+							</select>
+							<button>Submit Review</button>
+						</div>
+					</div>
+					<div class="submission-item">
+						<h3>Title B</h3>
+						<p>Recipient: 0x1234...5678</p>
+						<p>Reviews: 2</p>
+						<p>Total Royalty Level: 60</p>
+						<span class="status-badge status-registered">Registered</span>
+						<div class="review-controls">
+							<select>
+								<option value="20">20% Royalty Level</option>
+								<option value="40">40% Royalty Level</option>
+								<option value="60">60% Royalty Level</option>
+								<option value="80">80% Royalty Level</option>
+							</select>
+							<button>Submit Review</button>
+						</div>
+						<button>Claim Royalty</button>
+					</div>
+					<div class="submission-item">
+						<h3>Title C</h3>
+						<p>Recipient: 0x8765...4321</p>
+						<p>Reviews: 3</p>
+						<p>Total Royalty Level: 80</p>
+						<span class="status-badge status-claimed">Claimed</span>
+					</div>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
