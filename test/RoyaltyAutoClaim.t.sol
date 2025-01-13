@@ -110,11 +110,15 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
 
-        (address royaltyRecipient, uint8 reviewCount, uint16 totalRoyaltyLevel) =
-            RoyaltyAutoClaim(address(proxy)).submissions("test");
-        assertEq(royaltyRecipient, submitter);
-        assertEq(reviewCount, 0);
-        assertEq(totalRoyaltyLevel, 0);
+        RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
+        assertEq(submission.royaltyRecipient, submitter, "Royalty recipient should be submitter");
+        assertEq(submission.reviewCount, 0, "Review count should be 0");
+        assertEq(submission.totalRoyaltyLevel, 0, "Total royalty level should be 0");
+        assertEq(
+            uint256(submission.status),
+            uint256(RoyaltyAutoClaim.SubmissionStatus.Registered),
+            "Submission status should be Registered"
+        );
 
         vm.expectRevert();
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
@@ -124,12 +128,12 @@ contract RoyaltyAutoClaimTest is AATest {
 
         vm.expectRevert();
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
-        assertEq(RoyaltyAutoClaim(address(proxy)).getRoyalty("test"), 0 ether);
+        assertEq(RoyaltyAutoClaim(address(proxy)).getRoyalty("test"), 0 ether, "Royalty should be 0");
 
         vm.prank(reviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
 
-        assertEq(RoyaltyAutoClaim(address(proxy)).getRoyalty("test"), 30 ether);
+        assertEq(RoyaltyAutoClaim(address(proxy)).getRoyalty("test"), 30 ether, "Royalty should be 30 ether");
 
         uint256 proxyBalanceBefore = token.balanceOf(address(proxy));
 
@@ -137,7 +141,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         uint256 proxyBalanceAfter = token.balanceOf(address(proxy));
 
-        assertEq(token.balanceOf(submitter), 30 ether);
-        assertEq(proxyBalanceAfter, proxyBalanceBefore - 30 ether);
+        assertEq(token.balanceOf(submitter), 30 ether, "Submitter should have 30 ether");
+        assertEq(proxyBalanceAfter, proxyBalanceBefore - 30 ether, "Proxy balance should be 30 ether less");
     }
 }

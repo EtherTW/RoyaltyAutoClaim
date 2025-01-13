@@ -18,11 +18,12 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     error EmptyTitle();
     error AlreadyRegistered();
     error InvalidToken();
-    error InvalidRoyaltyLevel();
+    error InvalidRoyaltyLevel(uint16 royaltyLevel);
     error NotEnoughReviews();
     error AlreadyClaimed();
     error RenounceOwnershipDisabled();
     error SubmissionNotExist();
+    error SubmissionNotRegistered();
     error NotFromEntryPoint();
     error ForbiddenPaymaster();
     error ZeroRoyalty();
@@ -32,19 +33,40 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     uint8 public constant ROYALTY_LEVEL_60 = 60;
     uint8 public constant ROYALTY_LEVEL_80 = 80;
 
-    address public admin;
-    address public token; // 稿費幣種
-
-    mapping(address => bool) public reviewers;
+    struct Configs {
+        address admin;
+        address token;
+        mapping(address => bool) reviewers;
+    }
 
     struct Submission {
         address royaltyRecipient;
         uint8 reviewCount;
         uint16 totalRoyaltyLevel;
+        SubmissionStatus status;
     }
 
-    mapping(string => Submission) public submissions;
-    mapping(string => bool) public isClaimed;
+    enum SubmissionStatus {
+        NotExist,
+        Registered,
+        Claimed
+    }
+
+    /// @custom:storage-location erc7201:royaltyautoclaim.main
+    struct MainStorage {
+        Configs configs;
+        mapping(string => Submission) submissions;
+    }
+
+    // keccak256(abi.encode(uint256(keccak256("royaltyautoclaim.storage.main")) - 1)) & ~bytes32(uint256(0xff));
+    /// @dev cast index-erc7201 royaltyautoclaim.storage.main
+    bytes32 private constant MAIN_STORAGE_LOCATION = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
+
+    function _getMainStorage() private pure returns (MainStorage storage $) {
+        assembly {
+            $.slot := MAIN_STORAGE_LOCATION
+        }
+    }
 
     constructor() {
         _disableInitializers();
@@ -59,10 +81,11 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
         require(_token != address(0), ZeroAddress());
 
         __Ownable_init(_owner);
-        admin = _admin;
-        token = _token;
+        MainStorage storage $ = _getMainStorage();
+        $.configs.admin = _admin;
+        $.configs.token = _token;
         for (uint256 i = 0; i < _reviewers.length; i++) {
-            reviewers[_reviewers[i]] = true;
+            $.configs.reviewers[_reviewers[i]] = true;
         }
     }
 
@@ -74,12 +97,12 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     }
 
     modifier onlyAdminOrEntryPoint() {
-        require(msg.sender == admin || msg.sender == entryPoint(), Unauthorized(msg.sender));
+        require(msg.sender == admin() || msg.sender == entryPoint(), Unauthorized(msg.sender));
         _;
     }
 
     modifier onlyReviewerOrEntryPoint() {
-        require(reviewers[msg.sender] || msg.sender == entryPoint(), Unauthorized(msg.sender));
+        require(isReviewer(msg.sender) || msg.sender == entryPoint(), Unauthorized(msg.sender));
         _;
     }
 
@@ -113,13 +136,13 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
 
     function changeAdmin(address _admin) public onlyOwnerOrEntryPoint {
         require(_admin != address(0), ZeroAddress());
-        admin = _admin;
+        _getMainStorage().configs.admin = _admin;
     }
 
     function changeRoyaltyToken(address _token) public onlyOwnerOrEntryPoint {
         require(_token != address(0), ZeroAddress());
         require(IERC20(_token).totalSupply() >= 0, InvalidToken());
-        token = _token;
+        _getMainStorage().configs.token = _token;
     }
 
     function renounceOwnership() public pure override {
@@ -132,25 +155,27 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
         require(_reviewers.length == _status.length, ArrayLengthMismatch());
 
         for (uint256 i = 0; i < _reviewers.length; i++) {
-            reviewers[_reviewers[i]] = _status[i];
+            _getMainStorage().configs.reviewers[_reviewers[i]] = _status[i];
         }
     }
 
     function registerSubmission(string memory title, address royaltyRecipient) public onlyAdminOrEntryPoint {
         require(bytes(title).length > 0, EmptyTitle());
         require(royaltyRecipient != address(0), ZeroAddress());
-        require(!isSubmissionExist(title), AlreadyRegistered());
-        submissions[title].royaltyRecipient = royaltyRecipient;
+        require(submissions(title).status == SubmissionStatus.NotExist, SubmissionNotExist());
+        MainStorage storage $ = _getMainStorage();
+        $.submissions[title].royaltyRecipient = royaltyRecipient;
+        $.submissions[title].status = SubmissionStatus.Registered;
     }
 
     function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) public onlyAdminOrEntryPoint {
-        require(isSubmissionExist(title), SubmissionNotExist());
-        submissions[title].royaltyRecipient = newRoyaltyRecipient;
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
+        _getMainStorage().submissions[title].royaltyRecipient = newRoyaltyRecipient;
     }
 
     function revokeSubmission(string memory title) public onlyAdminOrEntryPoint {
-        require(isSubmissionExist(title), SubmissionNotExist());
-        delete submissions[title];
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
+        delete _getMainStorage().submissions[title];
     }
 
     // ================================ Reviewer ================================
@@ -159,51 +184,26 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
         require(
             royaltyLevel == ROYALTY_LEVEL_20 || royaltyLevel == ROYALTY_LEVEL_40 || royaltyLevel == ROYALTY_LEVEL_60
                 || royaltyLevel == ROYALTY_LEVEL_80,
-            InvalidRoyaltyLevel()
+            InvalidRoyaltyLevel(royaltyLevel)
         );
-        submissions[title].reviewCount++;
-        submissions[title].totalRoyaltyLevel += royaltyLevel;
+        MainStorage storage $ = _getMainStorage();
+        $.submissions[title].reviewCount++;
+        $.submissions[title].totalRoyaltyLevel += royaltyLevel;
     }
 
     // ================================ Submitter ================================
 
     // TODO: add ReentrancyGuard
     function claimRoyalty(string memory title) public {
-        require(isSubmissionExist(title), SubmissionNotExist());
-        require(!isClaimed[title], AlreadyClaimed());
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
+        require(submissions(title).status != SubmissionStatus.Claimed, AlreadyClaimed());
         require(isSubmissionClaimable(title), NotEnoughReviews());
         uint256 amount = getRoyalty(title);
         require(amount > 0, ZeroRoyalty());
+        MainStorage storage $ = _getMainStorage();
+        $.submissions[title].status = SubmissionStatus.Claimed;
 
-        isClaimed[title] = true;
-        IERC20(token).safeTransfer(submissions[title].royaltyRecipient, amount);
-    }
-
-    // ================================ View ================================
-
-    function isSubmissionExist(string memory title) public view returns (bool) {
-        return submissions[title].royaltyRecipient != address(0);
-    }
-
-    function isSubmissionClaimable(string memory title) public view returns (bool) {
-        if (!isSubmissionExist(title) || isClaimed[title]) {
-            return false;
-        }
-        return submissions[title].reviewCount >= 2;
-    }
-
-    function getRoyalty(string memory title) public view returns (uint256 royalty) {
-        if (!isSubmissionClaimable(title)) return 0;
-
-        // TODO: add multiplier variable or just use 1e18?
-        return (uint256(submissions[title].totalRoyaltyLevel) * 1e18) / submissions[title].reviewCount;
-    }
-
-    /**
-     * @dev EntryPoint for v0.7
-     */
-    function entryPoint() public pure returns (address) {
-        return 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
+        IERC20(token()).safeTransfer(submissions(title).royaltyRecipient, amount);
     }
 
     // ================================ ERC-4337 ================================
@@ -240,16 +240,53 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
             selector == this.updateReviewers.selector || selector == this.registerSubmission.selector
                 || selector == this.updateRoyaltyRecipient.selector || selector == this.revokeSubmission.selector
         ) {
-            if (signer != admin) {
+            if (signer != admin()) {
                 revert Unauthorized(signer);
             }
             // Reviewer
         } else if (selector == this.reviewSubmission.selector) {
-            if (!reviewers[signer]) {
+            if (!isReviewer(signer)) {
                 revert Unauthorized(signer);
             }
         }
 
         return 0;
+    }
+
+    // ================================ View ================================
+
+    function admin() public view returns (address) {
+        return _getMainStorage().configs.admin;
+    }
+
+    function token() public view returns (address) {
+        return _getMainStorage().configs.token;
+    }
+
+    function submissions(string memory title) public view returns (Submission memory) {
+        return _getMainStorage().submissions[title];
+    }
+
+    function isReviewer(address reviewer) public view returns (bool) {
+        return _getMainStorage().configs.reviewers[reviewer];
+    }
+
+    function isSubmissionClaimable(string memory title) public view returns (bool) {
+        if (submissions(title).status != SubmissionStatus.Registered) {
+            return false;
+        }
+        return submissions(title).reviewCount >= 2;
+    }
+
+    function getRoyalty(string memory title) public view returns (uint256 royalty) {
+        if (!isSubmissionClaimable(title)) {
+            return 0;
+        }
+        return (uint256(submissions(title).totalRoyaltyLevel) * 1e18) / submissions(title).reviewCount;
+    }
+
+    /// @dev v0.7
+    function entryPoint() public pure returns (address) {
+        return 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
     }
 }
