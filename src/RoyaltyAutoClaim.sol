@@ -34,6 +34,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     uint8 public constant ROYALTY_LEVEL_40 = 40;
     uint8 public constant ROYALTY_LEVEL_60 = 60;
     uint8 public constant ROYALTY_LEVEL_80 = 80;
+    address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     struct Configs {
         address admin;
@@ -54,7 +55,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         Claimed
     }
 
-    /// @custom:storage-location erc7201:royaltyautoclaim.main
+    /// @custom:storage-location erc7201:royaltyautoclaim.storage.main
     struct MainStorage {
         Configs configs;
         mapping(string => Submission) submissions;
@@ -143,12 +144,20 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
 
     function changeRoyaltyToken(address _token) public onlyOwnerOrEntryPoint {
         require(_token != address(0), ZeroAddress());
-        require(IERC20(_token).totalSupply() >= 0, InvalidToken());
         _getMainStorage().configs.token = _token;
     }
 
     function renounceOwnership() public pure override {
         revert RenounceOwnershipDisabled();
+    }
+
+    function emergencyWithdraw(address _token, uint256 _amount) public onlyOwnerOrEntryPoint {
+        if (_token == NATIVE_TOKEN) {
+            (bool success,) = owner().call{value: _amount}("");
+            require(success);
+        } else {
+            IERC20(_token).safeTransfer(owner(), _amount);
+        }
     }
 
     // ================================ Admin ================================
@@ -204,7 +213,12 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
 
-        IERC20(token()).safeTransfer(submissions(title).royaltyRecipient, amount);
+        if (token() == NATIVE_TOKEN) {
+            (bool success,) = submissions(title).royaltyRecipient.call{value: amount}("");
+            require(success);
+        } else {
+            IERC20(token()).safeTransfer(submissions(title).royaltyRecipient, amount);
+        }
     }
 
     // ================================ ERC-4337 ================================
@@ -232,6 +246,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
             // Owner
             selector == this.upgradeToAndCall.selector || selector == this.changeAdmin.selector
                 || selector == this.changeRoyaltyToken.selector || selector == this.transferOwnership.selector
+                || selector == this.emergencyWithdraw.selector
         ) {
             if (signer != owner()) {
                 revert Unauthorized(signer);
