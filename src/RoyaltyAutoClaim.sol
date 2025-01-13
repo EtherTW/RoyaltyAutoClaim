@@ -8,8 +8,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
+import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 
-contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
+contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     error ZeroAddress();
@@ -27,6 +28,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
     error NotFromEntryPoint();
     error ForbiddenPaymaster();
     error ZeroRoyalty();
+    error UnsupportSelector(bytes4 selector);
 
     uint8 public constant ROYALTY_LEVEL_20 = 20;
     uint8 public constant ROYALTY_LEVEL_40 = 40;
@@ -193,8 +195,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
 
     // ================================ Submitter ================================
 
-    // TODO: add ReentrancyGuard
-    function claimRoyalty(string memory title) public {
+    function claimRoyalty(string memory title) public nonReentrant {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
         require(submissions(title).status != SubmissionStatus.Claimed, AlreadyClaimed());
         require(isSubmissionClaimable(title), NotEnoughReviews());
@@ -235,6 +236,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
             if (signer != owner()) {
                 revert Unauthorized(signer);
             }
+            return 0;
         } else if (
             // Admin
             selector == this.updateReviewers.selector || selector == this.registerSubmission.selector
@@ -243,14 +245,19 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount {
             if (signer != admin()) {
                 revert Unauthorized(signer);
             }
+            return 0;
             // Reviewer
         } else if (selector == this.reviewSubmission.selector) {
             if (!isReviewer(signer)) {
                 revert Unauthorized(signer);
             }
+            return 0;
+            // Anybody
+        } else if (selector == this.claimRoyalty.selector) {
+            return 0;
         }
 
-        return 0;
+        revert UnsupportSelector(selector);
     }
 
     // ================================ View ================================
