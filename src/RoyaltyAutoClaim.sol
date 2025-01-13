@@ -9,6 +9,7 @@ import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/Pac
 import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -304,7 +305,8 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         if (!isSubmissionClaimable(title)) {
             return 0;
         }
-        return (uint256(submissions(title).totalRoyaltyLevel) * 1e18) / submissions(title).reviewCount;
+        uint8 decimals = token() == NATIVE_TOKEN ? 18 : IERC20Metadata(token()).decimals();
+        return (uint256(submissions(title).totalRoyaltyLevel) * (10 ** decimals)) / submissions(title).reviewCount;
     }
 
     /// @dev v0.7
