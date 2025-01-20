@@ -22,6 +22,13 @@ Reviewer
 Submitter
 - 領取稿費
 
+## Frontend
+
+- For icon, use [lucide-vue-next](https://lucide.dev/icons)
+- For Component, use [shadcn-vue](https://www.shadcn-vue.com/docs/components/accordion.html)
+- Vue 3 + Vite + TypeScript + TailwindCSS
+
+
 ## Reference
 
 - https://github.com/consenlabs/ethtaipei2023-aa-workshop
