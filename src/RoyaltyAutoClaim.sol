@@ -244,26 +244,26 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         address signer = ECDSA.recover(ethHash, userOp.signature);
 
         if (
-            // Owner
             selector == this.upgradeToAndCall.selector || selector == this.changeAdmin.selector
                 || selector == this.changeRoyaltyToken.selector || selector == this.transferOwnership.selector
                 || selector == this.emergencyWithdraw.selector
         ) {
+            // Owner
             if (signer != owner()) {
                 revert Unauthorized(signer);
             }
             return 0;
         } else if (
-            // Admin
             selector == this.updateReviewers.selector || selector == this.registerSubmission.selector
                 || selector == this.updateRoyaltyRecipient.selector || selector == this.revokeSubmission.selector
         ) {
+            // Admin
             if (signer != admin()) {
                 revert Unauthorized(signer);
             }
             return 0;
-            // Reviewer
         } else if (selector == this.reviewSubmission.selector) {
+            // Reviewer
             if (!isReviewer(signer)) {
                 revert Unauthorized(signer);
             }
