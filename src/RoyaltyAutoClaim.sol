@@ -18,12 +18,12 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     error Unauthorized(address caller);
     error ArrayLengthMismatch();
     error EmptyTitle();
-    error AlreadyRegistered();
     error InvalidToken();
     error InvalidRoyaltyLevel(uint16 royaltyLevel);
     error NotEnoughReviews();
     error AlreadyClaimed();
     error RenounceOwnershipDisabled();
+    error AlreadyRegistered();
     error SubmissionNotExist();
     error SubmissionNotRegistered();
     error NotFromEntryPoint();
@@ -174,7 +174,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     function registerSubmission(string memory title, address royaltyRecipient) public onlyAdminOrEntryPoint {
         require(bytes(title).length > 0, EmptyTitle());
         require(royaltyRecipient != address(0), ZeroAddress());
-        require(submissions(title).status == SubmissionStatus.NotExist, SubmissionNotExist());
+        require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].royaltyRecipient = royaltyRecipient;
         $.submissions[title].status = SubmissionStatus.Registered;
@@ -206,9 +206,13 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     // ================================ Submitter ================================
 
     function claimRoyalty(string memory title) public nonReentrant {
-        require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
-        require(submissions(title).status != SubmissionStatus.Claimed, AlreadyClaimed());
-        require(isSubmissionClaimable(title), NotEnoughReviews());
+        if (submissions(title).status == SubmissionStatus.NotExist) {
+            revert SubmissionNotExist();
+        } else if (submissions(title).status == SubmissionStatus.Claimed) {
+            revert AlreadyClaimed();
+        } else if (!isSubmissionClaimable(title)) {
+            revert NotEnoughReviews();
+        }
         uint256 amount = getRoyalty(title);
         require(amount > 0, ZeroRoyalty());
         MainStorage storage $ = _getMainStorage();

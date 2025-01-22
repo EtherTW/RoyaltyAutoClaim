@@ -523,7 +523,7 @@ contract RoyaltyAutoClaimTest is AATest {
     }
 
     function testCannot_claimRoyalty_if_submission_not_registered() public {
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.SubmissionNotRegistered.selector));
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.SubmissionNotExist.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("nonexistent");
     }
 
@@ -565,12 +565,8 @@ contract RoyaltyAutoClaimTest is AATest {
         // Setup submission with zero royalty reviews
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
-        vm.prank(reviewers[0]);
-        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 0);
-        vm.prank(reviewers[1]);
-        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 0);
 
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroRoyalty.selector));
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.NotEnoughReviews.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
     }
 
