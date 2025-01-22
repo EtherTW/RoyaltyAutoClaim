@@ -241,12 +241,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
 
-        if (token() == NATIVE_TOKEN) {
-            (bool success,) = submissions(title).royaltyRecipient.call{value: amount}("");
-            require(success);
-        } else {
-            IERC20(token()).safeTransfer(submissions(title).royaltyRecipient, amount);
-        }
+        IERC20(token()).safeTransfer(submissions(title).royaltyRecipient, amount);
     }
 
     // ================================ ERC-4337 ================================
@@ -337,7 +332,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         if (!isSubmissionClaimable(title)) {
             return 0;
         }
-        uint8 decimals = token() == NATIVE_TOKEN ? 18 : IERC20Metadata(token()).decimals();
+        uint8 decimals = IERC20Metadata(token()).decimals();
         return (uint256(submissions(title).totalRoyaltyLevel) * (10 ** decimals)) / submissions(title).reviewCount;
     }
 

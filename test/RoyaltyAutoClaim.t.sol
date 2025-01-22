@@ -538,35 +538,6 @@ contract RoyaltyAutoClaimTest is AATest {
         assertEq(token.balanceOf(address(proxy)), initialBalance - expectedRoyalty, "Proxy balance should decrease");
     }
 
-    function test_claimRoyalty_with_native_token() public {
-        // Change token to native ETH
-        vm.prank(owner);
-        RoyaltyAutoClaim(address(proxy)).changeRoyaltyToken(NATIVE_TOKEN);
-
-        address submitter = vm.randomAddress();
-        uint256 initialBalance = address(proxy).balance;
-        uint256 expectedRoyalty = 30 ether; // (20 + 40) / 2 = 30
-
-        // Setup submission and reviews
-        vm.prank(admin);
-        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
-        vm.prank(reviewers[0]);
-        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
-        vm.prank(reviewers[1]);
-        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
-
-        // Claim royalty
-        RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
-
-        // Verify state changes
-        RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
-        assertEq(
-            uint256(submission.status), uint256(RoyaltyAutoClaim.SubmissionStatus.Claimed), "Status should be Claimed"
-        );
-        assertEq(address(submitter).balance, expectedRoyalty, "Submitter should receive correct royalty");
-        assertEq(address(proxy).balance, initialBalance - expectedRoyalty, "Proxy balance should decrease");
-    }
-
     function testCannot_claimRoyalty_if_submission_not_registered() public {
         vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.SubmissionNotExist.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("nonexistent");
