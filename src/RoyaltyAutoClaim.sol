@@ -62,12 +62,10 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         mapping(string => mapping(address => bool)) hasReviewed;
     }
 
-    // address transient userOpSigner;
-
     // keccak256(abi.encode(uint256(keccak256("royaltyautoclaim.storage.main")) - 1)) & ~bytes32(uint256(0xff));
     /// @dev cast index-erc7201 royaltyautoclaim.storage.main
     bytes32 private constant MAIN_STORAGE_SLOT = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
-    // @dev cast index-erc7201 royaltyautoclaim.storage.signer
+    /// @dev cast index-erc7201 royaltyautoclaim.storage.signer
     bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
 
     function _getMainStorage() private pure returns (MainStorage storage $) {
@@ -293,8 +291,8 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
             }
 
             return 0;
-            // Anybody
         } else if (selector == this.claimRoyalty.selector) {
+            // Anybody
             return 0;
         }
 
@@ -334,8 +332,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         return (uint256(submissions(title).totalRoyaltyLevel) * (10 ** decimals)) / submissions(title).reviewCount;
     }
 
-    /// @dev v0.7
     function entryPoint() public pure returns (address) {
-        return 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
+        return 0x0000000071727De22E5E9d8BAf0edAc6f37da032; // v0.7
     }
 }
