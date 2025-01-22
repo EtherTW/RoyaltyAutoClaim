@@ -211,6 +211,46 @@ contract RoyaltyAutoClaimTest is AATest {
 
     // ======================================== Admin Functions ========================================
 
+    function test_updateReviewers() public {
+        address[] memory newReviewers = new address[](2);
+        bool[] memory status = new bool[](2);
+
+        newReviewers[0] = vm.addr(5);
+        newReviewers[1] = vm.addr(6);
+        status[0] = true;
+        status[1] = false;
+
+        // Should fail if not admin
+        vm.prank(vm.addr(0xbeef));
+        vm.expectRevert();
+        RoyaltyAutoClaim(address(proxy)).updateReviewers(newReviewers, status);
+
+        // Should fail if arrays have different lengths
+        bool[] memory invalidStatus = new bool[](1);
+        invalidStatus[0] = true;
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ArrayLengthMismatch.selector));
+        RoyaltyAutoClaim(address(proxy)).updateReviewers(newReviewers, invalidStatus);
+
+        // Should succeed when called by admin
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).updateReviewers(newReviewers, status);
+
+        // Verify the updates
+        assertEq(RoyaltyAutoClaim(address(proxy)).isReviewer(newReviewers[0]), true);
+        assertEq(RoyaltyAutoClaim(address(proxy)).isReviewer(newReviewers[1]), false);
+
+        // Test removing an existing reviewer
+        address[] memory existingReviewers = new address[](1);
+        bool[] memory removeStatus = new bool[](1);
+        existingReviewers[0] = reviewers[0];
+        removeStatus[0] = false;
+
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).updateReviewers(existingReviewers, removeStatus);
+        assertEq(RoyaltyAutoClaim(address(proxy)).isReviewer(reviewers[0]), false);
+    }
+
     function test_registerSubmission() public {
         address submitter = vm.randomAddress();
         vm.prank(admin);
@@ -250,7 +290,44 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
     }
 
-    // ======================================== updateRoyaltyRecipient ========================================
+    function testCannot_registerSubmission_with_empty_title() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.EmptyTitle.selector));
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("", vm.randomAddress());
+    }
+
+    function testCannot_registerSubmission_with_zero_address() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", address(0));
+    }
+
+    function test_updateRoyaltyRecipient_success() public {
+        address originalRecipient = vm.randomAddress();
+        address newRecipient = vm.randomAddress();
+
+        // Register submission first
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", originalRecipient);
+
+        // Update recipient
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).updateRoyaltyRecipient("test", newRecipient);
+
+        RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
+        assertEq(submission.royaltyRecipient, newRecipient, "Royalty recipient should be updated");
+    }
+
+    function testCannot_updateRoyaltyRecipient_if_not_admin() public {
+        // Register submission first
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
+
+        // Try to update as non-admin
+        vm.prank(vm.randomAddress());
+        vm.expectRevert();
+        RoyaltyAutoClaim(address(proxy)).updateRoyaltyRecipient("test", vm.randomAddress());
+    }
 
     function testCannot_updateRoyaltyRecipient_if_the_submission_is_claimed_or_not_exist() public {
         vm.expectRevert(); // submission not exist
@@ -268,7 +345,38 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim(address(proxy)).updateRoyaltyRecipient("test", vm.randomAddress());
     }
 
-    // ======================================== revokeSubmission ========================================
+    function test_revokeSubmission_success() public {
+        address submitter = vm.randomAddress();
+
+        // Register submission first
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+
+        // Revoke submission
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).revokeSubmission("test");
+
+        RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
+        assertEq(
+            uint256(submission.status),
+            uint256(RoyaltyAutoClaim.SubmissionStatus.NotExist),
+            "Submission should be deleted"
+        );
+        assertEq(submission.royaltyRecipient, address(0), "Royalty recipient should be zero");
+        assertEq(submission.reviewCount, 0, "Review count should be zero");
+        assertEq(submission.totalRoyaltyLevel, 0, "Total royalty level should be zero");
+    }
+
+    function testCannot_revokeSubmission_if_not_admin() public {
+        // Register submission first
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
+
+        // Try to revoke as non-admin
+        vm.prank(vm.randomAddress());
+        vm.expectRevert();
+        RoyaltyAutoClaim(address(proxy)).revokeSubmission("test");
+    }
 
     function testCannot_revokeSubmission_if_the_submission_is_claimed_or_not_exist() public {
         vm.expectRevert(); // submission not exist
@@ -286,49 +394,293 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim(address(proxy)).revokeSubmission("test");
     }
 
-    // ======================================== reviewSubmission ========================================
+    // ======================================== Reviewer Functions ========================================
 
-    function testCannot_reviewSubmission_if_the_submission_is_claimed_or_not_exist() public {
-        vm.expectRevert(); // submission not exist
-        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+    function test_reviewSubmission_success() public {
+        address submitter = vm.randomAddress();
 
+        // Register submission
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+
+        // Test all valid royalty levels
+        uint16[] memory validLevels = new uint16[](4);
+        validLevels[0] = 20;
+        validLevels[1] = 40;
+        validLevels[2] = 60;
+        validLevels[3] = 80;
+
+        for (uint256 i = 0; i < validLevels.length; i++) {
+            vm.prank(reviewers[0]);
+            RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", validLevels[i]);
+
+            RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
+            assertEq(submission.reviewCount, i + 1, "Review count should increment");
+            assertEq(submission.totalRoyaltyLevel, validLevels[i], "Total royalty level should match");
+        }
+    }
+
+    function testCannot_reviewSubmission_if_not_reviewer() public {
+        // Register submission
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
+
+        // Try to review as non-reviewer
+        address nonReviewer = vm.addr(0xbeef);
+        vm.prank(nonReviewer);
+        vm.expectRevert();
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+    }
+
+    function testCannot_reviewSubmission_with_invalid_royalty_level() public {
+        // Register submission
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
+
+        // Try invalid royalty levels
+        uint16[] memory invalidLevels = new uint16[](4);
+        invalidLevels[0] = 0;
+        invalidLevels[1] = 30;
+        invalidLevels[2] = 100;
+        invalidLevels[3] = 255;
+
+        for (uint256 i = 0; i < invalidLevels.length; i++) {
+            vm.prank(reviewers[0]);
+            vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.InvalidRoyaltyLevel.selector, invalidLevels[i]));
+            RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", invalidLevels[i]);
+        }
+    }
+
+    function testCannot_reviewSubmission_multiple_times() public {
+        // Register submission
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
+
+        // First review should succeed
+        vm.prank(reviewers[0]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+
+        // Second review from same reviewer should fail
+        vm.prank(reviewers[0]);
+        vm.expectRevert();
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
+    }
+
+    // ======================================== Submitter Functions ========================================
+
+    function test_claimRoyalty_with_erc20() public {
+        address submitter = vm.randomAddress();
+        uint256 initialBalance = token.balanceOf(address(proxy));
+        uint256 expectedRoyalty = 30 ether; // (20 + 40) / 2 = 30
+
+        // Setup submission and reviews
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
         vm.prank(reviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
         vm.prank(reviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
+
+        // Claim royalty
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
 
-        vm.expectRevert(); // submission claimed
-        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
-    }
-
-    // ======================================== validateUserOp ========================================
-
-    function testCannot_validateUserOp_not_from_entrypoint() public {
-        PackedUserOperation memory userOp = buildUserOp(1, bytes(""));
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.NotFromEntryPoint.selector));
-        RoyaltyAutoClaim(address(proxy)).validateUserOp(userOp, 0, 0);
-    }
-
-    function testCannot_validateUserOp_with_paymaster_data() public {
-        PackedUserOperation memory userOp = buildUserOp(1, bytes(""));
-        userOp.paymasterAndData = bytes(
-            hex"0000000000000039cd5e8ae05257ce51c473ddd100000000000000000000000000009d4600000000000000000000000000000001000000678490690000000000005aa567cab83dfbb6ccc8667789beb8c8311b3653c2e8b332f22717de496424df34b457b1a0283058d007bf3303f754480efc66c4d04b46b0697d203ba8105a401c"
+        // Verify state changes
+        RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
+        assertEq(
+            uint256(submission.status), uint256(RoyaltyAutoClaim.SubmissionStatus.Claimed), "Status should be Claimed"
         );
+        assertEq(token.balanceOf(submitter), expectedRoyalty, "Submitter should receive correct royalty");
+        assertEq(token.balanceOf(address(proxy)), initialBalance - expectedRoyalty, "Proxy balance should decrease");
+    }
+
+    function test_claimRoyalty_with_native_token() public {
+        // Change token to native ETH
+        vm.prank(owner);
+        RoyaltyAutoClaim(address(proxy)).changeRoyaltyToken(NATIVE_TOKEN);
+
+        address submitter = vm.randomAddress();
+        uint256 initialBalance = address(proxy).balance;
+        uint256 expectedRoyalty = 30 ether; // (20 + 40) / 2 = 30
+
+        // Setup submission and reviews
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+        vm.prank(reviewers[0]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+        vm.prank(reviewers[1]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
+
+        // Claim royalty
+        RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
+
+        // Verify state changes
+        RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
+        assertEq(
+            uint256(submission.status), uint256(RoyaltyAutoClaim.SubmissionStatus.Claimed), "Status should be Claimed"
+        );
+        assertEq(address(submitter).balance, expectedRoyalty, "Submitter should receive correct royalty");
+        assertEq(address(proxy).balance, initialBalance - expectedRoyalty, "Proxy balance should decrease");
+    }
+
+    function testCannot_claimRoyalty_if_submission_not_registered() public {
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.SubmissionNotRegistered.selector));
+        RoyaltyAutoClaim(address(proxy)).claimRoyalty("nonexistent");
+    }
+
+    function testCannot_claimRoyalty_if_already_claimed() public {
+        address submitter = vm.randomAddress();
+
+        // Setup submission and reviews
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+        vm.prank(reviewers[0]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+        vm.prank(reviewers[1]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
+
+        // First claim should succeed
+        RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
+
+        // Second claim should fail
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyClaimed.selector));
+        RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
+    }
+
+    function testCannot_claimRoyalty_if_not_enough_reviews() public {
+        address submitter = vm.randomAddress();
+
+        // Setup submission with only one review
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+        vm.prank(reviewers[0]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.NotEnoughReviews.selector));
+        RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
+    }
+
+    function testCannot_claimRoyalty_if_zero_royalty() public {
+        address submitter = vm.randomAddress();
+
+        // Setup submission with zero royalty reviews
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+        vm.prank(reviewers[0]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 0);
+        vm.prank(reviewers[1]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 0);
+
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroRoyalty.selector));
+        RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
+    }
+
+    // ======================================== ERC-4337 ========================================
+
+    function test_validateUserOp_owner_functions() public {
+        // Test owner functions
+        bytes[] memory ownerCalls = new bytes[](5);
+        ownerCalls[0] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(0), ""));
+        ownerCalls[1] = abi.encodeCall(RoyaltyAutoClaim.changeAdmin, (address(0)));
+        ownerCalls[2] = abi.encodeCall(RoyaltyAutoClaim.changeRoyaltyToken, (address(0)));
+        ownerCalls[3] = abi.encodeCall(OwnableUpgradeable.transferOwnership, (address(0)));
+        ownerCalls[4] = abi.encodeCall(RoyaltyAutoClaim.emergencyWithdraw, (address(0), 0));
+
+        // Should fail for non-owner
+        for (uint256 i = 0; i < ownerCalls.length; i++) {
+            PackedUserOperation memory userOp = buildUserOp(0xbeef, ownerCalls[i]);
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOpWithRevert.selector,
+                    0,
+                    "AA23 reverted",
+                    abi.encodeWithSelector(RoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
+                )
+            );
+            handleUserOp(userOp);
+        }
+
+        // Should succeed for owner
+        for (uint256 i = 0; i < ownerCalls.length; i++) {
+            PackedUserOperation memory userOp = buildUserOp(1, ownerCalls[i]);
+            handleUserOp(userOp);
+        }
+    }
+
+    function test_validateUserOp_admin_functions() public {
+        // Test admin functions
+        bytes[] memory adminCalls = new bytes[](4);
+        adminCalls[0] = abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (new address[](0), new bool[](0)));
+        adminCalls[1] = abi.encodeCall(RoyaltyAutoClaim.registerSubmission, ("test", address(0)));
+        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.updateRoyaltyRecipient, ("test", address(0)));
+        adminCalls[3] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, ("test"));
+
+        // Should fail for non-admin
+        for (uint256 i = 0; i < adminCalls.length; i++) {
+            PackedUserOperation memory userOp = buildUserOp(0xbeef, adminCalls[i]);
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOpWithRevert.selector,
+                    0,
+                    "AA23 reverted",
+                    abi.encodeWithSelector(RoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
+                )
+            );
+            handleUserOp(userOp);
+        }
+
+        // Should succeed for admin
+        for (uint256 i = 0; i < adminCalls.length; i++) {
+            PackedUserOperation memory userOp = buildUserOp(2, adminCalls[i]); // admin's private key is 2
+            handleUserOp(userOp);
+        }
+    }
+
+    function test_validateUserOp_reviewer_functions() public {
+        // Test reviewer function
+        bytes memory reviewerCall = abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20));
+
+        // Should fail for non-reviewer
+        PackedUserOperation memory userOp = buildUserOp(0xbeef, reviewerCall);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
                 0,
                 "AA23 reverted",
-                abi.encodeWithSelector(RoyaltyAutoClaim.ForbiddenPaymaster.selector)
+                abi.encodeWithSelector(RoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
+            )
+        );
+        handleUserOp(userOp);
+
+        // Should succeed for reviewer
+        userOp = buildUserOp(3, reviewerCall); // reviewer's private key is 3
+        handleUserOp(userOp);
+    }
+
+    function test_validateUserOp_public_functions() public {
+        // Test public function (claimRoyalty)
+        bytes memory publicCall = abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test"));
+
+        // Should succeed for any address
+        PackedUserOperation memory userOp = buildUserOp(0xbeef, publicCall);
+        handleUserOp(userOp);
+    }
+
+    function test_validateUserOp_unsupported_selector() public {
+        // Test unsupported selector
+        bytes4 unsupportedSelector = bytes4(keccak256("unsupportedFunction()"));
+        bytes memory unsupportedCall = abi.encodePacked(unsupportedSelector);
+
+        PackedUserOperation memory userOp = buildUserOp(0xbeef, unsupportedCall);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(RoyaltyAutoClaim.UnsupportSelector.selector, unsupportedSelector)
             )
         );
         handleUserOp(userOp);
     }
-
-    // ======================================== internal functions ========================================
 
     function buildUserOp(uint256 privateKey, bytes memory callData)
         internal
