@@ -253,7 +253,7 @@ contract RoyaltyAutoClaimTest is AATest {
         bool[] memory invalidStatus = new bool[](1);
         invalidStatus[0] = true;
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ArrayLengthMismatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.InvalidArrayLength.selector));
         RoyaltyAutoClaim(address(proxy)).updateReviewers(newReviewers, invalidStatus);
 
         // Should succeed when called by admin
@@ -273,6 +273,12 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).updateReviewers(existingReviewers, removeStatus);
         assertEq(RoyaltyAutoClaim(address(proxy)).isReviewer(initialReviewers[0]), false);
+    }
+
+    function testCannot_updateReviewers_if_array_length_is_0() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.InvalidArrayLength.selector));
+        RoyaltyAutoClaim(address(proxy)).updateReviewers(new address[](0), new bool[](0));
     }
 
     function test_registerSubmission() public {

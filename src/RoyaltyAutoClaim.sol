@@ -16,9 +16,8 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
 
     error ZeroAddress();
     error Unauthorized(address caller);
-    error ArrayLengthMismatch();
+    error InvalidArrayLength();
     error EmptyTitle();
-    error InvalidToken();
     error InvalidRoyaltyLevel(uint16 royaltyLevel);
     error NotEnoughReviews();
     error AlreadyClaimed();
@@ -169,7 +168,8 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     // ================================ Admin ================================
 
     function updateReviewers(address[] memory _reviewers, bool[] memory _status) public onlyAdminOrEntryPoint {
-        require(_reviewers.length == _status.length, ArrayLengthMismatch());
+        require(_reviewers.length == _status.length, InvalidArrayLength());
+        require(_reviewers.length > 0, InvalidArrayLength());
 
         for (uint256 i = 0; i < _reviewers.length; i++) {
             _getMainStorage().configs.reviewers[_reviewers[i]] = _status[i];
