@@ -16,7 +16,7 @@ contract MockERC20 is ERC20 {
 contract RoyaltyAutoClaimTest is AATest {
     address owner = vm.addr(1);
     address admin = vm.addr(2);
-    address[] reviewers = new address[](3);
+    address[] initialReviewers = new address[](3);
 
     RoyaltyAutoClaim royaltyAutoClaim;
     RoyaltyAutoClaimProxy proxy;
@@ -26,15 +26,15 @@ contract RoyaltyAutoClaimTest is AATest {
     function setUp() public override {
         super.setUp();
 
-        reviewers[0] = vm.addr(3);
-        reviewers[1] = vm.addr(4);
+        initialReviewers[0] = vm.addr(3);
+        initialReviewers[1] = vm.addr(4);
 
         token = new MockERC20(owner);
 
         royaltyAutoClaim = new RoyaltyAutoClaim();
         proxy = new RoyaltyAutoClaimProxy(
             address(royaltyAutoClaim),
-            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(token), reviewers))
+            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(token), initialReviewers))
         );
 
         bytes32 v = vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT);
@@ -48,8 +48,8 @@ contract RoyaltyAutoClaimTest is AATest {
         // log
         console.log("owner", owner);
         console.log("admin", admin);
-        console.log("reviewer 0", reviewers[0]);
-        console.log("reviewer 1", reviewers[1]);
+        console.log("reviewer 0", initialReviewers[0]);
+        console.log("reviewer 1", initialReviewers[1]);
     }
 
     function test_simple_flow() public {
@@ -70,14 +70,14 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.expectRevert();
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
 
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
 
         vm.expectRevert();
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
         assertEq(RoyaltyAutoClaim(address(proxy)).getRoyalty("test"), 0 ether, "Royalty should be 0");
 
-        vm.prank(reviewers[1]);
+        vm.prank(initialReviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
 
         assertEq(RoyaltyAutoClaim(address(proxy)).getRoyalty("test"), 30 ether, "Royalty should be 30 ether");
@@ -112,7 +112,7 @@ contract RoyaltyAutoClaimTest is AATest {
         address newOwner = vm.randomAddress();
         MockV2 v2 = new MockV2();
 
-        PackedUserOperation memory userOp = buildUserOp(
+        PackedUserOperation memory userOp = _buildUserOp(
             0xbeef,
             abi.encodeCall(
                 royaltyAutoClaim.upgradeToAndCall, (address(v2), abi.encodeCall(MockV2.initialize, (newOwner)))
@@ -128,7 +128,7 @@ contract RoyaltyAutoClaimTest is AATest {
         );
         handleUserOp(userOp);
 
-        userOp = buildUserOp(
+        userOp = _buildUserOp(
             1,
             abi.encodeCall(
                 royaltyAutoClaim.upgradeToAndCall, (address(v2), abi.encodeCall(MockV2.initialize, (newOwner)))
@@ -243,12 +243,12 @@ contract RoyaltyAutoClaimTest is AATest {
         // Test removing an existing reviewer
         address[] memory existingReviewers = new address[](1);
         bool[] memory removeStatus = new bool[](1);
-        existingReviewers[0] = reviewers[0];
+        existingReviewers[0] = initialReviewers[0];
         removeStatus[0] = false;
 
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).updateReviewers(existingReviewers, removeStatus);
-        assertEq(RoyaltyAutoClaim(address(proxy)).isReviewer(reviewers[0]), false);
+        assertEq(RoyaltyAutoClaim(address(proxy)).isReviewer(initialReviewers[0]), false);
     }
 
     function test_registerSubmission() public {
@@ -274,9 +274,9 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.expectRevert(); // submission already exists
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
 
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
-        vm.prank(reviewers[1]);
+        vm.prank(initialReviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
 
@@ -335,9 +335,9 @@ contract RoyaltyAutoClaimTest is AATest {
 
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
-        vm.prank(reviewers[1]);
+        vm.prank(initialReviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
 
@@ -384,9 +384,9 @@ contract RoyaltyAutoClaimTest is AATest {
 
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
-        vm.prank(reviewers[1]);
+        vm.prank(initialReviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
 
@@ -403,7 +403,7 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
 
-        // Add more reviewers for testing
+        // Add more initialReviewers for testing
         address[] memory testReviewers = new address[](4);
         bool[] memory status = new bool[](4);
         for (uint256 i = 0; i < 4; i++) {
@@ -413,7 +413,7 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).updateReviewers(testReviewers, status);
 
-        // Test all valid royalty levels with different reviewers
+        // Test all valid royalty levels with different initialReviewers
         uint16[] memory validLevels = new uint16[](4);
         validLevels[0] = 20;
         validLevels[1] = 40;
@@ -458,7 +458,7 @@ contract RoyaltyAutoClaimTest is AATest {
         invalidLevels[3] = 255;
 
         for (uint256 i = 0; i < invalidLevels.length; i++) {
-            vm.prank(reviewers[0]);
+            vm.prank(initialReviewers[0]);
             vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.InvalidRoyaltyLevel.selector, invalidLevels[i]));
             RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", invalidLevels[i]);
         }
@@ -470,11 +470,11 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", vm.randomAddress());
 
         // First review should succeed
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
 
         // Second review from same reviewer should fail
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyReviewed.selector));
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
     }
@@ -498,11 +498,11 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // First review should succeed via UserOperation
         PackedUserOperation memory userOp =
-            buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20)));
+            _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20)));
         handleUserOp(userOp);
 
         // Second review from same reviewer should fail
-        userOp = buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 40)));
+        userOp = _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 40)));
 
         vm.expectEmit(false, true, true, true);
         emit IEntryPoint.UserOperationRevertReason(
@@ -521,9 +521,9 @@ contract RoyaltyAutoClaimTest is AATest {
         // Setup submission and reviews
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
-        vm.prank(reviewers[1]);
+        vm.prank(initialReviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
 
         // Claim royalty
@@ -549,9 +549,9 @@ contract RoyaltyAutoClaimTest is AATest {
         // Setup submission and reviews
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
-        vm.prank(reviewers[1]);
+        vm.prank(initialReviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
 
         // First claim should succeed
@@ -568,17 +568,18 @@ contract RoyaltyAutoClaimTest is AATest {
         // Setup submission and reviews
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
-        vm.prank(reviewers[1]);
+        vm.prank(initialReviewers[1]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
 
         // First claim should succeed via UserOperation
-        PackedUserOperation memory userOp = buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        PackedUserOperation memory userOp =
+            _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
         handleUserOp(userOp);
 
         // Second claim should fail
-        userOp = buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        userOp = _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
         vm.expectEmit(false, true, true, true);
         emit IEntryPoint.UserOperationRevertReason(
             bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyClaimed.selector)
@@ -592,7 +593,7 @@ contract RoyaltyAutoClaimTest is AATest {
         // Setup submission with only one review
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
-        vm.prank(reviewers[0]);
+        vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
 
         vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.NotEnoughReviews.selector));
@@ -612,6 +613,21 @@ contract RoyaltyAutoClaimTest is AATest {
 
     // ======================================== ERC-4337 ========================================
 
+    function _buildUserOp(uint256 privateKey, bytes memory callData)
+        internal
+        view
+        returns (PackedUserOperation memory)
+    {
+        PackedUserOperation memory userOp = createUserOp();
+        userOp.sender = address(proxy);
+        userOp.nonce = entryPoint.getNonce(address(proxy), 0);
+        userOp.callData = callData;
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        userOp.signature = abi.encodePacked(r, s, v);
+        return userOp;
+    }
+
     function test_validateUserOp_owner_functions() public {
         // Test owner functions
         bytes[] memory ownerCalls = new bytes[](5);
@@ -623,7 +639,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // Should fail for non-owner
         for (uint256 i = 0; i < ownerCalls.length; i++) {
-            PackedUserOperation memory userOp = buildUserOp(0xbeef, ownerCalls[i]);
+            PackedUserOperation memory userOp = _buildUserOp(0xbeef, ownerCalls[i]);
             vm.expectRevert(
                 abi.encodeWithSelector(
                     IEntryPoint.FailedOpWithRevert.selector,
@@ -637,7 +653,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // Should succeed for owner
         for (uint256 i = 0; i < ownerCalls.length; i++) {
-            PackedUserOperation memory userOp = buildUserOp(1, ownerCalls[i]);
+            PackedUserOperation memory userOp = _buildUserOp(1, ownerCalls[i]);
             handleUserOp(userOp);
         }
     }
@@ -652,7 +668,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // Should fail for non-admin
         for (uint256 i = 0; i < adminCalls.length; i++) {
-            PackedUserOperation memory userOp = buildUserOp(0xbeef, adminCalls[i]);
+            PackedUserOperation memory userOp = _buildUserOp(0xbeef, adminCalls[i]);
             vm.expectRevert(
                 abi.encodeWithSelector(
                     IEntryPoint.FailedOpWithRevert.selector,
@@ -666,7 +682,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // Should succeed for admin
         for (uint256 i = 0; i < adminCalls.length; i++) {
-            PackedUserOperation memory userOp = buildUserOp(2, adminCalls[i]); // admin's private key is 2
+            PackedUserOperation memory userOp = _buildUserOp(2, adminCalls[i]); // admin's private key is 2
             handleUserOp(userOp);
         }
     }
@@ -676,7 +692,7 @@ contract RoyaltyAutoClaimTest is AATest {
         bytes memory reviewerCall = abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20));
 
         // Should fail for non-reviewer
-        PackedUserOperation memory userOp = buildUserOp(0xbeef, reviewerCall);
+        PackedUserOperation memory userOp = _buildUserOp(0xbeef, reviewerCall);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -688,7 +704,7 @@ contract RoyaltyAutoClaimTest is AATest {
         handleUserOp(userOp);
 
         // Should succeed for reviewer
-        userOp = buildUserOp(3, reviewerCall); // reviewer's private key is 3
+        userOp = _buildUserOp(3, reviewerCall); // reviewer's private key is 3
         handleUserOp(userOp);
     }
 
@@ -697,7 +713,7 @@ contract RoyaltyAutoClaimTest is AATest {
         bytes memory publicCall = abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test"));
 
         // Should succeed for any address
-        PackedUserOperation memory userOp = buildUserOp(0xbeef, publicCall);
+        PackedUserOperation memory userOp = _buildUserOp(0xbeef, publicCall);
         handleUserOp(userOp);
     }
 
@@ -706,7 +722,7 @@ contract RoyaltyAutoClaimTest is AATest {
         bytes4 unsupportedSelector = bytes4(keccak256("unsupportedFunction()"));
         bytes memory unsupportedCall = abi.encodePacked(unsupportedSelector);
 
-        PackedUserOperation memory userOp = buildUserOp(0xbeef, unsupportedCall);
+        PackedUserOperation memory userOp = _buildUserOp(0xbeef, unsupportedCall);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -718,18 +734,55 @@ contract RoyaltyAutoClaimTest is AATest {
         handleUserOp(userOp);
     }
 
-    function buildUserOp(uint256 privateKey, bytes memory callData)
-        internal
-        view
-        returns (PackedUserOperation memory)
-    {
-        PackedUserOperation memory userOp = createUserOp();
-        userOp.sender = address(proxy);
-        userOp.nonce = entryPoint.getNonce(address(proxy), 0);
-        userOp.callData = callData;
-        (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
-        userOp.signature = abi.encodePacked(r, s, v);
-        return userOp;
+    // ======================================== View Functions ========================================
+
+    function test_isSubmissionClaimable() public {
+        address submitter = vm.randomAddress();
+
+        // Case 1: Submission does not exist
+        assertFalse(
+            RoyaltyAutoClaim(address(proxy)).isSubmissionClaimable("test"),
+            "Non-existent submission should not be claimable"
+        );
+
+        // Case 2: Submission is registered but has no reviews
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+        assertFalse(
+            RoyaltyAutoClaim(address(proxy)).isSubmissionClaimable("test"),
+            "Submission with no reviews should not be claimable"
+        );
+
+        // Case 3: Submission has one review (not enough)
+        vm.prank(initialReviewers[0]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+        assertFalse(
+            RoyaltyAutoClaim(address(proxy)).isSubmissionClaimable("test"),
+            "Submission with one review should not be claimable"
+        );
+
+        // Case 4: Submission has enough reviews (two or more)
+        vm.prank(initialReviewers[1]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
+        assertTrue(
+            RoyaltyAutoClaim(address(proxy)).isSubmissionClaimable("test"),
+            "Submission with two reviews should be claimable"
+        );
+
+        // Case 5: Submission is claimed (should not be claimable)
+        RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
+        assertFalse(
+            RoyaltyAutoClaim(address(proxy)).isSubmissionClaimable("test"), "Claimed submission should not be claimable"
+        );
+
+        // Case 6: Submission is revoked
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test2", submitter);
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).revokeSubmission("test2");
+        assertFalse(
+            RoyaltyAutoClaim(address(proxy)).isSubmissionClaimable("test2"),
+            "Revoked submission should not be claimable"
+        );
     }
 }
