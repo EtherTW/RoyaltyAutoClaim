@@ -21,6 +21,7 @@ contract RoyaltyAutoClaimTest is AATest {
     RoyaltyAutoClaim royaltyAutoClaim;
     RoyaltyAutoClaimProxy proxy;
     IERC20 token;
+    address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     function setUp() public override {
         super.setUp();
@@ -91,6 +92,8 @@ contract RoyaltyAutoClaimTest is AATest {
         assertEq(proxyBalanceAfter, proxyBalanceBefore - 30 ether, "Proxy balance should be 30 ether less");
     }
 
+    // ======================================== Upgradeable functions ========================================
+
     function test_upgradeToAndCall() public {
         address newOwner = vm.randomAddress();
         MockV2 v2 = new MockV2();
@@ -135,7 +138,78 @@ contract RoyaltyAutoClaimTest is AATest {
         assertEq(address(uint160(uint256(vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT)))), address(v2));
     }
 
-    // ======================================== registerSubmission ========================================
+    // ======================================== Owner Functions ========================================
+
+    function test_changeAdmin() public {
+        address newAdmin = vm.randomAddress();
+
+        // Should fail if not owner
+        vm.prank(vm.addr(0xbeef));
+        vm.expectRevert();
+        RoyaltyAutoClaim(address(proxy)).changeAdmin(newAdmin);
+
+        // Should fail if zero address
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        RoyaltyAutoClaim(address(proxy)).changeAdmin(address(0));
+
+        // Should succeed when called by owner
+        vm.prank(owner);
+        RoyaltyAutoClaim(address(proxy)).changeAdmin(newAdmin);
+        assertEq(RoyaltyAutoClaim(address(proxy)).admin(), newAdmin);
+    }
+
+    function test_changeRoyaltyToken() public {
+        address newToken = vm.randomAddress();
+
+        // Should fail if not owner
+        vm.prank(vm.addr(0xbeef));
+        vm.expectRevert();
+        RoyaltyAutoClaim(address(proxy)).changeRoyaltyToken(newToken);
+
+        // Should fail if zero address
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        RoyaltyAutoClaim(address(proxy)).changeRoyaltyToken(address(0));
+
+        // Should succeed when called by owner
+        vm.prank(owner);
+        RoyaltyAutoClaim(address(proxy)).changeRoyaltyToken(newToken);
+        assertEq(RoyaltyAutoClaim(address(proxy)).token(), newToken);
+    }
+
+    function test_renounceOwnership() public {
+        // Should always revert
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.RenounceOwnershipDisabled.selector));
+        RoyaltyAutoClaim(address(proxy)).renounceOwnership();
+    }
+
+    function test_emergencyWithdraw() public {
+        uint256 amount = 1 ether;
+
+        // Test native token withdrawal
+        uint256 ownerBalanceBefore = owner.balance;
+
+        // Should fail if not owner
+        vm.prank(vm.addr(0xbeef));
+        vm.expectRevert();
+        RoyaltyAutoClaim(address(proxy)).emergencyWithdraw(NATIVE_TOKEN, amount);
+
+        // Should succeed when called by owner
+        vm.prank(owner);
+        RoyaltyAutoClaim(address(proxy)).emergencyWithdraw(NATIVE_TOKEN, amount);
+        assertEq(owner.balance, ownerBalanceBefore + amount);
+
+        // Test ERC20 token withdrawal
+        uint256 tokenBalanceBefore = token.balanceOf(owner);
+
+        vm.prank(owner);
+        RoyaltyAutoClaim(address(proxy)).emergencyWithdraw(address(token), amount);
+        assertEq(token.balanceOf(owner), tokenBalanceBefore + amount);
+    }
+
+    // ======================================== Admin Functions ========================================
 
     function test_registerSubmission() public {
         address submitter = vm.randomAddress();
