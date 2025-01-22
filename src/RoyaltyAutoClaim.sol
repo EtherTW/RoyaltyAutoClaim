@@ -28,7 +28,6 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     error SubmissionNotRegistered();
     error NotFromEntryPoint();
     error ForbiddenPaymaster();
-    error ZeroRoyalty();
     error UnsupportSelector(bytes4 selector);
     error AlreadyReviewed();
 
@@ -237,7 +236,6 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
             revert NotEnoughReviews();
         }
         uint256 amount = getRoyalty(title);
-        require(amount > 0, ZeroRoyalty());
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
 

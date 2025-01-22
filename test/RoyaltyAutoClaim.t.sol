@@ -92,6 +92,30 @@ contract RoyaltyAutoClaimTest is AATest {
         assertEq(proxyBalanceAfter, proxyBalanceBefore - 30 ether, "Proxy balance should be 30 ether less");
     }
 
+    function testCannot_initialize_with_zero_addresses() public {
+        RoyaltyAutoClaim newImpl = new RoyaltyAutoClaim();
+
+        // Test zero owner
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        new RoyaltyAutoClaimProxy(
+            address(newImpl),
+            abi.encodeCall(RoyaltyAutoClaim.initialize, (address(0), admin, address(token), initialReviewers))
+        );
+
+        // Test zero admin
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        new RoyaltyAutoClaimProxy(
+            address(newImpl),
+            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, address(0), address(token), initialReviewers))
+        );
+
+        // Test zero token
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        new RoyaltyAutoClaimProxy(
+            address(newImpl), abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(0), initialReviewers))
+        );
+    }
+
     // ======================================== Upgradeable functions ========================================
 
     function test_upgradeToAndCall() public {
@@ -734,6 +758,29 @@ contract RoyaltyAutoClaimTest is AATest {
         handleUserOp(userOp);
     }
 
+    function testCannot_validateUserOp_not_from_entrypoint() public {
+        PackedUserOperation memory userOp;
+        vm.expectRevert(RoyaltyAutoClaim.NotFromEntryPoint.selector);
+        royaltyAutoClaim.validateUserOp(userOp, bytes32(0), 0);
+    }
+
+    function testCannot_validateUserOp_with_paymaster() public {
+        PackedUserOperation memory userOp =
+            _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+
+        userOp.paymasterAndData = abi.encodePacked(vm.addr(0xdead), uint128(999_999), uint128(999_999));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(RoyaltyAutoClaim.ForbiddenPaymaster.selector)
+            )
+        );
+        handleUserOp(userOp);
+    }
+
     // ======================================== View Functions ========================================
 
     function test_isSubmissionClaimable() public {
@@ -784,5 +831,9 @@ contract RoyaltyAutoClaimTest is AATest {
             RoyaltyAutoClaim(address(proxy)).isSubmissionClaimable("test2"),
             "Revoked submission should not be claimable"
         );
+    }
+
+    function test_entryPoint() public view {
+        assertEq(RoyaltyAutoClaim(address(proxy)).entryPoint(), 0x0000000071727De22E5E9d8BAf0edAc6f37da032);
     }
 }
