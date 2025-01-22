@@ -403,20 +403,33 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
 
-        // Test all valid royalty levels
+        // Add more reviewers for testing
+        address[] memory testReviewers = new address[](4);
+        bool[] memory status = new bool[](4);
+        for (uint256 i = 0; i < 4; i++) {
+            testReviewers[i] = vm.addr(10 + i);
+            status[i] = true;
+        }
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).updateReviewers(testReviewers, status);
+
+        // Test all valid royalty levels with different reviewers
         uint16[] memory validLevels = new uint16[](4);
         validLevels[0] = 20;
         validLevels[1] = 40;
         validLevels[2] = 60;
         validLevels[3] = 80;
 
+        uint256 expectedTotalLevel = 0;
         for (uint256 i = 0; i < validLevels.length; i++) {
-            vm.prank(reviewers[0]);
+            vm.prank(testReviewers[i]);
             RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", validLevels[i]);
+
+            expectedTotalLevel += validLevels[i];
 
             RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
             assertEq(submission.reviewCount, i + 1, "Review count should increment");
-            assertEq(submission.totalRoyaltyLevel, validLevels[i], "Total royalty level should match");
+            assertEq(submission.totalRoyaltyLevel, expectedTotalLevel, "Total royalty level should be cumulative");
         }
     }
 
@@ -462,8 +475,40 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // Second review from same reviewer should fail
         vm.prank(reviewers[0]);
-        vm.expectRevert();
+        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyReviewed.selector));
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
+    }
+
+    function testCannot_reviewSubmission_multiple_times_4337() public {
+        address submitter = vm.randomAddress();
+        address reviewer = vm.addr(0xbeef);
+
+        // Register reviewer
+        address[] memory testReviewers = new address[](1);
+        bool[] memory status = new bool[](1);
+        testReviewers[0] = reviewer;
+        status[0] = true;
+
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).updateReviewers(testReviewers, status);
+
+        // Register submission
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+
+        // First review should succeed via UserOperation
+        PackedUserOperation memory userOp =
+            buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20)));
+        handleUserOp(userOp);
+
+        // Second review from same reviewer should fail
+        userOp = buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 40)));
+
+        vm.expectEmit(false, true, true, true);
+        emit IEntryPoint.UserOperationRevertReason(
+            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyReviewed.selector)
+        );
+        handleUserOp(userOp);
     }
 
     // ======================================== Submitter Functions ========================================
@@ -544,6 +589,30 @@ contract RoyaltyAutoClaimTest is AATest {
         // Second claim should fail
         vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyClaimed.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
+    }
+
+    function testCannot_claimRoyalty_if_already_claimed_4337() public {
+        address submitter = vm.addr(0xbeef);
+
+        // Setup submission and reviews
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+        vm.prank(reviewers[0]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+        vm.prank(reviewers[1]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
+
+        // First claim should succeed via UserOperation
+        PackedUserOperation memory userOp = buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        handleUserOp(userOp);
+
+        // Second claim should fail
+        userOp = buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        vm.expectEmit(false, true, true, true);
+        emit IEntryPoint.UserOperationRevertReason(
+            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyClaimed.selector)
+        );
+        handleUserOp(userOp);
     }
 
     function testCannot_claimRoyalty_if_not_enough_reviews() public {

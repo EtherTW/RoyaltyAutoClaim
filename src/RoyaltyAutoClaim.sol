@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.27;
+pragma solidity ^0.8.28;
 
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
@@ -30,6 +30,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     error ForbiddenPaymaster();
     error ZeroRoyalty();
     error UnsupportSelector(bytes4 selector);
+    error AlreadyReviewed();
 
     uint8 public constant ROYALTY_LEVEL_20 = 20;
     uint8 public constant ROYALTY_LEVEL_40 = 40;
@@ -45,9 +46,9 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
 
     struct Submission {
         address royaltyRecipient;
-        uint8 reviewCount;
         uint16 totalRoyaltyLevel;
         SubmissionStatus status;
+        uint8 reviewCount;
     }
 
     enum SubmissionStatus {
@@ -60,15 +61,20 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     struct MainStorage {
         Configs configs;
         mapping(string => Submission) submissions;
+        mapping(string => mapping(address => bool)) hasReviewed;
     }
+
+    // address transient userOpSigner;
 
     // keccak256(abi.encode(uint256(keccak256("royaltyautoclaim.storage.main")) - 1)) & ~bytes32(uint256(0xff));
     /// @dev cast index-erc7201 royaltyautoclaim.storage.main
-    bytes32 private constant MAIN_STORAGE_LOCATION = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
+    bytes32 private constant MAIN_STORAGE_SLOT = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
+    // @dev cast index-erc7201 royaltyautoclaim.storage.signer
+    bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
 
     function _getMainStorage() private pure returns (MainStorage storage $) {
         assembly {
-            $.slot := MAIN_STORAGE_LOCATION
+            $.slot := MAIN_STORAGE_SLOT
         }
     }
 
@@ -198,9 +204,26 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
                 || royaltyLevel == ROYALTY_LEVEL_80,
             InvalidRoyaltyLevel(royaltyLevel)
         );
+
+        address reviewer = _getReviewer();
         MainStorage storage $ = _getMainStorage();
+        if ($.hasReviewed[title][reviewer]) {
+            revert AlreadyReviewed();
+        }
+        $.hasReviewed[title][reviewer] = true;
         $.submissions[title].reviewCount++;
         $.submissions[title].totalRoyaltyLevel += royaltyLevel;
+    }
+
+    function _getReviewer() internal view returns (address) {
+        if (msg.sender == entryPoint()) {
+            address reviewer;
+            assembly {
+                reviewer := tload(TRANSIENT_SIGNER_SLOT)
+            }
+            return reviewer;
+        }
+        return msg.sender;
     }
 
     // ================================ Submitter ================================
@@ -271,6 +294,11 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
             if (!isReviewer(signer)) {
                 revert Unauthorized(signer);
             }
+
+            assembly {
+                tstore(TRANSIENT_SIGNER_SLOT, signer)
+            }
+
             return 0;
             // Anybody
         } else if (selector == this.claimRoyalty.selector) {
