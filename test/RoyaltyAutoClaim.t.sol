@@ -12,7 +12,6 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
     Test case order
     (Find following keywords to quickly navigate)
 
-    Upgradeable functions
     Owner Functions
     Admin Functions
     Reviewer Functions
@@ -184,7 +183,7 @@ contract RoyaltyAutoClaimTest is AATest {
         );
     }
 
-    // ======================================== Upgradeable functions ========================================
+    // ======================================== Owner Functions ========================================
 
     function test_upgradeToAndCall_success() public {
         address newOwner = vm.randomAddress();
@@ -230,7 +229,65 @@ contract RoyaltyAutoClaimTest is AATest {
         assertEq(address(uint160(uint256(vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT)))), address(v2));
     }
 
-    // ======================================== Owner Functions ========================================
+    function test_transferOwnership() public {
+        address newOwner = vm.addr(0xbeef);
+
+        // Should fail if not owner
+        vm.prank(vm.addr(0xbeef));
+        vm.expectRevert();
+        royaltyAutoClaim.transferOwnership(newOwner);
+
+        // Should succeed when called by owner
+        vm.prank(owner);
+        royaltyAutoClaim.transferOwnership(newOwner);
+        assertEq(royaltyAutoClaim.owner(), newOwner);
+
+        // Should fail if not newOwner
+        PackedUserOperation memory userOp =
+            _buildUserOp(0xcafe, abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (owner)));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xcafe))
+            )
+        );
+        handleUserOp(userOp);
+
+        // Should fail if newOwner is zero address
+        userOp = _buildUserOp(0xcafe, abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0))));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xcafe))
+            )
+        );
+        handleUserOp(userOp);
+
+        // Should succeed when called by newOwner via UserOperation
+        userOp = _buildUserOp(0xbeef, abi.encodeCall(OwnableUpgradeable.transferOwnership, (owner)));
+        handleUserOp(userOp);
+        assertEq(royaltyAutoClaim.owner(), owner);
+    }
+
+    function testCannot_transferOwnership_if_zero_address() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        royaltyAutoClaim.transferOwnership(address(0));
+    }
+
+    function testCannot_transferOwnership_if_zero_address_4337() public {
+        PackedUserOperation memory userOp =
+            _buildUserOp(1, abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0))));
+        vm.expectEmit(false, true, true, true);
+        emit IEntryPoint.UserOperationRevertReason(
+            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
+        );
+        handleUserOp(userOp);
+    }
 
     function test_changeAdmin() public {
         address newAdmin = vm.randomAddress();
@@ -822,12 +879,12 @@ contract RoyaltyAutoClaimTest is AATest {
     }
 
     function test_validateUserOp_owner_functions() public {
-        // Test Owner Functions
+        // note: 這裡只驗證 validateUserOp 的資格，沒檢查 userOp 的執行，所以 zero address 交易雖成功，理論上 userop 要是失敗的
         bytes[] memory ownerCalls = new bytes[](5);
         ownerCalls[0] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(0), ""));
         ownerCalls[1] = abi.encodeCall(RoyaltyAutoClaim.changeAdmin, (address(0)));
         ownerCalls[2] = abi.encodeCall(RoyaltyAutoClaim.changeRoyaltyToken, (address(0)));
-        ownerCalls[3] = abi.encodeCall(OwnableUpgradeable.transferOwnership, (address(0)));
+        ownerCalls[3] = abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0)));
         ownerCalls[4] = abi.encodeCall(RoyaltyAutoClaim.emergencyWithdraw, (address(0), 0));
 
         // Should fail for non-owner
