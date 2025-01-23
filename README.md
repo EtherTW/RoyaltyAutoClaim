@@ -10,6 +10,11 @@ forge coverage
 forge coverage --report lcov 
 ```
 
+確保 storage layout 為空，避免未來升級時 storage collision 風險
+```
+forge inspect ./src/RoyaltyAutoClaim.sol:RoyaltyAutoClaim storage
+```
+
 ## Frontend
 
 - For icon, use [lucide-vue-next](https://lucide.dev/icons)

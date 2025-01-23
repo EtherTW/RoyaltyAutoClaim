@@ -90,6 +90,26 @@ contract RoyaltyAutoClaimTest is AATest {
         harness = new RoyaltyAutoClaimHarness();
     }
 
+    function test_prevent_storage_collision() public {
+        // Get storage slots 0-3 and verify they are empty
+        for (uint256 i = 0; i < 4; i++) {
+            bytes32 slot = vm.load(address(royaltyAutoClaim), bytes32(i));
+            assertEq(slot, bytes32(0), "Storage slot should be empty");
+        }
+
+        // Perform some state changes
+        address[] memory reviewers = new address[](1);
+        reviewers[0] = initialReviewers[0];
+        vm.prank(owner);
+        RoyaltyAutoClaim(address(proxy)).transferOwnership(vm.randomAddress());
+
+        // Verify slots are still empty after state changes
+        for (uint256 i = 0; i < 4; i++) {
+            bytes32 slot = vm.load(address(royaltyAutoClaim), bytes32(i));
+            assertEq(slot, bytes32(0), "Storage slot should remain empty after state changes");
+        }
+    }
+
     function test_simple_flow() public {
         address submitter = vm.randomAddress();
         vm.prank(admin);
