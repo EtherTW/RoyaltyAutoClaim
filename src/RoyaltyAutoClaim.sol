@@ -60,12 +60,10 @@ interface IRoyaltyAutoClaim {
     error InvalidArrayLength();
     error EmptyTitle();
     error InvalidRoyaltyLevel(uint16 royaltyLevel);
-    error NotEnoughReviews();
-    error AlreadyClaimed();
+    error SubmissionNotClaimable();
     error RenounceOwnershipDisabled();
     error AlreadyRegistered();
-    error SubmissionNotExist();
-    error SubmissionNotRegistered();
+    error SubmissionStatusNotRegistered();
     error NotFromEntryPoint();
     error ForbiddenPaymaster();
     error UnsupportSelector(bytes4 selector);
@@ -250,14 +248,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) public onlyAdminOrEntryPoint {
-        require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         address oldRecipient = _getMainStorage().submissions[title].royaltyRecipient;
         _getMainStorage().submissions[title].royaltyRecipient = newRoyaltyRecipient;
         emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient);
     }
 
     function revokeSubmission(string memory title) public onlyAdminOrEntryPoint {
-        require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         delete _getMainStorage().submissions[title];
         emit SubmissionRevoked(title);
     }
@@ -265,6 +263,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     // ================================ Reviewer ================================
 
     function reviewSubmission(string memory title, uint16 royaltyLevel) public onlyReviewerOrEntryPoint {
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         require(
             royaltyLevel == ROYALTY_LEVEL_20 || royaltyLevel == ROYALTY_LEVEL_40 || royaltyLevel == ROYALTY_LEVEL_60
                 || royaltyLevel == ROYALTY_LEVEL_80,
@@ -291,13 +290,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     // ================================ Submitter ================================
 
     function claimRoyalty(string memory title) public nonReentrant {
-        if (submissions(title).status == SubmissionStatus.NotExist) {
-            revert SubmissionNotExist();
-        } else if (submissions(title).status == SubmissionStatus.Claimed) {
-            revert AlreadyClaimed();
-        } else if (!isSubmissionClaimable(title)) {
-            revert NotEnoughReviews();
-        }
+        require(isSubmissionClaimable(title), SubmissionNotClaimable());
+
         uint256 amount = getRoyalty(title);
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;

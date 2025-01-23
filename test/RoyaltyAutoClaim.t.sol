@@ -590,6 +590,31 @@ contract RoyaltyAutoClaimTest is AATest {
         }
     }
 
+    function testCannot_reviewSubmission_if_the_submission_is_claimed_or_not_exist() public {
+        // Test non-existent submission
+        vm.prank(initialReviewers[0]);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+
+        // Setup a submission and get it to claimed state
+        address submitter = vm.randomAddress();
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+
+        vm.prank(initialReviewers[0]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+        vm.prank(initialReviewers[1]);
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
+
+        // Claim the royalty
+        RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
+
+        // Test reviewing a claimed submission
+        vm.prank(initialReviewers[0]);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
+        RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
+    }
+
     function testCannot_reviewSubmission_if_not_reviewer() public {
         // Register submission
         vm.prank(admin);
@@ -696,7 +721,7 @@ contract RoyaltyAutoClaimTest is AATest {
     }
 
     function testCannot_claimRoyalty_if_submission_not_registered() public {
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotExist.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("nonexistent");
     }
 
@@ -715,7 +740,7 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
 
         // Second claim should fail
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyClaimed.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
     }
 
@@ -739,7 +764,10 @@ contract RoyaltyAutoClaimTest is AATest {
         userOp = _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
         vm.expectEmit(false, true, true, true);
         emit IEntryPoint.UserOperationRevertReason(
-            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyClaimed.selector)
+            bytes32(0),
+            address(proxy),
+            userOp.nonce,
+            abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector)
         );
         handleUserOp(userOp);
     }
@@ -753,7 +781,7 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
 
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.NotEnoughReviews.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
     }
 
@@ -764,7 +792,7 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
 
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.NotEnoughReviews.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
     }
 
