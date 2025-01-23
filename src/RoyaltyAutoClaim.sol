@@ -13,8 +13,8 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 
 interface IRoyaltyAutoClaim {
     // Owner functions
-    function upgradeToAndCall(address newImplementation, bytes memory data) external payable;
-    function transferOwnership(address newOwner) external;
+    // function upgradeToAndCall(address newImplementation, bytes memory data) external payable;
+    // function transferOwnership(address newOwner) external;
     function changeAdmin(address _admin) external;
     function changeRoyaltyToken(address _token) external;
     function emergencyWithdraw(address _token, uint256 _amount) external;
@@ -180,24 +180,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     // ================================ Owner ================================
-    function upgradeToAndCall(address newImplementation, bytes memory data)
-        public
-        payable
-        override(UUPSUpgradeable, IRoyaltyAutoClaim)
-        onlyOwnerOrEntryPoint
-    {
-        super.upgradeToAndCall(newImplementation, data);
-    }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyOwnerOrEntryPoint {}
-
-    function transferOwnership(address newOwner)
-        public
-        override(OwnableUpgradeable, IRoyaltyAutoClaim)
-        onlyOwnerOrEntryPoint
-    {
-        super.transferOwnership(newOwner);
-    }
 
     function changeAdmin(address _admin) public onlyOwnerOrEntryPoint {
         require(_admin != address(0), ZeroAddress());
