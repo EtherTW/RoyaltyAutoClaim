@@ -317,6 +317,10 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         return _getMainStorage().configs.reviewers[reviewer];
     }
 
+    function hasReviewed(string memory title, address reviewer) public view returns (bool) {
+        return _getMainStorage().hasReviewed[title][reviewer];
+    }
+
     function isSubmissionClaimable(string memory title) public view returns (bool) {
         if (submissions(title).status != SubmissionStatus.Registered) {
             return false;

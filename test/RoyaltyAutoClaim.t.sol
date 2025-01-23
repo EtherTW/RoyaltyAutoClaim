@@ -433,7 +433,7 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
 
-        // Add more initialReviewers for testing
+        // Add more reviewers for testing
         address[] memory testReviewers = new address[](4);
         bool[] memory status = new bool[](4);
         for (uint256 i = 0; i < 4; i++) {
@@ -443,7 +443,7 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).updateReviewers(testReviewers, status);
 
-        // Test all valid royalty levels with different initialReviewers
+        // Test all valid royalty levels with different reviewers
         uint16[] memory validLevels = new uint16[](4);
         validLevels[0] = 20;
         validLevels[1] = 40;
@@ -460,6 +460,75 @@ contract RoyaltyAutoClaimTest is AATest {
             RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
             assertEq(submission.reviewCount, i + 1, "Review count should increment");
             assertEq(submission.totalRoyaltyLevel, expectedTotalLevel, "Total royalty level should be cumulative");
+
+            // Verify hasReviewed is set to true for the reviewer
+            assertTrue(
+                RoyaltyAutoClaim(address(proxy)).hasReviewed("test", testReviewers[i]),
+                "hasReviewed should be true for reviewer"
+            );
+
+            // Verify hasReviewed is still false for unused reviewers
+            for (uint256 j = i + 1; j < testReviewers.length; j++) {
+                assertFalse(
+                    RoyaltyAutoClaim(address(proxy)).hasReviewed("test", testReviewers[j]),
+                    "hasReviewed should be false for unused reviewers"
+                );
+            }
+        }
+    }
+
+    function test_reviewSubmission_4337() public {
+        address submitter = vm.randomAddress();
+
+        // Register submission
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
+
+        // Add more reviewers for testing
+        address[] memory testReviewers = new address[](4);
+        bool[] memory status = new bool[](4);
+        for (uint256 i = 0; i < 4; i++) {
+            testReviewers[i] = vm.addr(10 + i);
+            status[i] = true;
+        }
+        vm.prank(admin);
+        RoyaltyAutoClaim(address(proxy)).updateReviewers(testReviewers, status);
+
+        // Test all valid royalty levels with different reviewers
+        uint16[] memory validLevels = new uint16[](4);
+        validLevels[0] = 20;
+        validLevels[1] = 40;
+        validLevels[2] = 60;
+        validLevels[3] = 80;
+
+        uint256 expectedTotalLevel = 0;
+        for (uint256 i = 0; i < validLevels.length; i++) {
+            // Create and execute UserOperation for review submission
+            PackedUserOperation memory userOp = _buildUserOp(
+                10 + i, // Use the same private key as the reviewer address
+                abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", validLevels[i]))
+            );
+            handleUserOp(userOp);
+
+            expectedTotalLevel += validLevels[i];
+
+            RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
+            assertEq(submission.reviewCount, i + 1, "Review count should increment");
+            assertEq(submission.totalRoyaltyLevel, expectedTotalLevel, "Total royalty level should be cumulative");
+
+            // Verify hasReviewed is set to true for the reviewer
+            assertTrue(
+                RoyaltyAutoClaim(address(proxy)).hasReviewed("test", testReviewers[i]),
+                "hasReviewed should be true for reviewer"
+            );
+
+            // Verify hasReviewed is still false for unused reviewers
+            for (uint256 j = i + 1; j < testReviewers.length; j++) {
+                assertFalse(
+                    RoyaltyAutoClaim(address(proxy)).hasReviewed("test", testReviewers[j]),
+                    "hasReviewed should be false for unused reviewers"
+                );
+            }
         }
     }
 
