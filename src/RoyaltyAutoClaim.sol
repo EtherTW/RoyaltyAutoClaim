@@ -11,9 +11,50 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+interface IRoyaltyAutoClaim {
+    // Owner functions
+    function upgradeToAndCall(address newImplementation, bytes memory data) external payable;
+    function transferOwnership(address newOwner) external;
+    function changeAdmin(address _admin) external;
+    function changeRoyaltyToken(address _token) external;
+    function emergencyWithdraw(address _token, uint256 _amount) external;
 
+    // Admin functions
+    function updateReviewers(address[] memory _reviewers, bool[] memory _status) external;
+    function registerSubmission(string memory title, address royaltyRecipient) external;
+    function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) external;
+    function revokeSubmission(string memory title) external;
+
+    // Reviewer functions
+    function reviewSubmission(string memory title, uint16 royaltyLevel) external;
+
+    // Submitter functions
+    function claimRoyalty(string memory title) external;
+
+    // Events
+    event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
+    event RoyaltyTokenChanged(address indexed oldToken, address indexed newToken);
+    event EmergencyWithdraw(address indexed token, uint256 amount);
+    event ReviewerStatusUpdated(address indexed reviewer, bool status);
+    event SubmissionRegistered(string indexed title, address indexed royaltyRecipient);
+    event SubmissionRoyaltyRecipientUpdated(
+        string indexed title, address indexed oldRecipient, address indexed newRecipient
+    );
+    event SubmissionRevoked(string indexed title);
+    event SubmissionReviewed(string indexed title, address indexed reviewer, uint16 royaltyLevel);
+    event RoyaltyClaimed(string indexed title, address indexed recipient, uint256 amount);
+
+    // View functions
+    function admin() external view returns (address);
+    function token() external view returns (address);
+    function submissions(string memory title) external view returns (Submission memory);
+    function isReviewer(address reviewer) external view returns (bool);
+    function hasReviewed(string memory title, address reviewer) external view returns (bool);
+    function isSubmissionClaimable(string memory title) external view returns (bool);
+    function getRoyalty(string memory title) external view returns (uint256 royalty);
+    function entryPoint() external pure returns (address);
+
+    // Errors
     error ZeroAddress();
     error Unauthorized(address caller);
     error InvalidArrayLength();
@@ -30,12 +71,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     error UnsupportSelector(bytes4 selector);
     error AlreadyReviewed();
 
-    uint8 public constant ROYALTY_LEVEL_20 = 20;
-    uint8 public constant ROYALTY_LEVEL_40 = 40;
-    uint8 public constant ROYALTY_LEVEL_60 = 60;
-    uint8 public constant ROYALTY_LEVEL_80 = 80;
-    address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-
+    // Structs
     struct Configs {
         address admin;
         address token;
@@ -61,6 +97,16 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         mapping(string => Submission) submissions;
         mapping(string => mapping(address => bool)) hasReviewed;
     }
+}
+
+contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradeable, IAccount, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
+    uint8 public constant ROYALTY_LEVEL_20 = 20;
+    uint8 public constant ROYALTY_LEVEL_40 = 40;
+    uint8 public constant ROYALTY_LEVEL_60 = 60;
+    uint8 public constant ROYALTY_LEVEL_80 = 80;
+    address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     // keccak256(abi.encode(uint256(keccak256("royaltyautoclaim.storage.main")) - 1)) & ~bytes32(uint256(0xff));
     /// @dev cast index-erc7201 royaltyautoclaim.storage.main
@@ -134,20 +180,37 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     }
 
     // ================================ Owner ================================
+    function upgradeToAndCall(address newImplementation, bytes memory data)
+        public
+        payable
+        override(UUPSUpgradeable, IRoyaltyAutoClaim)
+        onlyOwnerOrEntryPoint
+    {
+        super.upgradeToAndCall(newImplementation, data);
+    }
 
-    /**
-     * @dev for upgradeToAndCall
-     */
     function _authorizeUpgrade(address newImplementation) internal override onlyOwnerOrEntryPoint {}
+
+    function transferOwnership(address newOwner)
+        public
+        override(OwnableUpgradeable, IRoyaltyAutoClaim)
+        onlyOwnerOrEntryPoint
+    {
+        super.transferOwnership(newOwner);
+    }
 
     function changeAdmin(address _admin) public onlyOwnerOrEntryPoint {
         require(_admin != address(0), ZeroAddress());
+        address oldAdmin = _getMainStorage().configs.admin;
         _getMainStorage().configs.admin = _admin;
+        emit AdminChanged(oldAdmin, _admin);
     }
 
     function changeRoyaltyToken(address _token) public onlyOwnerOrEntryPoint {
         require(_token != address(0), ZeroAddress());
+        address oldToken = _getMainStorage().configs.token;
         _getMainStorage().configs.token = _token;
+        emit RoyaltyTokenChanged(oldToken, _token);
     }
 
     function renounceOwnership() public pure override {
@@ -161,6 +224,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         } else {
             IERC20(_token).safeTransfer(owner(), _amount);
         }
+        emit EmergencyWithdraw(_token, _amount);
     }
 
     // ================================ Admin ================================
@@ -171,6 +235,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
 
         for (uint256 i = 0; i < _reviewers.length; i++) {
             _getMainStorage().configs.reviewers[_reviewers[i]] = _status[i];
+            emit ReviewerStatusUpdated(_reviewers[i], _status[i]);
         }
     }
 
@@ -181,16 +246,20 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].royaltyRecipient = royaltyRecipient;
         $.submissions[title].status = SubmissionStatus.Registered;
+        emit SubmissionRegistered(title, royaltyRecipient);
     }
 
     function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) public onlyAdminOrEntryPoint {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
+        address oldRecipient = _getMainStorage().submissions[title].royaltyRecipient;
         _getMainStorage().submissions[title].royaltyRecipient = newRoyaltyRecipient;
+        emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient);
     }
 
     function revokeSubmission(string memory title) public onlyAdminOrEntryPoint {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionNotRegistered());
         delete _getMainStorage().submissions[title];
+        emit SubmissionRevoked(title);
     }
 
     // ================================ Reviewer ================================
@@ -216,6 +285,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         $.hasReviewed[title][reviewer] = true;
         $.submissions[title].reviewCount++;
         $.submissions[title].totalRoyaltyLevel += royaltyLevel;
+        emit SubmissionReviewed(title, reviewer, royaltyLevel);
     }
 
     // ================================ Submitter ================================
@@ -233,6 +303,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         $.submissions[title].status = SubmissionStatus.Claimed;
 
         IERC20(token()).safeTransfer(submissions(title).royaltyRecipient, amount);
+        emit RoyaltyClaimed(title, submissions(title).royaltyRecipient, amount);
     }
 
     // ================================ ERC-4337 ================================
@@ -295,11 +366,7 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
     }
 
     /// @dev 當函式透過 4337 flow 呼叫且需要 signer address 時使用 ex. hasReviewed in reviewSubmission
-    function _getUserOpSigner() internal view returns (address) {
-        if (msg.sender != entryPoint()) {
-            revert NotFromEntryPoint();
-        }
-
+    function _getUserOpSigner() internal view onlyEntryPoint returns (address) {
         address signer;
         assembly {
             signer := tload(TRANSIENT_SIGNER_SLOT)

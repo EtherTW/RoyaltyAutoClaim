@@ -9,17 +9,17 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /*
 
-Test case order
-(Find following keywords to quickly navigate)
+    Test case order
+    (Find following keywords to quickly navigate)
 
-Upgradeable functions
-Owner Functions
-Admin Functions
-Reviewer Functions
-Submitter Functions
-ERC-4337 Flow
-View Functions
-Internal Functions
+    Upgradeable functions
+    Owner Functions
+    Admin Functions
+    Reviewer Functions
+    Submitter Functions
+    ERC-4337 Flow
+    View Functions
+    Internal Functions
 
 */
 
@@ -101,7 +101,7 @@ contract RoyaltyAutoClaimTest is AATest {
         assertEq(submission.totalRoyaltyLevel, 0, "Total royalty level should be 0");
         assertEq(
             uint256(submission.status),
-            uint256(RoyaltyAutoClaim.SubmissionStatus.Registered),
+            uint256(IRoyaltyAutoClaim.SubmissionStatus.Registered),
             "Submission status should be Registered"
         );
 
@@ -134,21 +134,21 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim newImpl = new RoyaltyAutoClaim();
 
         // Test zero owner
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         new RoyaltyAutoClaimProxy(
             address(newImpl),
             abi.encodeCall(RoyaltyAutoClaim.initialize, (address(0), admin, address(token), initialReviewers))
         );
 
         // Test zero admin
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         new RoyaltyAutoClaimProxy(
             address(newImpl),
             abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, address(0), address(token), initialReviewers))
         );
 
         // Test zero token
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         new RoyaltyAutoClaimProxy(
             address(newImpl), abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(0), initialReviewers))
         );
@@ -185,7 +185,7 @@ contract RoyaltyAutoClaimTest is AATest {
                 IEntryPoint.FailedOpWithRevert.selector,
                 0,
                 "AA23 reverted",
-                abi.encodeWithSelector(RoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
+                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
             )
         );
         handleUserOp(userOp);
@@ -212,7 +212,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // Should fail if zero address
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         RoyaltyAutoClaim(address(proxy)).changeAdmin(address(0));
 
         // Should succeed when called by owner
@@ -231,7 +231,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // Should fail if zero address
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         RoyaltyAutoClaim(address(proxy)).changeRoyaltyToken(address(0));
 
         // Should succeed when called by owner
@@ -243,7 +243,7 @@ contract RoyaltyAutoClaimTest is AATest {
     function test_renounceOwnership() public {
         // Should always revert
         vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.RenounceOwnershipDisabled.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.RenounceOwnershipDisabled.selector));
         RoyaltyAutoClaim(address(proxy)).renounceOwnership();
     }
 
@@ -291,7 +291,7 @@ contract RoyaltyAutoClaimTest is AATest {
         bool[] memory invalidStatus = new bool[](1);
         invalidStatus[0] = true;
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.InvalidArrayLength.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidArrayLength.selector));
         RoyaltyAutoClaim(address(proxy)).updateReviewers(newReviewers, invalidStatus);
 
         // Should succeed when called by admin
@@ -315,7 +315,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
     function testCannot_updateReviewers_if_array_length_is_0() public {
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.InvalidArrayLength.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidArrayLength.selector));
         RoyaltyAutoClaim(address(proxy)).updateReviewers(new address[](0), new bool[](0));
     }
 
@@ -329,7 +329,7 @@ contract RoyaltyAutoClaimTest is AATest {
         assertEq(submission.totalRoyaltyLevel, 0, "Total royalty level should be 0");
         assertEq(
             uint256(submission.status),
-            uint256(RoyaltyAutoClaim.SubmissionStatus.Registered),
+            uint256(IRoyaltyAutoClaim.SubmissionStatus.Registered),
             "Submission status should be Registered"
         );
     }
@@ -360,13 +360,13 @@ contract RoyaltyAutoClaimTest is AATest {
 
     function testCannot_registerSubmission_with_empty_title() public {
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.EmptyTitle.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmptyTitle.selector));
         RoyaltyAutoClaim(address(proxy)).registerSubmission("", vm.randomAddress());
     }
 
     function testCannot_registerSubmission_with_zero_address() public {
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.ZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", address(0));
     }
 
@@ -427,7 +427,7 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
         assertEq(
             uint256(submission.status),
-            uint256(RoyaltyAutoClaim.SubmissionStatus.NotExist),
+            uint256(IRoyaltyAutoClaim.SubmissionStatus.NotExist),
             "Submission should be deleted"
         );
         assertEq(submission.royaltyRecipient, address(0), "Royalty recipient should be zero");
@@ -596,7 +596,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         for (uint256 i = 0; i < invalidLevels.length; i++) {
             vm.prank(initialReviewers[0]);
-            vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.InvalidRoyaltyLevel.selector, invalidLevels[i]));
+            vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidRoyaltyLevel.selector, invalidLevels[i]));
             RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", invalidLevels[i]);
         }
     }
@@ -612,7 +612,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         // Second review from same reviewer should fail
         vm.prank(initialReviewers[0]);
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyReviewed.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyReviewed.selector));
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 40);
     }
 
@@ -643,7 +643,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
         vm.expectEmit(false, true, true, true);
         emit IEntryPoint.UserOperationRevertReason(
-            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyReviewed.selector)
+            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyReviewed.selector)
         );
         handleUserOp(userOp);
     }
@@ -669,14 +669,14 @@ contract RoyaltyAutoClaimTest is AATest {
         // Verify state changes
         RoyaltyAutoClaim.Submission memory submission = RoyaltyAutoClaim(address(proxy)).submissions("test");
         assertEq(
-            uint256(submission.status), uint256(RoyaltyAutoClaim.SubmissionStatus.Claimed), "Status should be Claimed"
+            uint256(submission.status), uint256(IRoyaltyAutoClaim.SubmissionStatus.Claimed), "Status should be Claimed"
         );
         assertEq(token.balanceOf(submitter), expectedRoyalty, "Submitter should receive correct royalty");
         assertEq(token.balanceOf(address(proxy)), initialBalance - expectedRoyalty, "Proxy balance should decrease");
     }
 
     function testCannot_claimRoyalty_if_submission_not_registered() public {
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.SubmissionNotExist.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotExist.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("nonexistent");
     }
 
@@ -695,7 +695,7 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
 
         // Second claim should fail
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyClaimed.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyClaimed.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
     }
 
@@ -719,7 +719,7 @@ contract RoyaltyAutoClaimTest is AATest {
         userOp = _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
         vm.expectEmit(false, true, true, true);
         emit IEntryPoint.UserOperationRevertReason(
-            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(RoyaltyAutoClaim.AlreadyClaimed.selector)
+            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyClaimed.selector)
         );
         handleUserOp(userOp);
     }
@@ -733,7 +733,7 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(initialReviewers[0]);
         RoyaltyAutoClaim(address(proxy)).reviewSubmission("test", 20);
 
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.NotEnoughReviews.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.NotEnoughReviews.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
     }
 
@@ -744,7 +744,7 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(admin);
         RoyaltyAutoClaim(address(proxy)).registerSubmission("test", submitter);
 
-        vm.expectRevert(abi.encodeWithSelector(RoyaltyAutoClaim.NotEnoughReviews.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.NotEnoughReviews.selector));
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
     }
 
@@ -782,7 +782,7 @@ contract RoyaltyAutoClaimTest is AATest {
                     IEntryPoint.FailedOpWithRevert.selector,
                     0,
                     "AA23 reverted",
-                    abi.encodeWithSelector(RoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
+                    abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
                 )
             );
             handleUserOp(userOp);
@@ -811,7 +811,7 @@ contract RoyaltyAutoClaimTest is AATest {
                     IEntryPoint.FailedOpWithRevert.selector,
                     0,
                     "AA23 reverted",
-                    abi.encodeWithSelector(RoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
+                    abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
                 )
             );
             handleUserOp(userOp);
@@ -835,7 +835,7 @@ contract RoyaltyAutoClaimTest is AATest {
                 IEntryPoint.FailedOpWithRevert.selector,
                 0,
                 "AA23 reverted",
-                abi.encodeWithSelector(RoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
+                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
             )
         );
         handleUserOp(userOp);
@@ -865,7 +865,7 @@ contract RoyaltyAutoClaimTest is AATest {
                 IEntryPoint.FailedOpWithRevert.selector,
                 0,
                 "AA23 reverted",
-                abi.encodeWithSelector(RoyaltyAutoClaim.UnsupportSelector.selector, unsupportedSelector)
+                abi.encodeWithSelector(IRoyaltyAutoClaim.UnsupportSelector.selector, unsupportedSelector)
             )
         );
         handleUserOp(userOp);
@@ -873,7 +873,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
     function testCannot_validateUserOp_not_from_entrypoint() public {
         PackedUserOperation memory userOp;
-        vm.expectRevert(RoyaltyAutoClaim.NotFromEntryPoint.selector);
+        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
         royaltyAutoClaim.validateUserOp(userOp, bytes32(0), 0);
     }
 
@@ -888,7 +888,7 @@ contract RoyaltyAutoClaimTest is AATest {
                 IEntryPoint.FailedOpWithRevert.selector,
                 0,
                 "AA23 reverted",
-                abi.encodeWithSelector(RoyaltyAutoClaim.ForbiddenPaymaster.selector)
+                abi.encodeWithSelector(IRoyaltyAutoClaim.ForbiddenPaymaster.selector)
             )
         );
         handleUserOp(userOp);
@@ -969,14 +969,14 @@ contract RoyaltyAutoClaimTest is AATest {
         address signer = vm.addr(0xbeef);
         harness.setTransientSigner(signer);
 
-        vm.expectRevert(RoyaltyAutoClaim.NotFromEntryPoint.selector);
+        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
         harness.exposed_getUserOpSigner();
     }
 
     function testCannot_getUserOpSigner_if_signer_is_zero() public {
         // Don't set any signer, so it defaults to address(0)
         vm.prank(ENTRY_POINT);
-        vm.expectRevert(RoyaltyAutoClaim.ZeroAddress.selector);
+        vm.expectRevert(IRoyaltyAutoClaim.ZeroAddress.selector);
         harness.exposed_getUserOpSigner();
     }
 }
