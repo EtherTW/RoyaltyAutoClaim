@@ -202,7 +202,13 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
             InvalidRoyaltyLevel(royaltyLevel)
         );
 
-        address reviewer = _getReviewer();
+        address reviewer;
+        if (msg.sender == entryPoint()) {
+            reviewer = _getUserOpSigner();
+        } else {
+            reviewer = msg.sender;
+        }
+
         MainStorage storage $ = _getMainStorage();
         if ($.hasReviewed[title][reviewer]) {
             revert AlreadyReviewed();
@@ -210,17 +216,6 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         $.hasReviewed[title][reviewer] = true;
         $.submissions[title].reviewCount++;
         $.submissions[title].totalRoyaltyLevel += royaltyLevel;
-    }
-
-    function _getReviewer() internal view returns (address) {
-        if (msg.sender == entryPoint()) {
-            address reviewer;
-            assembly {
-                reviewer := tload(TRANSIENT_SIGNER_SLOT)
-            }
-            return reviewer;
-        }
-        return msg.sender;
     }
 
     // ================================ Submitter ================================
@@ -297,6 +292,24 @@ contract RoyaltyAutoClaim is UUPSUpgradeable, OwnableUpgradeable, IAccount, Reen
         }
 
         revert UnsupportSelector(selector);
+    }
+
+    /// @dev 當函式透過 4337 flow 呼叫且需要 signer address 時使用 ex. hasReviewed in reviewSubmission
+    function _getUserOpSigner() internal view returns (address) {
+        if (msg.sender != entryPoint()) {
+            revert NotFromEntryPoint();
+        }
+
+        address signer;
+        assembly {
+            signer := tload(TRANSIENT_SIGNER_SLOT)
+        }
+
+        if (signer == address(0)) {
+            revert ZeroAddress();
+        }
+
+        return signer;
     }
 
     // ================================ View ================================

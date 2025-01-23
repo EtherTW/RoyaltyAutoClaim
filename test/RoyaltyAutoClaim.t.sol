@@ -7,9 +7,41 @@ import "./MockV2.sol";
 import "./AATest.t.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
+/*
+
+Test case order
+(Find following keywords to quickly navigate)
+
+Upgradeable functions
+Owner Functions
+Admin Functions
+Reviewer Functions
+Submitter Functions
+ERC-4337 Flow
+View Functions
+Internal Functions
+
+*/
+
 contract MockERC20 is ERC20 {
     constructor(address owner) ERC20("Test", "TEST") {
         _mint(owner, 100 ether);
+    }
+}
+
+/// @dev for testing internal functions
+contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
+    bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
+
+    function exposed_getUserOpSigner() external view returns (address) {
+        return _getUserOpSigner();
+    }
+
+    // Helper function to set transient storage for testing
+    function setTransientSigner(address signer) external {
+        assembly {
+            tstore(TRANSIENT_SIGNER_SLOT, signer)
+        }
     }
 }
 
@@ -20,8 +52,11 @@ contract RoyaltyAutoClaimTest is AATest {
 
     RoyaltyAutoClaim royaltyAutoClaim;
     RoyaltyAutoClaimProxy proxy;
+    RoyaltyAutoClaimHarness harness;
+
     IERC20 token;
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+    address constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     function setUp() public override {
         super.setUp();
@@ -50,6 +85,9 @@ contract RoyaltyAutoClaimTest is AATest {
         console.log("admin", admin);
         console.log("reviewer 0", initialReviewers[0]);
         console.log("reviewer 1", initialReviewers[1]);
+
+        // harness
+        harness = new RoyaltyAutoClaimHarness();
     }
 
     function test_simple_flow() public {
@@ -710,7 +748,7 @@ contract RoyaltyAutoClaimTest is AATest {
         RoyaltyAutoClaim(address(proxy)).claimRoyalty("test");
     }
 
-    // ======================================== ERC-4337 ========================================
+    // ======================================== ERC-4337 Flow ========================================
 
     function _buildUserOp(uint256 privateKey, bytes memory callData)
         internal
@@ -728,7 +766,7 @@ contract RoyaltyAutoClaimTest is AATest {
     }
 
     function test_validateUserOp_owner_functions() public {
-        // Test owner functions
+        // Test Owner Functions
         bytes[] memory ownerCalls = new bytes[](5);
         ownerCalls[0] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(0), ""));
         ownerCalls[1] = abi.encodeCall(RoyaltyAutoClaim.changeAdmin, (address(0)));
@@ -758,7 +796,7 @@ contract RoyaltyAutoClaimTest is AATest {
     }
 
     function test_validateUserOp_admin_functions() public {
-        // Test admin functions
+        // Test Admin Functions
         bytes[] memory adminCalls = new bytes[](4);
         adminCalls[0] = abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (new address[](0), new bool[](0)));
         adminCalls[1] = abi.encodeCall(RoyaltyAutoClaim.registerSubmission, ("test", address(0)));
@@ -787,7 +825,7 @@ contract RoyaltyAutoClaimTest is AATest {
     }
 
     function test_validateUserOp_reviewer_functions() public {
-        // Test reviewer function
+        // Test Reviewer Functions
         bytes memory reviewerCall = abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20));
 
         // Should fail for non-reviewer
@@ -910,5 +948,35 @@ contract RoyaltyAutoClaimTest is AATest {
 
     function test_entryPoint() public view {
         assertEq(RoyaltyAutoClaim(address(proxy)).entryPoint(), 0x0000000071727De22E5E9d8BAf0edAc6f37da032);
+    }
+
+    // ======================================== Internal Functions ========================================
+
+    function test_getUserOpSigner() public {
+        address expectedSigner = vm.addr(0xbeef);
+
+        // Set up the test conditions
+        vm.prank(ENTRY_POINT);
+        harness.setTransientSigner(expectedSigner);
+
+        // Test the function when called from EntryPoint
+        vm.prank(ENTRY_POINT);
+        address actualSigner = harness.exposed_getUserOpSigner();
+        assertEq(actualSigner, expectedSigner, "Should return the correct signer address");
+    }
+
+    function testCannot_getUserOpSigner_if_not_from_entrypoint() public {
+        address signer = vm.addr(0xbeef);
+        harness.setTransientSigner(signer);
+
+        vm.expectRevert(RoyaltyAutoClaim.NotFromEntryPoint.selector);
+        harness.exposed_getUserOpSigner();
+    }
+
+    function testCannot_getUserOpSigner_if_signer_is_zero() public {
+        // Don't set any signer, so it defaults to address(0)
+        vm.prank(ENTRY_POINT);
+        vm.expectRevert(RoyaltyAutoClaim.ZeroAddress.selector);
+        harness.exposed_getUserOpSigner();
     }
 }
