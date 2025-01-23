@@ -122,6 +122,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         _disableInitializers();
     }
 
+    receive() external payable {}
+
     function initialize(address _owner, address _admin, address _token, address[] memory _reviewers)
         public
         initializer
