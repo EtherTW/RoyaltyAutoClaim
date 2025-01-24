@@ -65,7 +65,6 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
       | "transferOwnership"
       | "updateReviewers"
       | "updateRoyaltyRecipient"
-      | "upgradeToAndCall"
   ): FunctionFragment;
 
   getEvent(
@@ -141,10 +140,6 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
     functionFragment: "updateRoyaltyRecipient",
     values: [string, AddressLike]
   ): string;
-  encodeFunctionData(
-    functionFragment: "upgradeToAndCall",
-    values: [AddressLike, BytesLike]
-  ): string;
 
   decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
   decodeFunctionResult(
@@ -201,10 +196,6 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "updateRoyaltyRecipient",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "upgradeToAndCall",
     data: BytesLike
   ): Result;
 }
@@ -467,12 +458,6 @@ export interface IRoyaltyAutoClaim extends BaseContract {
     "nonpayable"
   >;
 
-  upgradeToAndCall: TypedContractMethod<
-    [newImplementation: AddressLike, data: BytesLike],
-    [void],
-    "payable"
-  >;
-
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -558,13 +543,6 @@ export interface IRoyaltyAutoClaim extends BaseContract {
     [title: string, newRoyaltyRecipient: AddressLike],
     [void],
     "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "upgradeToAndCall"
-  ): TypedContractMethod<
-    [newImplementation: AddressLike, data: BytesLike],
-    [void],
-    "payable"
   >;
 
   getEvent(

@@ -1,5 +1,5 @@
 import { ContractTransactionResponse, ethers, getBytes, hexlify, Interface, JsonRpcProvider, toBeHex } from 'ethers'
-import { Execution, getEntryPointContract, PimlicoBundler, sendop, UserOp } from 'sendop'
+import { Execution, getEntryPointContract, PimlicoBundler, sendop } from 'sendop'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '../typechain-types'
 
@@ -8,6 +8,8 @@ const ACCOUNT_1_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8
 
 const RPC_URL = 'http://localhost:8545'
 const BUNDLER_URL = 'http://localhost:4337'
+
+const CHAIN_ID = '11155111'
 
 describe('reviewSubmission', () => {
 	let client: JsonRpcProvider
@@ -95,7 +97,7 @@ describe('reviewSubmission', () => {
 		await waitForTransaction(royaltyAutoClaim.connect(admin).registerSubmission(title, submitter.address))
 
 		const op = await sendop({
-			bundler: new CustomBundler('11155111', BUNDLER_URL, reviewer),
+			bundler: new PimlicoBundler(CHAIN_ID, BUNDLER_URL),
 			executions: [
 				{
 					to: proxyAddress,
@@ -177,33 +179,4 @@ function findSelector(data: string, type?: 'function' | 'error'): string | undef
 	})
 
 	return matchingFragment?.format('sighash') + ` (${selector})`
-}
-
-class CustomBundler extends PimlicoBundler {
-	signer: ethers.Wallet
-	client: JsonRpcProvider
-
-	constructor(chainId: string, url: string, signer: ethers.Wallet) {
-		super(chainId, url)
-		this.signer = signer
-		this.client = new JsonRpcProvider(url)
-	}
-
-	// override
-	async getGasValues(userOp: UserOp) {
-		const curGasPrice = await this.bundler.send({ method: 'pimlico_getUserOperationGasPrice' })
-		if (!curGasPrice?.standard?.maxFeePerGas) {
-			throw new Error('Invalid gas price response from bundler')
-		}
-
-		return {
-			maxFeePerGas: curGasPrice.standard.maxFeePerGas,
-			maxPriorityFeePerGas: curGasPrice.standard.maxPriorityFeePerGas,
-			preVerificationGas: '0x186a0', // 100,000
-			verificationGasLimit: '0xf4240', // 1,000,000
-			callGasLimit: '0xf4240', // 1,000,000
-			paymasterVerificationGasLimit: '0x0',
-			paymasterPostOpGasLimit: '0x0',
-		}
-	}
 }

@@ -86,6 +86,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "ROYALTY_LEVEL_40"
       | "ROYALTY_LEVEL_60"
       | "ROYALTY_LEVEL_80"
+      | "SIG_VALIDATION_FAILED"
       | "UPGRADE_INTERFACE_VERSION"
       | "admin"
       | "changeAdmin"
@@ -147,6 +148,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "ROYALTY_LEVEL_80",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "SIG_VALIDATION_FAILED",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -253,6 +258,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "ROYALTY_LEVEL_80",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "SIG_VALIDATION_FAILED",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -565,6 +574,8 @@ export interface RoyaltyAutoClaim extends BaseContract {
 
   ROYALTY_LEVEL_80: TypedContractMethod<[], [bigint], "view">;
 
+  SIG_VALIDATION_FAILED: TypedContractMethod<[], [bigint], "view">;
+
   UPGRADE_INTERFACE_VERSION: TypedContractMethod<[], [string], "view">;
 
   admin: TypedContractMethod<[], [string], "view">;
@@ -694,6 +705,9 @@ export interface RoyaltyAutoClaim extends BaseContract {
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "ROYALTY_LEVEL_80"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "SIG_VALIDATION_FAILED"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "UPGRADE_INTERFACE_VERSION"

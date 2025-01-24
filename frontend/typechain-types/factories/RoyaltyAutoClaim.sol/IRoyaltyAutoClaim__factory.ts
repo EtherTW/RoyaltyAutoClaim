@@ -326,24 +326,6 @@ const _abi = [
     stateMutability: "nonpayable",
   },
   {
-    type: "function",
-    name: "upgradeToAndCall",
-    inputs: [
-      {
-        name: "newImplementation",
-        type: "address",
-        internalType: "address",
-      },
-      {
-        name: "data",
-        type: "bytes",
-        internalType: "bytes",
-      },
-    ],
-    outputs: [],
-    stateMutability: "payable",
-  },
-  {
     type: "event",
     name: "AdminChanged",
     inputs: [
