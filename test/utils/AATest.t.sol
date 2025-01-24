@@ -25,7 +25,7 @@ abstract contract AATest is Test {
         view
         returns (PackedUserOperation memory)
     {
-        PackedUserOperation memory userOp = createUserOp();
+        PackedUserOperation memory userOp = _createUserOp();
         userOp.sender = sender;
         userOp.nonce = entryPoint.getNonce(sender, 0);
         userOp.callData = callData;
@@ -35,52 +35,43 @@ abstract contract AATest is Test {
         return userOp;
     }
 
-    function createUserOp() internal pure returns (PackedUserOperation memory) {
-        return PackedUserOperation({
-            sender: address(0),
-            nonce: 0,
-            initCode: bytes(""),
-            callData: bytes(""),
-            accountGasLimits: pack(999_999, 999_999),
-            preVerificationGas: 99_999,
-            gasFees: pack(999_999, 999_999),
-            paymasterAndData: bytes(""),
-            signature: bytes("")
-        });
-    }
-
-    function pack(uint256 a, uint256 b) internal pure returns (bytes32) {
-        return bytes32((a << 128) | b);
-    }
-
-    function handleUserOp(PackedUserOperation memory userOp) internal {
+    function _handleUserOp(PackedUserOperation memory userOp) internal {
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = userOp;
         entryPoint.handleOps(ops, payable(msg.sender));
     }
 
-    function logUserOp(PackedUserOperation memory userOp) internal pure {
+    function _createUserOp() internal pure returns (PackedUserOperation memory) {
+        return PackedUserOperation({
+            sender: address(0),
+            nonce: 0,
+            initCode: bytes(""),
+            callData: bytes(""),
+            accountGasLimits: _pack(999_999, 999_999),
+            preVerificationGas: 99_999,
+            gasFees: _pack(999_999, 999_999),
+            paymasterAndData: bytes(""),
+            signature: bytes("")
+        });
+    }
+
+    function _pack(uint256 a, uint256 b) internal pure returns (bytes32) {
+        return bytes32((a << 128) | b);
+    }
+
+    function _logUserOp(PackedUserOperation memory userOp) internal pure {
         console.log("sender", userOp.sender);
         console.log("nonce", userOp.nonce);
         console.logBytes(userOp.initCode);
         console.logBytes(userOp.callData);
         console.logBytes32(userOp.accountGasLimits);
-        console.log(toHexString(userOp.preVerificationGas));
+        console.log(_toHexString(userOp.preVerificationGas));
         console.logBytes32(userOp.gasFees);
         console.logBytes(userOp.paymasterAndData);
         console.logBytes(userOp.signature);
     }
 
-    function toHexDigit(uint8 d) internal pure returns (bytes1) {
-        if (0 <= d && d <= 9) {
-            return bytes1(uint8(bytes1("0")) + d);
-        } else if (10 <= uint8(d) && uint8(d) <= 15) {
-            return bytes1(uint8(bytes1("a")) + d - 10);
-        }
-        revert("Invalid hex digit");
-    }
-
-    function toHexString(uint256 a) internal pure returns (string memory) {
+    function _toHexString(uint256 a) internal pure returns (string memory) {
         uint256 count = 0;
         uint256 b = a;
         while (b != 0) {
@@ -90,9 +81,18 @@ abstract contract AATest is Test {
         bytes memory res = new bytes(count);
         for (uint256 i = 0; i < count; ++i) {
             b = a % 16;
-            res[count - i - 1] = toHexDigit(uint8(b));
+            res[count - i - 1] = _toHexDigit(uint8(b));
             a /= 16;
         }
         return string.concat("0x", string(res));
+    }
+
+    function _toHexDigit(uint8 d) internal pure returns (bytes1) {
+        if (0 <= d && d <= 9) {
+            return bytes1(uint8(bytes1("0")) + d);
+        } else if (10 <= uint8(d) && uint8(d) <= 15) {
+            return bytes1(uint8(bytes1("a")) + d - 10);
+        }
+        revert("Invalid hex digit");
     }
 }

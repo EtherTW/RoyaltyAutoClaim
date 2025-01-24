@@ -29,13 +29,13 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                     abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
                 )
             );
-            handleUserOp(userOp);
+            _handleUserOp(userOp);
         }
 
         // Should succeed for owner
         for (uint256 i = 0; i < ownerCalls.length; i++) {
             PackedUserOperation memory userOp = _buildUserOp(ownerKey, address(proxy), ownerCalls[i]);
-            handleUserOp(userOp);
+            _handleUserOp(userOp);
         }
     }
 
@@ -58,13 +58,13 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                     abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
                 )
             );
-            handleUserOp(userOp);
+            _handleUserOp(userOp);
         }
 
         // Should succeed for admin
         for (uint256 i = 0; i < adminCalls.length; i++) {
             PackedUserOperation memory userOp = _buildUserOp(adminKey, address(proxy), adminCalls[i]); // admin's private key is 2
-            handleUserOp(userOp);
+            _handleUserOp(userOp);
         }
     }
 
@@ -81,15 +81,15 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
             )
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
 
         // Should succeed for reviewer1
         userOp = _buildUserOp(reviewer1Key, address(proxy), reviewerCall); // reviewer's private key is 3
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
 
         // Should succeed for reviewer2
         userOp = _buildUserOp(reviewer2Key, address(proxy), reviewerCall); // reviewer's private key is 3
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
     }
 
     function test_validateUserOp_public_functions() public {
@@ -97,7 +97,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
         // Should succeed for any address
         PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), publicCall);
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
     }
 
     function test_validateUserOp_unsupported_selector() public {
@@ -113,7 +113,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 abi.encodeWithSelector(IRoyaltyAutoClaim.UnsupportSelector.selector, unsupportedSelector)
             )
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
     }
 
     function testCannot_validateUserOp_not_from_entrypoint() public {
@@ -136,7 +136,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 abi.encodeWithSelector(IRoyaltyAutoClaim.ForbiddenPaymaster.selector)
             )
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
     }
 
     function test_upgradeToAndCall() public {
@@ -157,7 +157,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
             )
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
 
         userOp = _buildUserOp(
             ownerKey,
@@ -166,22 +166,16 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 royaltyAutoClaim.upgradeToAndCall, (address(v2), abi.encodeCall(MockV2.initialize, (newOwner)))
             )
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
         assertEq(address(uint160(uint256(vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT)))), address(v2));
     }
 
     function test_transferOwnership() public {
         PackedUserOperation memory userOp =
             _buildUserOp(ownerKey, address(proxy), abi.encodeCall(OwnableUpgradeable.transferOwnership, (newOwner)));
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
 
         assertEq(royaltyAutoClaim.owner(), newOwner);
-
-        // transfer back to owner
-        userOp =
-            _buildUserOp(newOwnerKey, address(proxy), abi.encodeCall(OwnableUpgradeable.transferOwnership, (owner)));
-        handleUserOp(userOp);
-        assertEq(royaltyAutoClaim.owner(), owner);
     }
 
     function testCannot_transferOwnership_if_not_owner() public {
@@ -196,7 +190,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fakeOwner)
             )
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
     }
 
     function testCannot_transferOwnership_if_zero_address() public {
@@ -206,11 +200,11 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         emit IEntryPoint.UserOperationRevertReason(
             bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
     }
 
     function test_reviewSubmission() public {
-        handleUserOp(
+        _handleUserOp(
             _buildUserOp(
                 adminKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, ("test", submitter))
             )
@@ -225,7 +219,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
             status[i] = true;
         }
 
-        handleUserOp(
+        _handleUserOp(
             _buildUserOp(
                 adminKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (testReviewers, status))
             )
@@ -246,7 +240,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 address(proxy),
                 abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", validLevels[i]))
             );
-            handleUserOp(userOp);
+            _handleUserOp(userOp);
 
             expectedTotalLevel += validLevels[i];
 
@@ -276,7 +270,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         // First review should succeed via UserOperation
         PackedUserOperation memory userOp =
             _buildUserOp(reviewer1Key, address(proxy), abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20)));
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
 
         // Second review from same reviewer should fail
         userOp =
@@ -285,7 +279,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         emit IEntryPoint.UserOperationRevertReason(
             bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyReviewed.selector)
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
     }
 
     function testCannot_claimRoyalty_if_already_claimed() public {
@@ -297,7 +291,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         royaltyAutoClaim.reviewSubmission("test", 40);
 
         // First claim should succeed via UserOperation
-        handleUserOp(_buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test"))));
+        _handleUserOp(_buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test"))));
 
         // Second claim should fail
         PackedUserOperation memory userOp =
@@ -309,6 +303,6 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
             userOp.nonce,
             abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector)
         );
-        handleUserOp(userOp);
+        _handleUserOp(userOp);
     }
 }

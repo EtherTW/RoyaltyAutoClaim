@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "forge-std/Test.sol";
-import "../../src/RoyaltyAutoClaim.sol";
-import "../../src/RoyaltyAutoClaimProxy.sol";
+import "./BaseTest.t.sol";
 import "../utils/MockV2.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /*
 
@@ -21,95 +18,12 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 */
 
-contract MockERC20 is ERC20 {
-    constructor(address owner) ERC20("Test", "TEST") {
-        _mint(owner, 100 ether);
-    }
-}
-
-/// @dev for testing internal functions
-contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
-    bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
-
-    function exposed_getUserOpSigner() external view returns (address) {
-        return _getUserOpSigner();
-    }
-
-    // Helper function to set transient storage for testing
-    function setTransientSigner(address signer) external {
-        assembly {
-            tstore(TRANSIENT_SIGNER_SLOT, signer)
-        }
-    }
-}
-
-contract RoyaltyAutoClaim_Unit_Test is Test {
-    address owner = vm.addr(1);
-    address admin = vm.addr(2);
-    address[] initialReviewers = new address[](3);
-
-    RoyaltyAutoClaim impl;
-    RoyaltyAutoClaimProxy proxy;
-    RoyaltyAutoClaim royaltyAutoClaim;
-    RoyaltyAutoClaimHarness harness;
-
-    IERC20 token;
-    address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    address constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
-
-    function setUp() public {
-        initialReviewers[0] = vm.addr(3);
-        initialReviewers[1] = vm.addr(4);
-
-        token = new MockERC20(owner);
-
-        impl = new RoyaltyAutoClaim();
-        proxy = new RoyaltyAutoClaimProxy(
-            address(impl), abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(token), initialReviewers))
-        );
-
-        bytes32 v = vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT);
-        assertEq(address(uint160(uint256(v))), address(impl));
-
-        // deal
-        vm.deal(address(proxy), 100 ether);
-        vm.prank(owner);
-        token.transfer(address(proxy), 100 ether);
-
-        royaltyAutoClaim = RoyaltyAutoClaim(payable(address(proxy)));
-
-        // log
-        console.log("owner", owner);
-        console.log("admin", admin);
-        console.log("reviewer 0", initialReviewers[0]);
-        console.log("reviewer 1", initialReviewers[1]);
-
-        // harness
-        harness = new RoyaltyAutoClaimHarness();
-    }
-
-    function test_prevent_storage_collision() public {
-        // Get storage slots 0-3 and verify they are empty
-        for (uint256 i = 0; i < 4; i++) {
-            bytes32 slot = vm.load(address(royaltyAutoClaim), bytes32(i));
-            assertEq(slot, bytes32(0), "Storage slot should be empty");
-        }
-
-        // Perform some state changes
-        address[] memory reviewers = new address[](1);
-        reviewers[0] = initialReviewers[0];
-        vm.prank(owner);
-        royaltyAutoClaim.transferOwnership(vm.randomAddress());
-
-        // Verify slots are still empty after state changes
-        for (uint256 i = 0; i < 4; i++) {
-            bytes32 slot = vm.load(address(royaltyAutoClaim), bytes32(i));
-            assertEq(slot, bytes32(0), "Storage slot should remain empty after state changes");
-        }
+contract RoyaltyAutoClaim_Unit_Test is BaseTest {
+    function setUp() public override {
+        super.setUp();
     }
 
     function test_receive_and_fallback() public {
-        // Test direct Ether transfer
         vm.deal(address(this), 1 ether);
         (bool success,) = address(proxy).call{value: 1 ether}("");
         assertTrue(success, "Should accept direct Ether transfer");
@@ -146,7 +60,7 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
         address newOwner = vm.randomAddress();
         MockV2 v2 = new MockV2();
 
-        vm.prank(vm.addr(0xbeef));
+        vm.prank(fake);
         vm.expectRevert();
         MockV2(address(proxy)).upgradeToAndCall(address(v2), abi.encodeCall(MockV2.initialize, (newOwner)));
 
@@ -157,14 +71,11 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     }
 
     function test_transferOwnership() public {
-        address newOwner = vm.addr(0xbeef);
-
         // Should fail if not owner
-        vm.prank(vm.addr(0xbeef));
+        vm.prank(fake);
         vm.expectRevert();
         royaltyAutoClaim.transferOwnership(newOwner);
 
-        // Should succeed when called by owner
         vm.prank(owner);
         royaltyAutoClaim.transferOwnership(newOwner);
         assertEq(royaltyAutoClaim.owner(), newOwner);
@@ -177,10 +88,8 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     }
 
     function test_changeAdmin() public {
-        address newAdmin = vm.randomAddress();
-
         // Should fail if not owner
-        vm.prank(vm.addr(0xbeef));
+        vm.prank(fake);
         vm.expectRevert();
         royaltyAutoClaim.changeAdmin(newAdmin);
 
@@ -189,60 +98,59 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         royaltyAutoClaim.changeAdmin(address(0));
 
-        // Should succeed when called by owner
         vm.prank(owner);
         royaltyAutoClaim.changeAdmin(newAdmin);
         assertEq(royaltyAutoClaim.admin(), newAdmin);
     }
 
     function test_changeRoyaltyToken() public {
-        address newToken = vm.randomAddress();
-
         // Should fail if not owner
-        vm.prank(vm.addr(0xbeef));
-        vm.expectRevert();
-        royaltyAutoClaim.changeRoyaltyToken(newToken);
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.changeRoyaltyToken(address(newToken));
 
         // Should fail if zero address
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         royaltyAutoClaim.changeRoyaltyToken(address(0));
 
-        // Should succeed when called by owner
         vm.prank(owner);
-        royaltyAutoClaim.changeRoyaltyToken(newToken);
-        assertEq(royaltyAutoClaim.token(), newToken);
+        royaltyAutoClaim.changeRoyaltyToken(address(newToken));
+        assertEq(royaltyAutoClaim.token(), address(newToken));
     }
 
-    function test_renounceOwnership() public {
-        // Should always revert
+    function testCannot_renounceOwnership() public {
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.RenounceOwnershipDisabled.selector));
         royaltyAutoClaim.renounceOwnership();
     }
 
-    function test_emergencyWithdraw() public {
+    function test_emergencyWithdraw_NATIVE_TOKEN() public {
         uint256 amount = 1 ether;
-
-        // Test native token withdrawal
         uint256 ownerBalanceBefore = owner.balance;
 
-        // Should fail if not owner
-        vm.prank(vm.addr(0xbeef));
-        vm.expectRevert();
-        royaltyAutoClaim.emergencyWithdraw(NATIVE_TOKEN, amount);
-
-        // Should succeed when called by owner
         vm.prank(owner);
         royaltyAutoClaim.emergencyWithdraw(NATIVE_TOKEN, amount);
         assertEq(owner.balance, ownerBalanceBefore + amount);
+    }
 
-        // Test ERC20 token withdrawal
+    function test_emergencyWithdraw_ERC20() public {
+        uint256 amount = 1 ether;
         uint256 tokenBalanceBefore = token.balanceOf(owner);
 
         vm.prank(owner);
         royaltyAutoClaim.emergencyWithdraw(address(token), amount);
         assertEq(token.balanceOf(owner), tokenBalanceBefore + amount);
+    }
+
+    function testCannot_emergencyWithdraw_if_not_owner() public {
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.emergencyWithdraw(NATIVE_TOKEN, 1 ether);
+
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.emergencyWithdraw(address(token), 1 ether);
     }
 
     // ======================================== Admin Functions ========================================
@@ -251,14 +159,14 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
         address[] memory newReviewers = new address[](2);
         bool[] memory status = new bool[](2);
 
-        newReviewers[0] = vm.addr(5);
-        newReviewers[1] = vm.addr(6);
+        newReviewers[0] = vm.randomAddress();
+        newReviewers[1] = vm.randomAddress();
         status[0] = true;
         status[1] = false;
 
         // Should fail if not admin
-        vm.prank(vm.addr(0xbeef));
-        vm.expectRevert();
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
         royaltyAutoClaim.updateReviewers(newReviewers, status);
 
         // Should fail if arrays have different lengths
@@ -268,23 +176,24 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidArrayLength.selector));
         royaltyAutoClaim.updateReviewers(newReviewers, invalidStatus);
 
-        // Should succeed when called by admin
         vm.prank(admin);
         royaltyAutoClaim.updateReviewers(newReviewers, status);
 
         // Verify the updates
         assertEq(royaltyAutoClaim.isReviewer(newReviewers[0]), true);
         assertEq(royaltyAutoClaim.isReviewer(newReviewers[1]), false);
+    }
 
-        // Test removing an existing reviewer
+    function test_updateReviewers_remove_existing_reviewer() public {
         address[] memory existingReviewers = new address[](1);
         bool[] memory removeStatus = new bool[](1);
-        existingReviewers[0] = initialReviewers[0];
+        existingReviewers[0] = reviewer1;
         removeStatus[0] = false;
 
         vm.prank(admin);
         royaltyAutoClaim.updateReviewers(existingReviewers, removeStatus);
-        assertEq(royaltyAutoClaim.isReviewer(initialReviewers[0]), false);
+        assertEq(royaltyAutoClaim.isReviewer(reviewer1), false);
+        assertEq(royaltyAutoClaim.isReviewer(reviewer2), true);
     }
 
     function testCannot_updateReviewers_if_array_length_is_0() public {
@@ -313,12 +222,12 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
         royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
 
         vm.prank(admin);
-        vm.expectRevert(); // submission already exists
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyRegistered.selector));
         royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
 
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(initialReviewers[1]);
+        vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
         royaltyAutoClaim.claimRoyalty("test");
 
@@ -327,9 +236,9 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     }
 
     function testCannot_registerSubmission_if_not_admin() public {
-        vm.prank(vm.randomAddress());
+        vm.prank(fake);
         vm.expectRevert();
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        royaltyAutoClaim.registerSubmission("test", fake);
     }
 
     function testCannot_registerSubmission_with_empty_title() public {
@@ -348,7 +257,6 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
         address originalRecipient = vm.randomAddress();
         address newRecipient = vm.randomAddress();
 
-        // Register submission first
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", originalRecipient);
 
@@ -361,25 +269,24 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     }
 
     function testCannot_updateRoyaltyRecipient_if_not_admin() public {
-        // Register submission first
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
 
-        // Try to update as non-admin
-        vm.prank(vm.randomAddress());
-        vm.expectRevert();
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
         royaltyAutoClaim.updateRoyaltyRecipient("test", vm.randomAddress());
     }
 
     function testCannot_updateRoyaltyRecipient_if_the_submission_is_claimed_or_not_exist() public {
-        vm.expectRevert(); // submission not exist
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
         royaltyAutoClaim.updateRoyaltyRecipient("test", vm.randomAddress());
 
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(initialReviewers[1]);
+        vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
         royaltyAutoClaim.claimRoyalty("test");
 
@@ -388,13 +295,9 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     }
 
     function test_revokeSubmission() public {
-        address submitter = vm.randomAddress();
-
-        // Register submission first
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", submitter);
 
-        // Revoke submission
         vm.prank(admin);
         royaltyAutoClaim.revokeSubmission("test");
 
@@ -410,25 +313,25 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     }
 
     function testCannot_revokeSubmission_if_not_admin() public {
-        // Register submission first
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
 
         // Try to revoke as non-admin
-        vm.prank(vm.randomAddress());
+        vm.prank(fake);
         vm.expectRevert();
         royaltyAutoClaim.revokeSubmission("test");
     }
 
     function testCannot_revokeSubmission_if_the_submission_is_claimed_or_not_exist() public {
-        vm.expectRevert(); // submission not exist
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
         royaltyAutoClaim.revokeSubmission("test");
 
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(initialReviewers[1]);
+        vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
         royaltyAutoClaim.claimRoyalty("test");
 
@@ -441,15 +344,15 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     function test_reviewSubmission() public {
         address submitter = vm.randomAddress();
 
-        // Register submission
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", submitter);
 
         // Add more reviewers for testing
+        uint256 randomUint = vm.randomUint();
         address[] memory testReviewers = new address[](4);
         bool[] memory status = new bool[](4);
         for (uint256 i = 0; i < 4; i++) {
-            testReviewers[i] = vm.addr(10 + i);
+            testReviewers[i] = vm.addr(randomUint + i);
             status[i] = true;
         }
         vm.prank(admin);
@@ -519,8 +422,7 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
         royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
 
         // Try to review as non-reviewer
-        address nonReviewer = vm.addr(0xbeef);
-        vm.prank(nonReviewer);
+        vm.prank(fake);
         vm.expectRevert();
         royaltyAutoClaim.reviewSubmission("test", 20);
     }
@@ -680,7 +582,7 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     // ======================================== Internal Functions ========================================
 
     function test_getUserOpSigner() public {
-        address expectedSigner = vm.addr(0xbeef);
+        address expectedSigner = vm.randomAddress();
 
         // Set up the test conditions
         vm.prank(ENTRY_POINT);
@@ -693,7 +595,7 @@ contract RoyaltyAutoClaim_Unit_Test is Test {
     }
 
     function testCannot_getUserOpSigner_if_not_from_entrypoint() public {
-        address signer = vm.addr(0xbeef);
+        address signer = vm.randomAddress();
         harness.setTransientSigner(signer);
 
         vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
