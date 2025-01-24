@@ -5,6 +5,7 @@ import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {UserOperationLib} from "@account-abstraction/contracts/core/UserOperationLib.sol";
+import {ECDSA} from "solady/utils/ECDSA.sol";
 
 import "forge-std/Test.sol";
 
@@ -17,6 +18,21 @@ abstract contract AATest is Test {
         EntryPoint ep = new EntryPoint();
         vm.etch(0x0000000071727De22E5E9d8BAf0edAc6f37da032, address(ep).code);
         entryPoint = IEntryPoint(0x0000000071727De22E5E9d8BAf0edAc6f37da032);
+    }
+
+    function _buildUserOp(uint256 privateKey, address sender, bytes memory callData)
+        internal
+        view
+        returns (PackedUserOperation memory)
+    {
+        PackedUserOperation memory userOp = createUserOp();
+        userOp.sender = sender;
+        userOp.nonce = entryPoint.getNonce(sender, 0);
+        userOp.callData = callData;
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        userOp.signature = abi.encodePacked(r, s, v);
+        return userOp;
     }
 
     function createUserOp() internal pure returns (PackedUserOperation memory) {

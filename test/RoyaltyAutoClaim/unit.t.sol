@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "../src/RoyaltyAutoClaim.sol";
-import "../src/RoyaltyAutoClaimProxy.sol";
-import "./MockV2.sol";
-import "./AATest.t.sol";
+import "forge-std/Test.sol";
+import "../../src/RoyaltyAutoClaim.sol";
+import "../../src/RoyaltyAutoClaimProxy.sol";
+import "../utils/MockV2.sol";
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /*
@@ -16,7 +16,6 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
     Admin Functions
     Reviewer Functions
     Submitter Functions
-    ERC-4337 Flow
     View Functions
     Internal Functions
 
@@ -44,7 +43,7 @@ contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
     }
 }
 
-contract RoyaltyAutoClaimTest is AATest {
+contract RoyaltyAutoClaim_Unit_Test is Test {
     address owner = vm.addr(1);
     address admin = vm.addr(2);
     address[] initialReviewers = new address[](3);
@@ -58,9 +57,7 @@ contract RoyaltyAutoClaimTest is AATest {
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
-    function setUp() public override {
-        super.setUp();
-
+    function setUp() public {
         initialReviewers[0] = vm.addr(3);
         initialReviewers[1] = vm.addr(4);
 
@@ -119,46 +116,6 @@ contract RoyaltyAutoClaimTest is AATest {
         assertEq(address(proxy).balance, 101 ether, "Proxy balance should increase"); // 100 ether from setUp + 1 ether
     }
 
-    function test_simple_flow() public {
-        address submitter = vm.randomAddress();
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
-
-        RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
-        assertEq(submission.royaltyRecipient, submitter, "Royalty recipient should be submitter");
-        assertEq(submission.reviewCount, 0, "Review count should be 0");
-        assertEq(submission.totalRoyaltyLevel, 0, "Total royalty level should be 0");
-        assertEq(
-            uint256(submission.status),
-            uint256(IRoyaltyAutoClaim.SubmissionStatus.Registered),
-            "Submission status should be Registered"
-        );
-
-        vm.expectRevert();
-        royaltyAutoClaim.claimRoyalty("test");
-
-        vm.prank(initialReviewers[0]);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-
-        vm.expectRevert();
-        royaltyAutoClaim.claimRoyalty("test");
-        assertEq(royaltyAutoClaim.getRoyalty("test"), 0 ether, "Royalty should be 0");
-
-        vm.prank(initialReviewers[1]);
-        royaltyAutoClaim.reviewSubmission("test", 40);
-
-        assertEq(royaltyAutoClaim.getRoyalty("test"), 30 ether, "Royalty should be 30 ether");
-
-        uint256 proxyBalanceBefore = token.balanceOf(address(proxy));
-
-        royaltyAutoClaim.claimRoyalty("test");
-
-        uint256 proxyBalanceAfter = token.balanceOf(address(proxy));
-
-        assertEq(token.balanceOf(submitter), 30 ether, "Submitter should have 30 ether");
-        assertEq(proxyBalanceAfter, proxyBalanceBefore - 30 ether, "Proxy balance should be 30 ether less");
-    }
-
     function testCannot_initialize_with_zero_addresses() public {
         RoyaltyAutoClaim newImpl = new RoyaltyAutoClaim();
 
@@ -185,7 +142,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
     // ======================================== Owner Functions ========================================
 
-    function test_upgradeToAndCall_success() public {
+    function test_upgradeToAndCall() public {
         address newOwner = vm.randomAddress();
         MockV2 v2 = new MockV2();
 
@@ -197,36 +154,6 @@ contract RoyaltyAutoClaimTest is AATest {
         MockV2(address(proxy)).upgradeToAndCall(address(v2), abi.encodeCall(MockV2.initialize, (newOwner)));
         bytes32 v = vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT);
         assertEq(address(uint160(uint256(v))), address(v2));
-    }
-
-    function test_upgradeToAndCall_4337() public {
-        address newOwner = vm.randomAddress();
-        MockV2 v2 = new MockV2();
-
-        PackedUserOperation memory userOp = _buildUserOp(
-            0xbeef,
-            abi.encodeCall(
-                royaltyAutoClaim.upgradeToAndCall, (address(v2), abi.encodeCall(MockV2.initialize, (newOwner)))
-            )
-        );
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                0,
-                "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
-            )
-        );
-        handleUserOp(userOp);
-
-        userOp = _buildUserOp(
-            1,
-            abi.encodeCall(
-                royaltyAutoClaim.upgradeToAndCall, (address(v2), abi.encodeCall(MockV2.initialize, (newOwner)))
-            )
-        );
-        handleUserOp(userOp);
-        assertEq(address(uint160(uint256(vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT)))), address(v2));
     }
 
     function test_transferOwnership() public {
@@ -241,52 +168,12 @@ contract RoyaltyAutoClaimTest is AATest {
         vm.prank(owner);
         royaltyAutoClaim.transferOwnership(newOwner);
         assertEq(royaltyAutoClaim.owner(), newOwner);
-
-        // Should fail if not newOwner
-        PackedUserOperation memory userOp =
-            _buildUserOp(0xcafe, abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (owner)));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                0,
-                "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xcafe))
-            )
-        );
-        handleUserOp(userOp);
-
-        // Should fail if newOwner is zero address
-        userOp = _buildUserOp(0xcafe, abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0))));
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                0,
-                "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xcafe))
-            )
-        );
-        handleUserOp(userOp);
-
-        // Should succeed when called by newOwner via UserOperation
-        userOp = _buildUserOp(0xbeef, abi.encodeCall(OwnableUpgradeable.transferOwnership, (owner)));
-        handleUserOp(userOp);
-        assertEq(royaltyAutoClaim.owner(), owner);
     }
 
     function testCannot_transferOwnership_if_zero_address() public {
         vm.prank(owner);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         royaltyAutoClaim.transferOwnership(address(0));
-    }
-
-    function testCannot_transferOwnership_if_zero_address_4337() public {
-        PackedUserOperation memory userOp =
-            _buildUserOp(1, abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0))));
-        vm.expectEmit(false, true, true, true);
-        emit IEntryPoint.UserOperationRevertReason(
-            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
-        );
-        handleUserOp(userOp);
     }
 
     function test_changeAdmin() public {
@@ -457,7 +344,7 @@ contract RoyaltyAutoClaimTest is AATest {
         royaltyAutoClaim.registerSubmission("test", address(0));
     }
 
-    function test_updateRoyaltyRecipient_success() public {
+    function test_updateRoyaltyRecipient() public {
         address originalRecipient = vm.randomAddress();
         address newRecipient = vm.randomAddress();
 
@@ -500,7 +387,7 @@ contract RoyaltyAutoClaimTest is AATest {
         royaltyAutoClaim.updateRoyaltyRecipient("test", vm.randomAddress());
     }
 
-    function test_revokeSubmission_success() public {
+    function test_revokeSubmission() public {
         address submitter = vm.randomAddress();
 
         // Register submission first
@@ -551,7 +438,7 @@ contract RoyaltyAutoClaimTest is AATest {
 
     // ======================================== Reviewer Functions ========================================
 
-    function test_reviewSubmission_success() public {
+    function test_reviewSubmission() public {
         address submitter = vm.randomAddress();
 
         // Register submission
@@ -579,60 +466,6 @@ contract RoyaltyAutoClaimTest is AATest {
         for (uint256 i = 0; i < validLevels.length; i++) {
             vm.prank(testReviewers[i]);
             royaltyAutoClaim.reviewSubmission("test", validLevels[i]);
-
-            expectedTotalLevel += validLevels[i];
-
-            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
-            assertEq(submission.reviewCount, i + 1, "Review count should increment");
-            assertEq(submission.totalRoyaltyLevel, expectedTotalLevel, "Total royalty level should be cumulative");
-
-            // Verify hasReviewed is set to true for the reviewer
-            assertTrue(
-                royaltyAutoClaim.hasReviewed("test", testReviewers[i]), "hasReviewed should be true for reviewer"
-            );
-
-            // Verify hasReviewed is still false for unused reviewers
-            for (uint256 j = i + 1; j < testReviewers.length; j++) {
-                assertFalse(
-                    royaltyAutoClaim.hasReviewed("test", testReviewers[j]),
-                    "hasReviewed should be false for unused reviewers"
-                );
-            }
-        }
-    }
-
-    function test_reviewSubmission_4337() public {
-        address submitter = vm.randomAddress();
-
-        // Register submission
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
-
-        // Add more reviewers for testing
-        address[] memory testReviewers = new address[](4);
-        bool[] memory status = new bool[](4);
-        for (uint256 i = 0; i < 4; i++) {
-            testReviewers[i] = vm.addr(10 + i);
-            status[i] = true;
-        }
-        vm.prank(admin);
-        royaltyAutoClaim.updateReviewers(testReviewers, status);
-
-        // Test all valid royalty levels with different reviewers
-        uint16[] memory validLevels = new uint16[](4);
-        validLevels[0] = 20;
-        validLevels[1] = 40;
-        validLevels[2] = 60;
-        validLevels[3] = 80;
-
-        uint256 expectedTotalLevel = 0;
-        for (uint256 i = 0; i < validLevels.length; i++) {
-            // Create and execute UserOperation for review submission
-            PackedUserOperation memory userOp = _buildUserOp(
-                10 + i, // Use the same private key as the reviewer address
-                abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", validLevels[i]))
-            );
-            handleUserOp(userOp);
 
             expectedTotalLevel += validLevels[i];
 
@@ -726,38 +559,6 @@ contract RoyaltyAutoClaimTest is AATest {
         royaltyAutoClaim.reviewSubmission("test", 40);
     }
 
-    function testCannot_reviewSubmission_multiple_times_4337() public {
-        address submitter = vm.randomAddress();
-        address reviewer = vm.addr(0xbeef);
-
-        // Register reviewer
-        address[] memory testReviewers = new address[](1);
-        bool[] memory status = new bool[](1);
-        testReviewers[0] = reviewer;
-        status[0] = true;
-
-        vm.prank(admin);
-        royaltyAutoClaim.updateReviewers(testReviewers, status);
-
-        // Register submission
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
-
-        // First review should succeed via UserOperation
-        PackedUserOperation memory userOp =
-            _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20)));
-        handleUserOp(userOp);
-
-        // Second review from same reviewer should fail
-        userOp = _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 40)));
-
-        vm.expectEmit(false, true, true, true);
-        emit IEntryPoint.UserOperationRevertReason(
-            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyReviewed.selector)
-        );
-        handleUserOp(userOp);
-    }
-
     // ======================================== Submitter Functions ========================================
 
     function test_claimRoyalty_with_erc20() public {
@@ -809,34 +610,6 @@ contract RoyaltyAutoClaimTest is AATest {
         royaltyAutoClaim.claimRoyalty("test");
     }
 
-    function testCannot_claimRoyalty_if_already_claimed_4337() public {
-        address submitter = vm.addr(0xbeef);
-
-        // Setup submission and reviews
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
-        vm.prank(initialReviewers[0]);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(initialReviewers[1]);
-        royaltyAutoClaim.reviewSubmission("test", 40);
-
-        // First claim should succeed via UserOperation
-        PackedUserOperation memory userOp =
-            _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
-        handleUserOp(userOp);
-
-        // Second claim should fail
-        userOp = _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
-        vm.expectEmit(false, true, true, true);
-        emit IEntryPoint.UserOperationRevertReason(
-            bytes32(0),
-            address(proxy),
-            userOp.nonce,
-            abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector)
-        );
-        handleUserOp(userOp);
-    }
-
     function testCannot_claimRoyalty_if_not_enough_reviews() public {
         address submitter = vm.randomAddress();
 
@@ -859,152 +632,6 @@ contract RoyaltyAutoClaimTest is AATest {
 
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
         royaltyAutoClaim.claimRoyalty("test");
-    }
-
-    // ======================================== ERC-4337 Flow ========================================
-
-    function _buildUserOp(uint256 privateKey, bytes memory callData)
-        internal
-        view
-        returns (PackedUserOperation memory)
-    {
-        PackedUserOperation memory userOp = createUserOp();
-        userOp.sender = address(proxy);
-        userOp.nonce = entryPoint.getNonce(address(proxy), 0);
-        userOp.callData = callData;
-        (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
-        userOp.signature = abi.encodePacked(r, s, v);
-        return userOp;
-    }
-
-    function test_validateUserOp_owner_functions() public {
-        // note: 這裡只驗證 validateUserOp 的資格，沒檢查 userOp 的執行，所以 zero address 交易雖成功，理論上 userop 要是失敗的
-        bytes[] memory ownerCalls = new bytes[](5);
-        ownerCalls[0] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(0), ""));
-        ownerCalls[1] = abi.encodeCall(RoyaltyAutoClaim.changeAdmin, (address(0)));
-        ownerCalls[2] = abi.encodeCall(RoyaltyAutoClaim.changeRoyaltyToken, (address(0)));
-        ownerCalls[3] = abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0)));
-        ownerCalls[4] = abi.encodeCall(RoyaltyAutoClaim.emergencyWithdraw, (address(0), 0));
-
-        // Should fail for non-owner
-        for (uint256 i = 0; i < ownerCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(0xbeef, ownerCalls[i]);
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    IEntryPoint.FailedOpWithRevert.selector,
-                    0,
-                    "AA23 reverted",
-                    abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
-                )
-            );
-            handleUserOp(userOp);
-        }
-
-        // Should succeed for owner
-        for (uint256 i = 0; i < ownerCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(1, ownerCalls[i]);
-            handleUserOp(userOp);
-        }
-    }
-
-    function test_validateUserOp_admin_functions() public {
-        // Test Admin Functions
-        bytes[] memory adminCalls = new bytes[](4);
-        adminCalls[0] = abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (new address[](0), new bool[](0)));
-        adminCalls[1] = abi.encodeCall(RoyaltyAutoClaim.registerSubmission, ("test", address(0)));
-        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.updateRoyaltyRecipient, ("test", address(0)));
-        adminCalls[3] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, ("test"));
-
-        // Should fail for non-admin
-        for (uint256 i = 0; i < adminCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(0xbeef, adminCalls[i]);
-            vm.expectRevert(
-                abi.encodeWithSelector(
-                    IEntryPoint.FailedOpWithRevert.selector,
-                    0,
-                    "AA23 reverted",
-                    abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
-                )
-            );
-            handleUserOp(userOp);
-        }
-
-        // Should succeed for admin
-        for (uint256 i = 0; i < adminCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(2, adminCalls[i]); // admin's private key is 2
-            handleUserOp(userOp);
-        }
-    }
-
-    function test_validateUserOp_reviewer_functions() public {
-        // Test Reviewer Functions
-        bytes memory reviewerCall = abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20));
-
-        // Should fail for non-reviewer
-        PackedUserOperation memory userOp = _buildUserOp(0xbeef, reviewerCall);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                0,
-                "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, vm.addr(0xbeef))
-            )
-        );
-        handleUserOp(userOp);
-
-        // Should succeed for reviewer
-        userOp = _buildUserOp(3, reviewerCall); // reviewer's private key is 3
-        handleUserOp(userOp);
-    }
-
-    function test_validateUserOp_public_functions() public {
-        // Test public function (claimRoyalty)
-        bytes memory publicCall = abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test"));
-
-        // Should succeed for any address
-        PackedUserOperation memory userOp = _buildUserOp(0xbeef, publicCall);
-        handleUserOp(userOp);
-    }
-
-    function test_validateUserOp_unsupported_selector() public {
-        // Test unsupported selector
-        bytes4 unsupportedSelector = bytes4(keccak256("unsupportedFunction()"));
-        bytes memory unsupportedCall = abi.encodePacked(unsupportedSelector);
-
-        PackedUserOperation memory userOp = _buildUserOp(0xbeef, unsupportedCall);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                0,
-                "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.UnsupportSelector.selector, unsupportedSelector)
-            )
-        );
-        handleUserOp(userOp);
-    }
-
-    function testCannot_validateUserOp_not_from_entrypoint() public {
-        PackedUserOperation memory userOp;
-        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
-        royaltyAutoClaim.validateUserOp(userOp, bytes32(0), 0);
-    }
-
-    function testCannot_validateUserOp_with_paymaster() public {
-        PackedUserOperation memory userOp =
-            _buildUserOp(0xbeef, abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
-
-        userOp.paymasterAndData = abi.encodePacked(vm.addr(0xdead), uint128(999_999), uint128(999_999));
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                0,
-                "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.ForbiddenPaymaster.selector)
-            )
-        );
-        handleUserOp(userOp);
     }
 
     // ======================================== View Functions ========================================
