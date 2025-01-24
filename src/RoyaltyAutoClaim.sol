@@ -106,6 +106,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     uint8 public constant ROYALTY_LEVEL_80 = 80;
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
+    uint256 public constant SIG_VALIDATION_FAILED = 1;
+
     // keccak256(abi.encode(uint256(keccak256("royaltyautoclaim.storage.main")) - 1)) & ~bytes32(uint256(0xff));
     /// @dev cast index-erc7201 royaltyautoclaim.storage.main
     bytes32 private constant MAIN_STORAGE_SLOT = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
@@ -304,6 +306,18 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
      * @dev Ensure that signer has the appropriate permissions of Owner, Admin, or Reviewer.
      * @dev Forbid to use paymaster
      * TODO: 檢查手續費最多不能超過 X ETH（X 的值待定）
+     *
+     * From ERC-4337: https://github.com/ethereum/ERCs/blob/b0573d36d07cdff90783a33959de4fece930deae/ERCS/erc-4337.md?plain=1#L105-L129
+     *  MUST validate the caller is a trusted EntryPoint
+     *  MUST validate that the signature is a valid signature of the `userOpHash`, and
+     *   SHOULD return SIG_VALIDATION_FAILED (and not revert) on signature mismatch. Any other error MUST revert.
+     *  MUST pay the entryPoint (caller) at least the "missingAccountFunds" (which might be zero, in case the current account's deposit is high enough)
+     *
+     * The account MAY pay more than this minimum, to cover future transactions (it can always issue `withdrawTo` to retrieve it)
+     * The return value MUST be packed of `authorizer`, `validUntil` and `validAfter` timestamps.
+     *   authorizer - 0 for valid signature, 1 to mark signature failure. Otherwise, an address of an authorizer contract, as defined in [ERC-7766](./eip-7766.md).
+     *   `validUntil` is 6-byte timestamp value, or zero for "infinite". The UserOp is valid only up to this time.
+     *   `validAfter` is 6-byte timestamp. The UserOp is valid only after this time.
      */
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
@@ -326,7 +340,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         ) {
             // Owner
             if (signer != owner()) {
-                revert Unauthorized(signer);
+                return SIG_VALIDATION_FAILED;
             }
             return 0;
         } else if (
@@ -335,13 +349,13 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         ) {
             // Admin
             if (signer != admin()) {
-                revert Unauthorized(signer);
+                return SIG_VALIDATION_FAILED;
             }
             return 0;
         } else if (selector == this.reviewSubmission.selector) {
             // Reviewer
             if (!isReviewer(signer)) {
-                revert Unauthorized(signer);
+                return SIG_VALIDATION_FAILED;
             }
 
             assembly {
