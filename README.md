@@ -2,7 +2,7 @@
 
 - [去中心化領稿費機制實驗 HackMD](https://hackmd.io/@nic619/SkZDIp2GJl?utm_source=substack&utm_medium=email)
 
-## Contract Test
+## Contract
 
 ```
 forge test
@@ -16,19 +16,38 @@ forge coverage --report lcov
 forge inspect ./src/RoyaltyAutoClaim.sol:RoyaltyAutoClaim storage
 ```
 
+- 有時出現奇怪錯誤，需要先清理再重新編譯
+```
+forge clean
+```
+
 ## Frontend
 
-- 若合約有更新，記得要先 `forge build`，然後再 `pnpm generate-types` 產新的合約型別，前端測試才會更新
+```
+cd frontend
+pnpm install
+pnpm generate-types
+```
+- 若合約有更新，記得先 `forge build`後再 `pnpm generate-types`，前端測試才會更新
+
+### Local dev net
+
+- anvil http://localhost:8545
+- alto http://localhost:4337
 
 ```
-pnpm i
-pnpm build
-pnpm test
+docker compose up -d
 ```
+
+```
+pnpm test 
+pnpm test <path>
+pnpm test -t <test_name>
+```
+
 
 - For icon, use [lucide-vue-next](https://lucide.dev/icons)
 - For Component, use [shadcn-vue](https://www.shadcn-vue.com/docs/components/accordion.html)
-- Vue 3 + Vite + TypeScript + TailwindCSS
 
 
 ## Reference
