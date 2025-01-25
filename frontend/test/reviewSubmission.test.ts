@@ -1,4 +1,13 @@
-import { ContractTransactionResponse, ethers, getBytes, hexlify, Interface, JsonRpcProvider, toBeHex } from 'ethers'
+import {
+	concat,
+	ContractTransactionResponse,
+	ethers,
+	getBytes,
+	hexlify,
+	Interface,
+	JsonRpcProvider,
+	toBeHex,
+} from 'ethers'
 import { Execution, getEntryPointContract, PimlicoBundler, sendop } from 'sendop'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '../typechain-types'
@@ -63,18 +72,12 @@ describe('reviewSubmission', () => {
 
 		royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(proxyAddress, owner)
 
-		// wait for one second
-		await new Promise(resolve => setTimeout(resolve, 1000))
-
-		// // give proxy address some ether
-		// const tx = await owner.sendTransaction({
-		// 	to: proxyAddress,
-		// 	value: ethers.parseEther('0.1'),
-		// })
-		// await tx.wait()
-
-		const entryPointContract = getEntryPointContract(owner)
-		await waitForTransaction(entryPointContract.depositTo(proxyAddress, { value: ethers.parseEther('0.1') }))
+		// deal
+		const tx = await owner.sendTransaction({
+			to: proxyAddress,
+			value: ethers.parseEther('1'),
+		})
+		await tx.wait()
 
 		console.log('proxyAddress', proxyAddress)
 		console.log('owner', owner.address)
@@ -92,8 +95,7 @@ describe('reviewSubmission', () => {
 
 	it.only('should review a submission by 4337 flow', async () => {
 		const title = 'test4337'
-		// wait for one second
-		await new Promise(resolve => setTimeout(resolve, 1000))
+
 		await waitForTransaction(royaltyAutoClaim.connect(admin).registerSubmission(title, submitter.address))
 
 		const op = await sendop({
@@ -110,12 +112,13 @@ describe('reviewSubmission', () => {
 					return proxyAddress
 				},
 				async getNonce() {
-					const nonceKey = 0
+					const nonceKey = concat(['0x00000000', reviewer.address])
 					const nonce: bigint = await getEntryPointContract(client).getNonce(proxyAddress, nonceKey)
 					return toBeHex(nonce)
 				},
 				getCallData(executions: Execution[]) {
-					return executions[0].data
+					// 0x8dd7712f is the selector for executeUserOp
+					return concat(['0x8dd7712f', executions[0].data])
 				},
 				async getDummySignature() {
 					return '0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c'

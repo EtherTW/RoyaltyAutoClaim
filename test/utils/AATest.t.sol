@@ -6,6 +6,7 @@ import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {UserOperationLib} from "@account-abstraction/contracts/core/UserOperationLib.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
+import {IAccountExecute} from "@account-abstraction/contracts/interfaces/IAccountExecute.sol";
 
 import "forge-std/Test.sol";
 
@@ -27,11 +28,20 @@ abstract contract AATest is Test {
     {
         PackedUserOperation memory userOp = _createUserOp();
         userOp.sender = sender;
-        userOp.nonce = entryPoint.getNonce(sender, 0);
-        userOp.callData = callData;
+
+        // Convert signer address to uint192 key (upper bits)
+        address signer = vm.addr(privateKey);
+        uint192 nonceKey = uint192(uint160(signer));
+        // Get the nonce using the signer's address as the key
+        userOp.nonce = entryPoint.getNonce(sender, nonceKey);
+
+        // Wrap the callData in executeUserOp selector
+        userOp.callData = abi.encodePacked(IAccountExecute.executeUserOp.selector, callData);
+
         (uint8 v, bytes32 r, bytes32 s) =
             vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
         userOp.signature = abi.encodePacked(r, s, v);
+
         return userOp;
     }
 

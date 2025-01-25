@@ -101,6 +101,9 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
             _buildUserOp(reviewer1Key, address(proxy), abi.encodeCall(royaltyAutoClaim.reviewSubmission, ("test", 20))); // reviewer 0
         _handleUserOp(userOp);
 
+        assertEq(submission.reviewCount, 1, "Review count should be 1");
+        assertEq(royaltyAutoClaim.hasReviewed("test", reviewer1), true, "Has reviewed should be true");
+
         // Try to claim after one review - should still fail
         userOp = _buildUserOp(submitterKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")));
         vm.expectEmit(false, true, true, true);
@@ -118,6 +121,8 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
             _buildUserOp(reviewer2Key, address(proxy), abi.encodeCall(royaltyAutoClaim.reviewSubmission, ("test", 40))); // reviewer 1
         _handleUserOp(userOp);
 
+        assertEq(submission.reviewCount, 2, "Review count should be 2");
+        assertEq(royaltyAutoClaim.hasReviewed("test", reviewer2), true, "Has reviewed should be true");
         assertEq(royaltyAutoClaim.getRoyalty("test"), 30 ether, "Royalty should be 30 ether");
 
         // Record balances before claim

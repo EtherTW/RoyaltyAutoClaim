@@ -525,6 +525,11 @@ const _abi = [
   },
   {
     type: "error",
+    name: "ExecutionFailed",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "ForbiddenPaymaster",
     inputs: [],
   },

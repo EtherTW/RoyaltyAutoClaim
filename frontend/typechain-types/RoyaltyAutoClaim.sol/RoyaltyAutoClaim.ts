@@ -94,6 +94,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "claimRoyalty"
       | "emergencyWithdraw"
       | "entryPoint"
+      | "executeUserOp"
       | "getRoyalty"
       | "hasReviewed"
       | "initialize"
@@ -178,6 +179,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   encodeFunctionData(
     functionFragment: "entryPoint",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "executeUserOp",
+    values: [PackedUserOperationStruct, BytesLike]
   ): string;
   encodeFunctionData(functionFragment: "getRoyalty", values: [string]): string;
   encodeFunctionData(
@@ -286,6 +291,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "entryPoint", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "executeUserOp",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "getRoyalty", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "hasReviewed",
@@ -598,6 +607,12 @@ export interface RoyaltyAutoClaim extends BaseContract {
 
   entryPoint: TypedContractMethod<[], [string], "view">;
 
+  executeUserOp: TypedContractMethod<
+    [userOp: PackedUserOperationStruct, arg1: BytesLike],
+    [void],
+    "nonpayable"
+  >;
+
   getRoyalty: TypedContractMethod<[title: string], [bigint], "view">;
 
   hasReviewed: TypedContractMethod<
@@ -734,6 +749,13 @@ export interface RoyaltyAutoClaim extends BaseContract {
   getFunction(
     nameOrSignature: "entryPoint"
   ): TypedContractMethod<[], [string], "view">;
+  getFunction(
+    nameOrSignature: "executeUserOp"
+  ): TypedContractMethod<
+    [userOp: PackedUserOperationStruct, arg1: BytesLike],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "getRoyalty"
   ): TypedContractMethod<[title: string], [bigint], "view">;

@@ -10,6 +10,7 @@ import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IAccountExecute} from "@account-abstraction/contracts/interfaces/IAccountExecute.sol";
 
 interface IRoyaltyAutoClaim {
     // Owner functions
@@ -68,6 +69,7 @@ interface IRoyaltyAutoClaim {
     error ForbiddenPaymaster();
     error UnsupportSelector(bytes4 selector);
     error AlreadyReviewed();
+    error ExecutionFailed();
 
     // Structs
     struct Configs {
@@ -97,7 +99,14 @@ interface IRoyaltyAutoClaim {
     }
 }
 
-contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradeable, IAccount, ReentrancyGuard {
+contract RoyaltyAutoClaim is
+    IRoyaltyAutoClaim,
+    UUPSUpgradeable,
+    OwnableUpgradeable,
+    IAccount,
+    IAccountExecute,
+    ReentrancyGuard
+{
     using SafeERC20 for IERC20;
 
     uint8 public constant ROYALTY_LEVEL_20 = 20;
@@ -329,49 +338,84 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             revert ForbiddenPaymaster();
         }
 
+        // Check that the callData function selector is executeUserOp
         bytes4 selector = bytes4(userOp.callData[0:4]);
-        bytes32 ethHash = ECDSA.toEthSignedMessageHash(userOpHash);
-        address signer = ECDSA.recover(ethHash, userOp.signature);
+        if (selector != this.executeUserOp.selector) {
+            revert UnsupportSelector(selector);
+        }
 
+        // Extract signer address from nonce key (upper 192 bits)
+        uint192 nonceKey = uint192(userOp.nonce >> 64);
+        address signer = address(uint160(nonceKey));
+
+        bytes32 ethHash = ECDSA.toEthSignedMessageHash(userOpHash);
+        address recoveredSigner = ECDSA.recover(ethHash, userOp.signature);
+
+        if (signer != recoveredSigner) {
+            return SIG_VALIDATION_FAILED;
+        }
+
+        return 0;
+    }
+
+    /**
+     * @dev ERC-4337 executeUserOp according to ERC-4337 v0.7
+     *         This function is intended to be called by ERC-4337 EntryPoint.sol
+     * @dev Ensure adequate authorization control: i.e. onlyEntryPointOrSelf
+     *      The implementation of the function is OPTIONAL
+     * @dev userOp.callData = IAccountExecute.executeUserOp.selector ++ calldata
+     *
+     * @notice Modified from https://github.com/erc7579/erc7579-implementation/blob/851c0bbf421d208f15309c4318cac3bef25deb43/src/MSAAdvanced.sol#L148-L167
+     */
+    function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {
+        bytes calldata callData = userOp.callData[4:];
+        bytes4 selector = bytes4(callData[0:4]);
+
+        // Extract signer address from nonce key (upper 24 bytes)
+        uint256 nonceKey = uint256(userOp.nonce >> 64);
+        address signer = address(uint160(nonceKey));
+
+        // Validate permissions based on function selector
         if (
             selector == this.upgradeToAndCall.selector || selector == this.changeAdmin.selector
                 || selector == this.changeRoyaltyToken.selector || selector == this.transferOwnership.selector
                 || selector == this.emergencyWithdraw.selector
         ) {
-            // Owner
+            // Owner functions
             if (signer != owner()) {
-                return SIG_VALIDATION_FAILED;
+                revert Unauthorized(signer);
             }
-            return 0;
         } else if (
             selector == this.updateReviewers.selector || selector == this.registerSubmission.selector
                 || selector == this.updateRoyaltyRecipient.selector || selector == this.revokeSubmission.selector
         ) {
-            // Admin
+            // Admin functions
             if (signer != admin()) {
-                return SIG_VALIDATION_FAILED;
+                revert Unauthorized(signer);
             }
-            return 0;
         } else if (selector == this.reviewSubmission.selector) {
-            // Reviewer
+            // Reviewer functions
             if (!isReviewer(signer)) {
-                return SIG_VALIDATION_FAILED;
+                revert Unauthorized(signer);
             }
-
+            // Store signer for use in reviewSubmission
             assembly {
                 tstore(TRANSIENT_SIGNER_SLOT, signer)
             }
-
-            return 0;
         } else if (selector == this.claimRoyalty.selector) {
-            // Anybody
-            return 0;
+            // Anybody can call this
+        } else {
+            revert UnsupportSelector(selector);
         }
 
-        revert UnsupportSelector(selector);
+        (bool success,) = address(this).delegatecall(callData); // TODO: why delegatecall?
+        if (!success) revert ExecutionFailed(); // TODO: internal error should be handled
     }
 
-    /// @dev 當函式透過 4337 flow 呼叫且需要 signer address 時使用 ex. hasReviewed in reviewSubmission
+    /*
+     * @dev 當函式透過 4337 flow 呼叫且需要 signer address 時使用 ex. hasReviewed in reviewSubmission
+     * @dev 記得要在 executeUserOp 中 tstore signer
+     */
     function _getUserOpSigner() internal view onlyEntryPoint returns (address) {
         address signer;
         assembly {
