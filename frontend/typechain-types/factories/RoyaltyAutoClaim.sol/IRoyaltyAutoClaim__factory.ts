@@ -546,6 +546,11 @@ const _abi = [
   },
   {
     type: "error",
+    name: "InvalidSignatureLength",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "NotFromEntryPoint",
     inputs: [],
   },

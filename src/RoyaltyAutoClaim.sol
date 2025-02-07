@@ -68,6 +68,7 @@ interface IRoyaltyAutoClaim {
     error ForbiddenPaymaster();
     error UnsupportSelector(bytes4 selector);
     error AlreadyReviewed();
+    error InvalidSignatureLength();
 
     // Structs
     struct Configs {
@@ -303,21 +304,22 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     // ================================ ERC-4337 ================================
 
     /**
-     * @dev Ensure that signer has the appropriate permissions of Owner, Admin, or Reviewer.
+     * @dev userOp.signature[0:65]: actual signature
+     * @dev userOp.signature[65:85]: claimed signer address
      * @dev Forbid to use paymaster
      * TODO: 檢查手續費最多不能超過 X ETH（X 的值待定）
      *
-     * From ERC-4337: https://github.com/ethereum/ERCs/blob/b0573d36d07cdff90783a33959de4fece930deae/ERCS/erc-4337.md?plain=1#L105-L129
-     *  MUST validate the caller is a trusted EntryPoint
-     *  MUST validate that the signature is a valid signature of the `userOpHash`, and
+     * docs from ERC-4337: https://github.com/ethereum/ERCs/blob/b0573d36d07cdff90783a33959de4fece930deae/ERCS/erc-4337.md?plain=1#L105-L129
+     *   MUST validate the caller is a trusted EntryPoint
+     *   MUST validate that the signature is a valid signature of the `userOpHash`, and
      *   SHOULD return SIG_VALIDATION_FAILED (and not revert) on signature mismatch. Any other error MUST revert.
-     *  MUST pay the entryPoint (caller) at least the "missingAccountFunds" (which might be zero, in case the current account's deposit is high enough)
+     *   MUST pay the entryPoint (caller) at least the "missingAccountFunds" (which might be zero, in case the current account's deposit is high enough)
      *
-     * The account MAY pay more than this minimum, to cover future transactions (it can always issue `withdrawTo` to retrieve it)
-     * The return value MUST be packed of `authorizer`, `validUntil` and `validAfter` timestamps.
-     *   authorizer - 0 for valid signature, 1 to mark signature failure. Otherwise, an address of an authorizer contract, as defined in [ERC-7766](./eip-7766.md).
-     *   `validUntil` is 6-byte timestamp value, or zero for "infinite". The UserOp is valid only up to this time.
-     *   `validAfter` is 6-byte timestamp. The UserOp is valid only after this time.
+     *   The account MAY pay more than this minimum, to cover future transactions (it can always issue `withdrawTo` to retrieve it)
+     *   The return value MUST be packed of `authorizer`, `validUntil` and `validAfter` timestamps.
+     *     authorizer - 0 for valid signature, 1 to mark signature failure. Otherwise, an address of an authorizer contract, as defined in [ERC-7766](./eip-7766.md).
+     *     `validUntil` is 6-byte timestamp value, or zero for "infinite". The UserOp is valid only up to this time.
+     *     `validAfter` is 6-byte timestamp. The UserOp is valid only after this time.
      */
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
@@ -329,17 +331,28 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             revert ForbiddenPaymaster();
         }
 
-        bytes4 selector = bytes4(userOp.callData[0:4]);
+        if (userOp.signature.length != 85) {
+            revert InvalidSignatureLength();
+        }
+
+        bytes memory actualSignature = bytes(userOp.signature[:65]);
+        address claimedSigner = address(bytes20(userOp.signature[65:]));
         bytes32 ethHash = ECDSA.toEthSignedMessageHash(userOpHash);
-        address signer = ECDSA.recover(ethHash, userOp.signature);
+        address actualSigner = ECDSA.recover(ethHash, actualSignature);
+
+        bytes4 selector = bytes4(userOp.callData[0:4]);
 
         if (
             selector == this.upgradeToAndCall.selector || selector == this.changeAdmin.selector
                 || selector == this.changeRoyaltyToken.selector || selector == this.transferOwnership.selector
                 || selector == this.emergencyWithdraw.selector
         ) {
-            // Owner
-            if (signer != owner()) {
+            // ===== Owner =====
+            if (claimedSigner != owner()) {
+                revert Unauthorized(claimedSigner);
+            }
+
+            if (actualSigner != claimedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
@@ -347,24 +360,35 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             selector == this.updateReviewers.selector || selector == this.registerSubmission.selector
                 || selector == this.updateRoyaltyRecipient.selector || selector == this.revokeSubmission.selector
         ) {
-            // Admin
-            if (signer != admin()) {
+            // ===== Admin =====
+            if (claimedSigner != admin()) {
+                revert Unauthorized(claimedSigner);
+            }
+
+            if (actualSigner != claimedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
         } else if (selector == this.reviewSubmission.selector) {
-            // Reviewer
-            if (!isReviewer(signer)) {
+            // ===== Reviewer =====
+            if (!isReviewer(claimedSigner)) {
+                revert Unauthorized(claimedSigner);
+            }
+
+            // Store the signer for reviewSubmission before signature verification to pass estimateUserOpGas
+            assembly {
+                tstore(TRANSIENT_SIGNER_SLOT, claimedSigner)
+            }
+
+            if (actualSigner != claimedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
-
-            assembly {
-                tstore(TRANSIENT_SIGNER_SLOT, signer)
-            }
-
             return 0;
         } else if (selector == this.claimRoyalty.selector) {
-            // Anybody
+            // ===== Anybody =====
+            if (actualSigner != claimedSigner) {
+                return SIG_VALIDATION_FAILED;
+            }
             return 0;
         }
 

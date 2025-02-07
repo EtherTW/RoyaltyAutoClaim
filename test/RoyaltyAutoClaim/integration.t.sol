@@ -4,6 +4,32 @@ pragma solidity ^0.8.28;
 import "../utils/MockV2.sol";
 import "./BaseTest.t.sol";
 
+/*
+
+測試 _handleUserOp 的預期錯誤
+
+1. EntryPoint Error
+(ex.1) AA24 signature error
+vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+
+(ex.2) AA23 reverted
+vm.expectRevert(
+    abi.encodeWithSelector(
+        IEntryPoint.FailedOpWithRevert.selector,
+        0,
+        "AA23 reverted",
+        abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fakeOwner)
+    )
+);
+
+3. 交易成功，但預期 userop 失敗
+vm.expectEmit(false, true, true, true);
+emit IEntryPoint.UserOperationRevertReason(
+    bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
+);
+
+*/
+
 contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     function setUp() public override {
         super.setUp();
@@ -21,6 +47,23 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         // Should fail for non-owner
         for (uint256 i = 0; i < ownerCalls.length; i++) {
             PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), ownerCalls[i]);
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOpWithRevert.selector,
+                    0,
+                    "AA23 reverted",
+                    abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
+                )
+            );
+            _handleUserOp(userOp);
+        }
+
+        // Should return 1 for invalid signature
+        for (uint256 i = 0; i < ownerCalls.length; i++) {
+            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), ownerCalls[i]);
+            (uint8 v, bytes32 r, bytes32 s) =
+                vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+            userOp.signature = abi.encodePacked(r, s, v, owner); // 放 owner address 但簽名用 fakeKey
             vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
             _handleUserOp(userOp);
         }
@@ -43,6 +86,23 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         // Should fail for non-admin
         for (uint256 i = 0; i < adminCalls.length; i++) {
             PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), adminCalls[i]);
+            vm.expectRevert(
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOpWithRevert.selector,
+                    0,
+                    "AA23 reverted",
+                    abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
+                )
+            );
+            _handleUserOp(userOp);
+        }
+
+        // Should return 1 for invalid signature
+        for (uint256 i = 0; i < adminCalls.length; i++) {
+            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), adminCalls[i]);
+            (uint8 v, bytes32 r, bytes32 s) =
+                vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+            userOp.signature = abi.encodePacked(r, s, v, admin); // 放 admin address 但簽名用 fakeKey
             vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
             _handleUserOp(userOp);
         }
@@ -59,6 +119,21 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
         // Should fail for non-reviewer
         PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), reviewerCall);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
+            )
+        );
+        _handleUserOp(userOp);
+
+        // Should return 1 for invalid signature
+        userOp = _buildUserOp(fakeKey, address(proxy), reviewerCall);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        userOp.signature = abi.encodePacked(r, s, v, reviewer1); // 放 reviewer1 address 但簽名用 fakeKey
         vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
         _handleUserOp(userOp);
 
@@ -74,8 +149,16 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     function test_validateUserOp_public_functions() public {
         bytes memory publicCall = abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test"));
 
-        // Should succeed for any address
+        // Should return 1 for invalid signature
         PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), publicCall);
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        userOp.signature = abi.encodePacked(r, s, v, submitter); // 放 submitter address 但簽名用 fakeKey
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+        _handleUserOp(userOp);
+
+        // Should succeed for any address
+        userOp = _buildUserOp(fakeKey, address(proxy), publicCall);
         _handleUserOp(userOp);
     }
 
@@ -118,6 +201,33 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         _handleUserOp(userOp);
     }
 
+    function testCannot_validateUserOp_InvalidSignatureLength() public {
+        PackedUserOperation memory userOp =
+            _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+
+        userOp.signature = new bytes(84);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidSignatureLength.selector)
+            )
+        );
+        _handleUserOp(userOp);
+
+        userOp.signature = new bytes(86);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidSignatureLength.selector)
+            )
+        );
+        _handleUserOp(userOp);
+    }
+
     function test_upgradeToAndCall() public {
         MockV2 v2 = new MockV2();
 
@@ -128,7 +238,14 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 royaltyAutoClaim.upgradeToAndCall, (address(v2), abi.encodeCall(MockV2.initialize, (newOwner)))
             )
         );
-        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
+            )
+        );
         _handleUserOp(userOp);
 
         userOp = _buildUserOp(
@@ -154,7 +271,15 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         (address fakeOwner, uint256 fakeOwnerKey) = makeAddrAndKey("fakeOwnerKey");
         PackedUserOperation memory userOp =
             _buildUserOp(fakeOwnerKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (fakeOwner)));
-        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fakeOwner)
+            )
+        );
         _handleUserOp(userOp);
     }
 

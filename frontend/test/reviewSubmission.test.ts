@@ -1,4 +1,13 @@
-import { ContractTransactionResponse, ethers, getBytes, hexlify, Interface, JsonRpcProvider, toBeHex } from 'ethers'
+import {
+	concat,
+	ContractTransactionResponse,
+	ethers,
+	getBytes,
+	hexlify,
+	Interface,
+	JsonRpcProvider,
+	toBeHex,
+} from 'ethers'
 import { Execution, getEntryPointContract, PimlicoBundler, sendop } from 'sendop'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '../typechain-types'
@@ -74,7 +83,7 @@ describe('reviewSubmission', () => {
 		// await tx.wait()
 
 		const entryPointContract = getEntryPointContract(owner)
-		await waitForTransaction(entryPointContract.depositTo(proxyAddress, { value: ethers.parseEther('0.1') }))
+		await waitForTransaction(entryPointContract.depositTo(proxyAddress, { value: ethers.parseEther('1') }))
 
 		console.log('proxyAddress', proxyAddress)
 		console.log('owner', owner.address)
@@ -110,19 +119,21 @@ describe('reviewSubmission', () => {
 					return proxyAddress
 				},
 				async getNonce() {
-					const nonceKey = 0
-					const nonce: bigint = await getEntryPointContract(client).getNonce(proxyAddress, nonceKey)
+					const nonce: bigint = await getEntryPointContract(client).getNonce(proxyAddress, 0)
 					return toBeHex(nonce)
 				},
 				getCallData(executions: Execution[]) {
 					return executions[0].data
 				},
 				async getDummySignature() {
-					return '0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c'
+					return concat([
+						'0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c',
+						reviewer.address,
+					])
 				},
-				async getSignature(userOpHash: string) {
-					const signature = await reviewer.signMessage(getBytes(userOpHash))
-					return signature
+				async getSignature(userOpHash: Uint8Array) {
+					const sig = await reviewer.signMessage(userOpHash)
+					return concat([sig, reviewer.address])
 				},
 			},
 		})

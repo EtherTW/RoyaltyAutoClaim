@@ -31,7 +31,8 @@ abstract contract AATest is Test {
         userOp.callData = callData;
         (uint8 v, bytes32 r, bytes32 s) =
             vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
-        userOp.signature = abi.encodePacked(r, s, v);
+        address signer = vm.addr(privateKey);
+        userOp.signature = abi.encodePacked(r, s, v, signer);
         return userOp;
     }
 
