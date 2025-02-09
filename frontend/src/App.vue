@@ -2,12 +2,25 @@
 import { Button } from '@/components/ui/button'
 import { ref } from 'vue'
 import { Settings } from 'lucide-vue-next'
+import { notify } from '@kyvg/vue3-notification'
+import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+
+const breakpoints = useBreakpoints(breakpointsTailwind)
+
 const isConnected = ref(false)
 
 const handleConnect = () => {
 	// TODO: Implement connection logic
 	isConnected.value = !isConnected.value
 }
+
+onMounted(() => {
+	notify({
+		title: 'Hello',
+		text: 'World',
+		type: 'success',
+	})
+})
 </script>
 
 <template>
@@ -39,4 +52,5 @@ const handleConnect = () => {
 			<router-view />
 		</main>
 	</div>
+	<notifications :position="breakpoints.isSmaller('md') ? 'top center' : 'bottom right'" />
 </template>
