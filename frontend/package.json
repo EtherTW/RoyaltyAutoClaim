@@ -12,6 +12,8 @@
 	},
 	"dependencies": {
 		"@kyvg/vue3-notification": "^3.4.1",
+		"@vue-dapp/core": "^1.5.1",
+		"@vue-dapp/modal": "^1.5.1",
 		"@vueuse/core": "^12.4.0",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",

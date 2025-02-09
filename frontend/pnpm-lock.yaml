@@ -11,6 +11,12 @@ importers:
       '@kyvg/vue3-notification':
         specifier: ^3.4.1
         version: 3.4.1(vue@3.5.13(typescript@5.6.3))
+      '@vue-dapp/core':
+        specifier: ^1.5.1
+        version: 1.5.1(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
+      '@vue-dapp/modal':
+        specifier: ^1.5.1
+        version: 1.5.1(@vue-dapp/core@1.5.1(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3)))(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
       '@vueuse/core':
         specifier: ^12.4.0
         version: 12.4.0(typescript@5.6.3)
@@ -516,6 +522,19 @@ packages:
 
   '@volar/typescript@2.4.11':
     resolution: {integrity: sha512-2DT+Tdh88Spp5PyPbqhyoYavYCPDsqbHLFwcUI9K1NlY1YgUJvujGdrqUp0zWxnW7KWNTr3xSpMuv2WnaTKDAw==}
+
+  '@vue-dapp/core@1.5.1':
+    resolution: {integrity: sha512-ihbk2dsySKHoApna0jDkUg3+ac3G3Cdxl4Is0suMmXFsjnWrlTy4l6fBUAYGHn/B8fRpXs41l/aHuI53zrJ5Jg==}
+    peerDependencies:
+      pinia: ^2.1.7
+      vue: ^3.3.7
+
+  '@vue-dapp/modal@1.5.1':
+    resolution: {integrity: sha512-ubPlDYjKSJaAjNQyCEsxOCN0c8jPlUFyGjYlU62J7gkx+hC1BjtmqqZFH+b6+68dQ06eJnCkqarjWC6joK1EKQ==}
+    peerDependencies:
+      '@vue-dapp/core': '*'
+      pinia: '>=2.1.7'
+      vue: '>=3.3.6'
 
   '@vue/compiler-core@3.5.13':
     resolution: {integrity: sha512-oOdAkwqUfW1WqpwSYJce06wvt6HljgY3fGeM9NcVA1HaYOij3mZG9Rkysn0OHuyUAGMbEbARIpsG+LPVlBJ5/Q==}
@@ -1895,6 +1914,17 @@ snapshots:
       '@volar/language-core': 2.4.11
       path-browserify: 1.0.1
       vscode-uri: 3.0.8
+
+  '@vue-dapp/core@1.5.1(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))':
+    dependencies:
+      pinia: 2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))
+      vue: 3.5.13(typescript@5.6.3)
+
+  '@vue-dapp/modal@1.5.1(@vue-dapp/core@1.5.1(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3)))(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))':
+    dependencies:
+      '@vue-dapp/core': 1.5.1(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
+      pinia: 2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))
+      vue: 3.5.13(typescript@5.6.3)
 
   '@vue/compiler-core@3.5.13':
     dependencies:

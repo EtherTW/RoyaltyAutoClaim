@@ -1,18 +1,37 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { ref } from 'vue'
-import { Settings } from 'lucide-vue-next'
 import { notify } from '@kyvg/vue3-notification'
+import { BrowserWalletConnector, useVueDapp } from '@vue-dapp/core'
+import { VueDappModal, useVueDappModal } from '@vue-dapp/modal'
+import '@vue-dapp/modal/dist/style.css'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
+import { LogOut, Settings } from 'lucide-vue-next'
+import { useEOAStore } from './stores/useEOA'
+
+const { addConnectors, status, address, isConnected, disconnect, watchWalletChanged, watchDisconnect } = useVueDapp()
+
+addConnectors([new BrowserWalletConnector()])
+
+const eoaStore = useEOAStore()
+
+watchWalletChanged(async wallet => {
+	eoaStore.setWallet(wallet.provider)
+})
+
+watchDisconnect(() => {
+	eoaStore.resetWallet()
+})
+
+const onClickConnect = () => {
+	const { open } = useVueDappModal()
+	open()
+}
+
+const onClickDisconnect = () => {
+	disconnect()
+}
 
 const breakpoints = useBreakpoints(breakpointsTailwind)
-
-const isConnected = ref(false)
-
-const handleConnect = () => {
-	// TODO: Implement connection logic
-	isConnected.value = !isConnected.value
-}
 
 onMounted(() => {
 	notify({
@@ -34,16 +53,28 @@ onMounted(() => {
 				</div>
 
 				<div class="flex items-center gap-6">
-					<Button @click="handleConnect" :variant="isConnected ? 'default' : 'outline'">
-						{{ isConnected ? 'Connected' : 'Connect' }}
+					<Address v-if="isConnected" :address="address">
+						<template #button>
+							<Button class="address-button" variant="link" size="icon" @click="onClickDisconnect">
+								<LogOut />
+							</Button>
+						</template>
+					</Address>
+					<Button
+						v-else
+						@click="onClickConnect"
+						:variant="isConnected ? 'default' : 'outline'"
+						:disabled="status === 'connecting'"
+					>
+						{{ status === 'connecting' ? 'Connecting...' : isConnected ? 'Connected' : 'Connect' }}
 					</Button>
 
-					<router-link
+					<RouterLink
 						to="/config"
 						class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
 					>
 						<Settings />
-					</router-link>
+					</RouterLink>
 				</div>
 			</div>
 		</header>
@@ -52,5 +83,6 @@ onMounted(() => {
 			<router-view />
 		</main>
 	</div>
-	<notifications :position="breakpoints.isSmaller('md') ? 'top center' : 'bottom right'" />
+	<VueDappModal autoConnect autoConnectBrowserWalletIfSolo />
+	<Notifications :position="breakpoints.isSmaller('md') ? 'top center' : 'bottom right'" />
 </template>
