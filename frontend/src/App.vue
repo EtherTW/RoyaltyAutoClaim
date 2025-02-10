@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
-import { notify } from '@kyvg/vue3-notification'
 import { BrowserWalletConnector, useVueDapp } from '@vue-dapp/core'
 import { VueDappModal, useVueDappModal } from '@vue-dapp/modal'
 import '@vue-dapp/modal/dist/style.css'
@@ -32,14 +31,6 @@ const onClickDisconnect = () => {
 }
 
 const breakpoints = useBreakpoints(breakpointsTailwind)
-
-onMounted(() => {
-	notify({
-		title: 'Hello',
-		text: 'World',
-		type: 'success',
-	})
-})
 </script>
 
 <template>
@@ -84,5 +75,5 @@ onMounted(() => {
 		</main>
 	</div>
 	<VueDappModal autoConnect autoConnectBrowserWalletIfSolo />
-	<Notifications :position="breakpoints.isSmaller('md') ? 'top center' : 'bottom right'" />
+	<Notifications :position="breakpoints.isSmaller('md') ? 'bottom center' : 'bottom right'" />
 </template>

@@ -1,9 +1,19 @@
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge' /* PartiallyEnd: #3632/scriptSetup.vue */
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+
+const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
+
+const loading = computed(() => royaltyAutoClaimStore.isLoading)
+const disabled = computed(() => royaltyAutoClaimStore.isBtnDisabled)
+
+function onClickRegisterSubmission() {
+	royaltyAutoClaimStore.registerSubmission('test', '0x1234567890123456789012345678901234567890')
+}
 </script>
 
 <template>
@@ -27,9 +37,16 @@ import { Label } from '@/components/ui/label'
 						<Input id="royaltyRecipient" placeholder="0x..." />
 					</div>
 					<div class="flex gap-4 flex-wrap">
-						<Button variant="default">Register Submission</Button>
-						<Button variant="default">Update Recipient</Button>
-						<Button variant="destructive">Revoke Submission</Button>
+						<Button
+							variant="default"
+							:loading="loading"
+							:disabled="disabled"
+							@click="onClickRegisterSubmission"
+						>
+							Register Submission
+						</Button>
+						<Button variant="default" :loading="loading" :disabled="disabled">Update Recipient</Button>
+						<Button variant="destructive" :loading="loading" :disabled="disabled">Revoke Submission</Button>
 					</div>
 				</div>
 			</CardContent>
