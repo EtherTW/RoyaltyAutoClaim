@@ -10,7 +10,8 @@
 		"paths": {
 			"@/*": ["./src/*"]
 		},
-		"moduleResolution": "node" // for @vue-dapp Could not find a declaration file for module
+		"moduleResolution": "node", // for @vue-dapp Could not find a declaration file for module
+		"verbatimModuleSyntax": false // no need to distinguish between type or value during import
 	},
-	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"]
+	"include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue", "test/**/*.test.ts"]
 }
