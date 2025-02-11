@@ -22,8 +22,6 @@ export async function waitForTransaction(promise: Promise<ContractTransactionRes
 	}
 }
 
-export function decodeError() {}
-
 export function findSelector(data: string, type?: 'function' | 'error'): string | undefined {
 	// Get the selector (first 4 bytes after '0x')
 	const selector = data.startsWith('0x') ? data.slice(0, 10) : '0x' + data.slice(0, 8)

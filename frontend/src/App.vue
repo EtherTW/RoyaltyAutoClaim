@@ -75,5 +75,6 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 		</main>
 	</div>
 	<VueDappModal autoConnect autoConnectBrowserWalletIfSolo />
+
 	<Notifications :position="breakpoints.isSmaller('md') ? 'bottom center' : 'bottom right'" />
 </template>

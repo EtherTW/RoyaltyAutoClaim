@@ -1,5 +1,7 @@
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+import { IRoyaltyAutoClaim__factory } from '@/typechain-types'
 import { notify } from '@kyvg/vue3-notification'
+import { Interface } from 'ethers'
 
 export function useContractCall(options: {
 	calldata: ComputedRef<string>
@@ -36,8 +38,9 @@ export function useContractCall(options: {
 		} catch (err: any) {
 			notify({
 				title: options.errorTitle,
-				text: err.message,
+				text: parseError(err),
 				type: 'error',
+				duration: -1,
 			})
 		} finally {
 			isLoading.value = false
@@ -48,4 +51,34 @@ export function useContractCall(options: {
 		isLoading,
 		send,
 	}
+}
+
+function parseError(error: any): string {
+	if (typeof error?.message === 'string') {
+		// Special handling for simulation errors
+		if (error.message.includes('eth_estimateUserOperationGas')) {
+			const match = error.message.match(/UserOperation reverted during simulation with reason: (.+)$/)
+			const contractError = match?.[1]
+
+			if (contractError) {
+				const iface = new Interface(IRoyaltyAutoClaim__factory.abi)
+				const decodedError = iface.parseError(contractError)
+				if (decodedError) {
+					return `${decodedError.name}(${decodedError.args.join(', ')})`
+				}
+			}
+		}
+
+		// Don't extract if it's a different JSON-RPC Error
+		if (error.message.startsWith('JSON-RPC Error:')) {
+			return error.message
+		}
+
+		// Extract everything before the first parenthesis
+		const match = error.message.match(/^([^(]+)/)
+		if (match) {
+			return match[1].trim()
+		}
+	}
+	return error?.message || 'Unknown error occurred'
 }
