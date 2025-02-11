@@ -37,6 +37,11 @@ export function useContractCall(options: {
 				type: 'success',
 			})
 		} catch (err: any) {
+			// ignore user rejected action ex. cancel the transaction in the wallet
+			if (err.message.includes('user rejected action')) {
+				return
+			}
+
 			notify({
 				title: options.errorTitle,
 				text: parseError(err),
