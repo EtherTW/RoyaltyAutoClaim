@@ -1,6 +1,6 @@
 import type { ContractTransactionResponse } from 'ethers'
 import { Interface } from 'ethers'
-import { RoyaltyAutoClaim__factory } from 'typechain-types'
+import { RoyaltyAutoClaim__factory } from '../typechain-types'
 
 export async function waitForTransaction(promise: Promise<ContractTransactionResponse>) {
 	try {

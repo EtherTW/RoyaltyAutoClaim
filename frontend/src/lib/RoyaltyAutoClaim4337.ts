@@ -7,8 +7,7 @@ import {
 	type OperationGetter,
 	type SendOpResult,
 } from 'sendop'
-
-export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS = '0xD5A67711b92eB0a4FAc29fe59F8f57802BA83e21' // first deployed proxy address on local network
+import { ROYALTY_AUTO_CLAIM_PROXY_ADDRESS } from '@/config'
 
 export class RoyaltyAutoClaim4337 implements OperationGetter {
 	client: JsonRpcProvider

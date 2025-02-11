@@ -8,7 +8,7 @@
 		"build": "vue-tsc -b && vite build",
 		"preview": "vite preview",
 		"test": "vitest --run",
-		"generate-types": "typechain --target ethers-v6 --out-dir 'typechain-types' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json'",
+		"generate-types": "typechain --target ethers-v6 --out-dir 'src/typechain-types' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json'",
 		"deploy-contracts:local": "pnpm test test/deploy-local.test.ts"
 	},
 	"dependencies": {
@@ -29,6 +29,7 @@
 		"vue-router": "^4.5.0"
 	},
 	"devDependencies": {
+		"@faker-js/faker": "^9.4.0",
 		"@typechain/ethers-v6": "^0.5.1",
 		"@types/node": "^22.10.7",
 		"@vitejs/plugin-vue": "^5.2.1",

@@ -10,7 +10,7 @@ import {
 } from 'ethers'
 import { Execution, getEntryPointContract, PimlicoBundler, sendop } from 'sendop'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '../typechain-types'
+import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '../src/typechain-types'
 
 const ACCOUNT_0_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
 const ACCOUNT_1_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'

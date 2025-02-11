@@ -1,5 +1,6 @@
-import { RoyaltyAutoClaim__factory } from '@/../typechain-types'
-import { ROYALTY_AUTO_CLAIM_PROXY_ADDRESS, RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
+import { RoyaltyAutoClaim__factory } from '@/typechain-types'
+import { ROYALTY_AUTO_CLAIM_PROXY_ADDRESS } from '@/config'
+import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
 import { notify } from '@kyvg/vue3-notification'
 import { JsonRpcSigner } from 'ethers'
 import { defineStore } from 'pinia'
