@@ -2,3 +2,5 @@ export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS = import.meta.env.VITE_ROYALTY_AUT
 if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS) {
 	throw new Error('ROYALTY_AUTO_CLAIM_PROXY_ADDRESS is not set in .env')
 }
+
+export const ERROR_NOTIFICATION_DURATION = -1

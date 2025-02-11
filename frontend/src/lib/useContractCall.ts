@@ -1,3 +1,4 @@
+import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { IRoyaltyAutoClaim__factory } from '@/typechain-types'
 import { notify } from '@kyvg/vue3-notification'
@@ -40,7 +41,7 @@ export function useContractCall(options: {
 				title: options.errorTitle,
 				text: parseError(err),
 				type: 'error',
-				duration: -1,
+				duration: ERROR_NOTIFICATION_DURATION,
 			})
 		} finally {
 			isLoading.value = false

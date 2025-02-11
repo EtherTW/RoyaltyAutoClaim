@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { fetchExistingSubmissions } from '@/lib/RoyaltyAutoClaim'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { notify } from '@kyvg/vue3-notification'
@@ -64,7 +65,7 @@ onMounted(async () => {
 			title: 'Error fetching submissions',
 			text: err.message,
 			type: 'error',
-			duration: -1,
+			duration: ERROR_NOTIFICATION_DURATION,
 		})
 	} finally {
 		isLoadingBasicSubmissions.value = false
