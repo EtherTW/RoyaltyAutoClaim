@@ -35,7 +35,7 @@ describe('RoyaltyAutoClaim.ts', () => {
 	})
 
 	it('fetchExistingSubmissions', async () => {
-		// register 3 submissions and revoke 1
+		// register 3 submissions, revoke 1 and update 1
 		const title1 = faker.lorem.word()
 		const title2 = faker.lorem.word()
 		const title3 = faker.lorem.word()

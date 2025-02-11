@@ -1,6 +1,6 @@
-import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { ROYALTY_AUTO_CLAIM_PROXY_ADDRESS } from '@/config'
 import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
+import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { notify } from '@kyvg/vue3-notification'
 import { JsonRpcSigner } from 'ethers'
 import { defineStore } from 'pinia'
@@ -13,10 +13,11 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 	const isLoading = ref(false)
 	const isBtnDisabled = computed(() => isLoading.value || !royaltyAutoClaim4337.value)
 
-	const royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(ROYALTY_AUTO_CLAIM_PROXY_ADDRESS, blockchainStore.client)
+	const royaltyAutoClaim = computed(() => {
+		return RoyaltyAutoClaim__factory.connect(ROYALTY_AUTO_CLAIM_PROXY_ADDRESS, blockchainStore.client)
+	})
 
 	const royaltyAutoClaim4337 = computed(() => {
-		const blockchainStore = useBlockchainStore()
 		const eoaStore = useEOAStore()
 
 		if (eoaStore.signer) {
@@ -30,11 +31,6 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 		return null
 	})
 
-	async function fetchSubmissions() {
-		// SubmissionRegistered event
-		// SubmissionRevoked event
-	}
-
 	async function registerSubmission(title: string, recipient: string) {
 		if (!royaltyAutoClaim4337.value) {
 			throw new Error('No royaltyAutoClaim')
@@ -44,7 +40,7 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 			isLoading.value = true
 
 			const op = await royaltyAutoClaim4337.value.sendCalldata(
-				royaltyAutoClaim.interface.encodeFunctionData('registerSubmission', [title, recipient]),
+				royaltyAutoClaim.value.interface.encodeFunctionData('registerSubmission', [title, recipient]),
 			)
 
 			notify({

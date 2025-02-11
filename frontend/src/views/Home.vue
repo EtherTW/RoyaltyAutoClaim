@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ref } from 'vue'
+import { fetchExistingSubmissions } from '@/lib/RoyaltyAutoClaim'
+import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+import { notify } from '@kyvg/vue3-notification'
 
-const title = ref('')
 const selectedRoyaltyLevel = ref('')
 const royaltyLevels = [
 	{ value: '20', label: '20' },
@@ -14,44 +14,48 @@ const royaltyLevels = [
 	{ value: '80', label: '80' },
 ]
 
-const handleReviewSubmit = () => {
-	// TODO: Implement review submission
-	console.log('Review submitted:', { title: title.value, royaltyLevel: selectedRoyaltyLevel.value })
+const handleReviewSubmit = () => {}
+
+const handleClaimRoyalty = () => {}
+
+type Submission = {
+	title: string
+	recipient: string
+	reviewCount: number | null
+	totalRoyaltyLevel: number | null
+	status: 'registered' | 'claimed' | null
 }
 
-const handleClaimRoyalty = () => {
-	// TODO: Implement royalty claim
-	console.log('Claiming royalty for:', title.value)
-}
+const submissions = ref<Submission[]>([])
 
-// Add new data for submissions
-const submissions = ref([
-	{
-		title: 'Title A',
-		recipient: '0x1234...5678',
-		reviewCount: 1,
-		totalRoyaltyLevel: 20,
-		status: 'registered',
-	},
-	{
-		title: 'Title B',
-		recipient: '0x1234...5678',
-		reviewCount: 2,
-		totalRoyaltyLevel: 60,
-		status: 'registered',
-	},
-	{
-		title: 'Title C',
-		recipient: '0x8765...4321',
-		reviewCount: 3,
-		totalRoyaltyLevel: 80,
-		status: 'claimed',
-	},
-])
+const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
-const getStatusColor = (status: string) => {
-	return status === 'claimed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-}
+onMounted(async () => {
+	try {
+		const basicSubmissions = await fetchExistingSubmissions(royaltyAutoClaimStore.royaltyAutoClaim)
+
+		submissions.value = basicSubmissions.map(submission => ({
+			title: submission.title,
+			recipient: submission.recipient,
+			reviewCount: null,
+			totalRoyaltyLevel: null,
+			status: null,
+		}))
+
+		submissions.value.forEach(async submission => {
+			const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submission.title)
+			submission.reviewCount = Number(submissionData.reviewCount)
+			submission.totalRoyaltyLevel = Number(submissionData.totalRoyaltyLevel)
+			submission.status = Number(submissionData.status) === 1 ? 'registered' : 'claimed'
+		})
+	} catch (err: any) {
+		notify({
+			title: 'Error fetching submissions',
+			text: err.message,
+			type: 'error',
+		})
+	}
+})
 </script>
 
 <template>
@@ -69,9 +73,9 @@ const getStatusColor = (status: string) => {
 				<CardContent>
 					<div class="space-y-1 text-sm text-muted-foreground flex justify-between">
 						<div>
-							<p>Recipient: {{ submission.recipient }}</p>
+							<div>Recipient: <Address :address="submission.recipient" /></div>
 							<p>Reviews: {{ submission.reviewCount }}</p>
-							<p>Total Royalty Level: {{ submission.totalRoyaltyLevel }}%</p>
+							<p>Avg Royalty Level: {{ submission.totalRoyaltyLevel }} USD</p>
 						</div>
 					</div>
 
@@ -90,7 +94,12 @@ const getStatusColor = (status: string) => {
 						</div>
 
 						<Button variant="secondary" @click="handleReviewSubmit">Submit Review</Button>
-						<Button v-if="submission.reviewCount >= 2" @click="handleClaimRoyalty"> Claim Royalty </Button>
+						<Button
+							v-if="submission.reviewCount && submission.reviewCount >= 2"
+							@click="handleClaimRoyalty"
+						>
+							Claim Royalty
+						</Button>
 					</div>
 				</CardContent>
 			</Card>

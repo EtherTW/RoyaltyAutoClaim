@@ -55,7 +55,7 @@ const onClickCopyAddress = () => {
 
 <style lang="css">
 .address-button {
-	@apply w-6 h-6 rounded-full bg-gray-100;
+	@apply w-5 h-5 rounded-full bg-gray-100;
 }
 
 .address-button:hover {
