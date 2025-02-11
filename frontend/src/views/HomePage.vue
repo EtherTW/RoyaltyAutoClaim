@@ -76,20 +76,17 @@ onMounted(async () => {
 
 <template>
 	<div class="container mx-auto p-8">
-		<div class="flex items-center justify-center mb-6">
-			<h1 v-if="submissions.length" class="text-2xl font-bold">Submissions</h1>
-		</div>
-
 		<div class="space-y-4">
-			<div class="flex items-center justify-center mb-6">
-				<Loader2
-					v-if="isLoadingBasicSubmissions || isLoadingSubmissionData"
-					class="w-4 h-4 ml-2 animate-spin"
-				/>
-				<div v-else class="text-gray-500">No Submissions</div>
+			<div
+				v-if="isLoadingBasicSubmissions || isLoadingSubmissionData"
+				class="flex items-center justify-center mb-6"
+			>
+				<Loader2 class="w-4 h-4 ml-2 animate-spin" />
 			</div>
 
-			<Card v-for="submission in submissions" :key="submission.title">
+			<div v-else-if="!submissions.length" class="text-gray-500 text-center">No Submissions</div>
+
+			<Card v-for="submission in [...submissions].reverse()" :key="submission.title">
 				<CardHeader>
 					<div class="flex items-center justify-between">
 						<CardTitle>{{ submission.title }}</CardTitle>
