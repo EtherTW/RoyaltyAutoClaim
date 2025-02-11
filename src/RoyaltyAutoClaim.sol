@@ -70,6 +70,7 @@ interface IRoyaltyAutoClaim {
     error UnsupportSelector(bytes4 selector);
     error AlreadyReviewed();
     error InvalidSignatureLength();
+    error SameAddress();
 
     // Structs
     struct Configs {
@@ -251,6 +252,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) public onlyAdminOrEntryPoint {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
+        require(newRoyaltyRecipient != submissions(title).royaltyRecipient, SameAddress());
         address oldRecipient = _getMainStorage().submissions[title].royaltyRecipient;
         _getMainStorage().submissions[title].royaltyRecipient = newRoyaltyRecipient;
         emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient, title);

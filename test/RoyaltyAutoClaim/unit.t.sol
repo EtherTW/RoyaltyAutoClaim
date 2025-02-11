@@ -294,6 +294,17 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.updateRoyaltyRecipient("test", vm.randomAddress());
     }
 
+    function testCannot_updateRoyaltyRecipient_with_same_address() public {
+        address recipient = vm.randomAddress();
+
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission("test", recipient);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
+        royaltyAutoClaim.updateRoyaltyRecipient("test", recipient);
+    }
+
     function test_revokeSubmission() public {
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", submitter);
