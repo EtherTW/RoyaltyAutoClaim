@@ -4,16 +4,27 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useContractCall } from '@/lib/useContractCall'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
-const loading = computed(() => royaltyAutoClaimStore.isLoading)
-const disabled = computed(() => royaltyAutoClaimStore.isBtnDisabled)
+const isBtnDisabled = computed(() => !royaltyAutoClaimStore.royaltyAutoClaim4337 || isRegisterLoading.value)
 
-function onClickRegisterSubmission() {
-	royaltyAutoClaimStore.registerSubmission('test', '0x1234567890123456789012345678901234567890')
-}
+const title = ref('test')
+const recipient = ref('0x1234567890123456789012345678901234567890')
+
+const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useContractCall({
+	calldata: computed(() =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('registerSubmission', [
+			title.value,
+			recipient.value,
+		]),
+	),
+	successTitle: 'Successfully Registered Submission',
+	waitingTitle: 'Waiting for Register Submission',
+	errorTitle: 'Error Registering Submission',
+})
 </script>
 
 <template>
@@ -30,23 +41,23 @@ function onClickRegisterSubmission() {
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
 						<Label for="submissionTitle">Submission Title</Label>
-						<Input id="submissionTitle" placeholder="Enter submission title" />
+						<Input id="submissionTitle" v-model="title" placeholder="Enter submission title" />
 					</div>
 					<div class="flex flex-col space-y-1.5">
 						<Label for="royaltyRecipient">Royalty Recipient Address</Label>
-						<Input id="royaltyRecipient" placeholder="0x..." />
+						<Input id="royaltyRecipient" v-model="recipient" placeholder="0x..." />
 					</div>
 					<div class="flex gap-4 flex-wrap">
 						<Button
 							variant="default"
-							:loading="loading"
-							:disabled="disabled"
+							:loading="isRegisterLoading"
+							:disabled="isBtnDisabled"
 							@click="onClickRegisterSubmission"
 						>
 							Register Submission
 						</Button>
-						<Button variant="default" :loading="loading" :disabled="disabled">Update Recipient</Button>
-						<Button variant="destructive" :loading="loading" :disabled="disabled">Revoke Submission</Button>
+						<Button variant="default" :disabled="isBtnDisabled">Update Recipient</Button>
+						<Button variant="destructive" :disabled="isBtnDisabled">Revoke Submission</Button>
 					</div>
 				</div>
 			</CardContent>
