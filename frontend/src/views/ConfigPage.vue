@@ -9,7 +9,13 @@ import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
-const isBtnDisabled = computed(() => !royaltyAutoClaimStore.royaltyAutoClaim4337 || isRegisterLoading.value)
+const isBtnDisabled = computed(
+	() =>
+		!royaltyAutoClaimStore.royaltyAutoClaim4337 ||
+		isRegisterLoading.value ||
+		isUpdateLoading.value ||
+		isRevokeLoading.value,
+)
 
 const title = ref('test')
 const recipient = ref('0x1234567890123456789012345678901234567890')
@@ -24,6 +30,27 @@ const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useCon
 	successTitle: 'Successfully Registered Submission',
 	waitingTitle: 'Waiting for Register Submission',
 	errorTitle: 'Error Registering Submission',
+})
+
+const { isLoading: isUpdateLoading, send: onClickUpdateRecipient } = useContractCall({
+	calldata: computed(() =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateRoyaltyRecipient', [
+			title.value,
+			recipient.value,
+		]),
+	),
+	successTitle: 'Successfully Updated Recipient',
+	waitingTitle: 'Waiting for Update Recipient',
+	errorTitle: 'Error Updating Recipient',
+})
+
+const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContractCall({
+	calldata: computed(() =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('revokeSubmission', [title.value]),
+	),
+	successTitle: 'Successfully Revoked Submission',
+	waitingTitle: 'Waiting for Revoke Submission',
+	errorTitle: 'Error Revoking Submission',
 })
 </script>
 
@@ -56,8 +83,22 @@ const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useCon
 						>
 							Register Submission
 						</Button>
-						<Button variant="default" :disabled="isBtnDisabled">Update Recipient</Button>
-						<Button variant="destructive" :disabled="isBtnDisabled">Revoke Submission</Button>
+						<Button
+							variant="default"
+							:loading="isUpdateLoading"
+							:disabled="isBtnDisabled"
+							@click="onClickUpdateRecipient"
+						>
+							Update Recipient
+						</Button>
+						<Button
+							variant="destructive"
+							:loading="isRevokeLoading"
+							:disabled="isBtnDisabled"
+							@click="onClickRevokeSubmission"
+						>
+							Revoke Submission
+						</Button>
 					</div>
 				</div>
 			</CardContent>

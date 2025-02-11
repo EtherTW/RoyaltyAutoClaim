@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { fetchExistingSubmissions } from '@/lib/RoyaltyAutoClaim'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { notify } from '@kyvg/vue3-notification'
+import { Loader2 } from 'lucide-vue-next'
 
 const selectedRoyaltyLevel = ref('')
 const royaltyLevels = [
@@ -27,11 +28,15 @@ type Submission = {
 }
 
 const submissions = ref<Submission[]>([])
+const isLoadingBasicSubmissions = ref(false)
+const isLoadingSubmissionData = ref(false)
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
 onMounted(async () => {
 	try {
+		isLoadingBasicSubmissions.value = true
+
 		const basicSubmissions = await fetchExistingSubmissions(royaltyAutoClaimStore.royaltyAutoClaim)
 
 		submissions.value = basicSubmissions.map(submission => ({
@@ -42,27 +47,47 @@ onMounted(async () => {
 			status: null,
 		}))
 
-		submissions.value.forEach(async submission => {
-			const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submission.title)
-			submission.reviewCount = Number(submissionData.reviewCount)
-			submission.totalRoyaltyLevel = Number(submissionData.totalRoyaltyLevel)
-			submission.status = Number(submissionData.status) === 1 ? 'registered' : 'claimed'
-		})
+		isLoadingBasicSubmissions.value = false
+
+		isLoadingSubmissionData.value = true
+		await Promise.all(
+			submissions.value.map(async submission => {
+				const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submission.title)
+				submission.reviewCount = Number(submissionData.reviewCount)
+				submission.totalRoyaltyLevel = Number(submissionData.totalRoyaltyLevel)
+				submission.status = Number(submissionData.status) === 1 ? 'registered' : 'claimed'
+			}),
+		)
+		isLoadingSubmissionData.value = false
 	} catch (err: any) {
 		notify({
 			title: 'Error fetching submissions',
 			text: err.message,
 			type: 'error',
+			duration: -1,
 		})
+	} finally {
+		isLoadingBasicSubmissions.value = false
+		isLoadingSubmissionData.value = false
 	}
 })
 </script>
 
 <template>
 	<div class="container mx-auto p-8">
-		<h1 class="text-2xl font-bold text-center mb-6">Submissions</h1>
+		<div class="flex items-center justify-center mb-6">
+			<h1 v-if="submissions.length" class="text-2xl font-bold">Submissions</h1>
+		</div>
 
 		<div class="space-y-4">
+			<div class="flex items-center justify-center mb-6">
+				<Loader2
+					v-if="isLoadingBasicSubmissions || isLoadingSubmissionData"
+					class="w-4 h-4 ml-2 animate-spin"
+				/>
+				<div v-else class="text-gray-500">No Submissions</div>
+			</div>
+
 			<Card v-for="submission in submissions" :key="submission.title">
 				<CardHeader>
 					<div class="flex items-center justify-between">
