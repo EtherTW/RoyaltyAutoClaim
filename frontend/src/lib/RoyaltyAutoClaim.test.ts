@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '@/typechain-types'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { account0 } from '../../test/test-utils'
 import { fetchExistingSubmissions } from './RoyaltyAutoClaim'
 import { waitForTransaction } from './ethers'
@@ -11,7 +11,7 @@ describe('RoyaltyAutoClaim.ts', () => {
 	let proxyAddress: string
 	let royaltyAutoClaim: RoyaltyAutoClaim
 
-	beforeAll(async () => {
+	beforeEach(async () => {
 		const RoyaltyAutoClaimFactory = new RoyaltyAutoClaim__factory(account0)
 		const RoyaltyAutoClaimProxyFactory = new RoyaltyAutoClaimProxy__factory(account0)
 
@@ -53,5 +53,18 @@ describe('RoyaltyAutoClaim.ts', () => {
 			{ title: title1, recipient: getAddress(newRecipient) },
 			{ title: title3, recipient: account0.address },
 		])
+	})
+
+	/*
+		pnpm vitest run -t "cannot show revoked submission"
+	*/
+	it('cannot show revoked submission', async () => {
+		const title = faker.lorem.word()
+		await waitForTransaction(royaltyAutoClaim.registerSubmission(title, account0.address))
+		await waitForTransaction(royaltyAutoClaim.updateRoyaltyRecipient(title, faker.finance.ethereumAddress()))
+		await waitForTransaction(royaltyAutoClaim.revokeSubmission(title))
+
+		const submissions = await fetchExistingSubmissions(royaltyAutoClaim)
+		expect(submissions).toEqual([])
 	})
 })

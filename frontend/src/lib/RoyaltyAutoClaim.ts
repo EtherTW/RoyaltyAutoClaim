@@ -17,6 +17,7 @@ export async function fetchExistingSubmissions(royaltyAutoClaim: RoyaltyAutoClai
 	const revokedEvents = await royaltyAutoClaim.queryFilter(royaltyAutoClaim.filters.SubmissionRevoked())
 
 	for (const event of revokedEvents) {
+		console.log(event.args.title)
 		submissions.delete(event.args.title)
 	}
 
@@ -26,10 +27,13 @@ export async function fetchExistingSubmissions(royaltyAutoClaim: RoyaltyAutoClai
 	)
 
 	for (const event of updatedEvents) {
-		submissions.set(event.args.title, {
-			title: event.args.title,
-			recipient: event.args.newRecipient,
-		})
+		// Only update if the submission exists
+		if (submissions.has(event.args.title)) {
+			submissions.set(event.args.title, {
+				title: event.args.title,
+				recipient: event.args.newRecipient,
+			})
+		}
 	}
 
 	return Array.from(submissions.values())
