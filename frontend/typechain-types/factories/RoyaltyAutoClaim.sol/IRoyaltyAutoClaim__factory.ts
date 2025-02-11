@@ -387,7 +387,7 @@ const _abi = [
     name: "RoyaltyClaimed",
     inputs: [
       {
-        name: "title",
+        name: "titleHash",
         type: "string",
         indexed: true,
         internalType: "string",
@@ -403,6 +403,12 @@ const _abi = [
         type: "uint256",
         indexed: false,
         internalType: "uint256",
+      },
+      {
+        name: "title",
+        type: "string",
+        indexed: false,
+        internalType: "string",
       },
     ],
     anonymous: false,
@@ -431,7 +437,7 @@ const _abi = [
     name: "SubmissionRegistered",
     inputs: [
       {
-        name: "title",
+        name: "titleHash",
         type: "string",
         indexed: true,
         internalType: "string",
@@ -442,6 +448,12 @@ const _abi = [
         indexed: true,
         internalType: "address",
       },
+      {
+        name: "title",
+        type: "string",
+        indexed: false,
+        internalType: "string",
+      },
     ],
     anonymous: false,
   },
@@ -450,7 +462,7 @@ const _abi = [
     name: "SubmissionReviewed",
     inputs: [
       {
-        name: "title",
+        name: "titleHash",
         type: "string",
         indexed: true,
         internalType: "string",
@@ -467,6 +479,12 @@ const _abi = [
         indexed: false,
         internalType: "uint16",
       },
+      {
+        name: "title",
+        type: "string",
+        indexed: false,
+        internalType: "string",
+      },
     ],
     anonymous: false,
   },
@@ -475,9 +493,15 @@ const _abi = [
     name: "SubmissionRevoked",
     inputs: [
       {
-        name: "title",
+        name: "titleHash",
         type: "string",
         indexed: true,
+        internalType: "string",
+      },
+      {
+        name: "title",
+        type: "string",
+        indexed: false,
         internalType: "string",
       },
     ],
@@ -488,7 +512,7 @@ const _abi = [
     name: "SubmissionRoyaltyRecipientUpdated",
     inputs: [
       {
-        name: "title",
+        name: "titleHash",
         type: "string",
         indexed: true,
         internalType: "string",
@@ -504,6 +528,12 @@ const _abi = [
         type: "address",
         indexed: true,
         internalType: "address",
+      },
+      {
+        name: "title",
+        type: "string",
+        indexed: false,
+        internalType: "string",
       },
     ],
     anonymous: false,

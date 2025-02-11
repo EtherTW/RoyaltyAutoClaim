@@ -36,13 +36,14 @@ interface IRoyaltyAutoClaim {
     event RoyaltyTokenChanged(address indexed oldToken, address indexed newToken);
     event EmergencyWithdraw(address indexed token, uint256 amount);
     event ReviewerStatusUpdated(address indexed reviewer, bool status);
-    event SubmissionRegistered(string indexed title, address indexed royaltyRecipient);
+
+    event SubmissionRegistered(string indexed titleHash, address indexed royaltyRecipient, string title);
     event SubmissionRoyaltyRecipientUpdated(
-        string indexed title, address indexed oldRecipient, address indexed newRecipient
+        string indexed titleHash, address indexed oldRecipient, address indexed newRecipient, string title
     );
-    event SubmissionRevoked(string indexed title);
-    event SubmissionReviewed(string indexed title, address indexed reviewer, uint16 royaltyLevel);
-    event RoyaltyClaimed(string indexed title, address indexed recipient, uint256 amount);
+    event SubmissionRevoked(string indexed titleHash, string title);
+    event SubmissionReviewed(string indexed titleHash, address indexed reviewer, uint16 royaltyLevel, string title);
+    event RoyaltyClaimed(string indexed titleHash, address indexed recipient, uint256 amount, string title);
 
     // View functions
     function admin() external view returns (address);
@@ -245,20 +246,20 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].royaltyRecipient = royaltyRecipient;
         $.submissions[title].status = SubmissionStatus.Registered;
-        emit SubmissionRegistered(title, royaltyRecipient);
+        emit SubmissionRegistered(title, royaltyRecipient, title);
     }
 
     function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) public onlyAdminOrEntryPoint {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         address oldRecipient = _getMainStorage().submissions[title].royaltyRecipient;
         _getMainStorage().submissions[title].royaltyRecipient = newRoyaltyRecipient;
-        emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient);
+        emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient, title);
     }
 
     function revokeSubmission(string memory title) public onlyAdminOrEntryPoint {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         delete _getMainStorage().submissions[title];
-        emit SubmissionRevoked(title);
+        emit SubmissionRevoked(title, title);
     }
 
     // ================================ Reviewer ================================
@@ -285,7 +286,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         $.hasReviewed[title][reviewer] = true;
         $.submissions[title].reviewCount++;
         $.submissions[title].totalRoyaltyLevel += royaltyLevel;
-        emit SubmissionReviewed(title, reviewer, royaltyLevel);
+        emit SubmissionReviewed(title, reviewer, royaltyLevel, title);
     }
 
     // ================================ Submitter ================================
@@ -298,7 +299,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         $.submissions[title].status = SubmissionStatus.Claimed;
 
         IERC20(token()).safeTransfer(submissions(title).royaltyRecipient, amount);
-        emit RoyaltyClaimed(title, submissions(title).royaltyRecipient, amount);
+        emit RoyaltyClaimed(title, submissions(title).royaltyRecipient, amount, title);
     }
 
     // ================================ ERC-4337 ================================

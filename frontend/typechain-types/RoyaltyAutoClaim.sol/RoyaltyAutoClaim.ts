@@ -411,15 +411,22 @@ export namespace ReviewerStatusUpdatedEvent {
 
 export namespace RoyaltyClaimedEvent {
   export type InputTuple = [
-    title: string,
+    titleHash: string,
     recipient: AddressLike,
-    amount: BigNumberish
+    amount: BigNumberish,
+    title: string
   ];
-  export type OutputTuple = [title: string, recipient: string, amount: bigint];
+  export type OutputTuple = [
+    titleHash: string,
+    recipient: string,
+    amount: bigint,
+    title: string
+  ];
   export interface OutputObject {
-    title: string;
+    titleHash: string;
     recipient: string;
     amount: bigint;
+    title: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -441,11 +448,20 @@ export namespace RoyaltyTokenChangedEvent {
 }
 
 export namespace SubmissionRegisteredEvent {
-  export type InputTuple = [title: string, royaltyRecipient: AddressLike];
-  export type OutputTuple = [title: string, royaltyRecipient: string];
+  export type InputTuple = [
+    titleHash: string,
+    royaltyRecipient: AddressLike,
+    title: string
+  ];
+  export type OutputTuple = [
+    titleHash: string,
+    royaltyRecipient: string,
+    title: string
+  ];
   export interface OutputObject {
-    title: string;
+    titleHash: string;
     royaltyRecipient: string;
+    title: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -455,19 +471,22 @@ export namespace SubmissionRegisteredEvent {
 
 export namespace SubmissionReviewedEvent {
   export type InputTuple = [
-    title: string,
+    titleHash: string,
     reviewer: AddressLike,
-    royaltyLevel: BigNumberish
+    royaltyLevel: BigNumberish,
+    title: string
   ];
   export type OutputTuple = [
-    title: string,
+    titleHash: string,
     reviewer: string,
-    royaltyLevel: bigint
+    royaltyLevel: bigint,
+    title: string
   ];
   export interface OutputObject {
-    title: string;
+    titleHash: string;
     reviewer: string;
     royaltyLevel: bigint;
+    title: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -476,9 +495,10 @@ export namespace SubmissionReviewedEvent {
 }
 
 export namespace SubmissionRevokedEvent {
-  export type InputTuple = [title: string];
-  export type OutputTuple = [title: string];
+  export type InputTuple = [titleHash: string, title: string];
+  export type OutputTuple = [titleHash: string, title: string];
   export interface OutputObject {
+    titleHash: string;
     title: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
@@ -489,19 +509,22 @@ export namespace SubmissionRevokedEvent {
 
 export namespace SubmissionRoyaltyRecipientUpdatedEvent {
   export type InputTuple = [
-    title: string,
+    titleHash: string,
     oldRecipient: AddressLike,
-    newRecipient: AddressLike
+    newRecipient: AddressLike,
+    title: string
   ];
   export type OutputTuple = [
-    title: string,
+    titleHash: string,
     oldRecipient: string,
-    newRecipient: string
+    newRecipient: string,
+    title: string
   ];
   export interface OutputObject {
-    title: string;
+    titleHash: string;
     oldRecipient: string;
     newRecipient: string;
+    title: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -975,7 +998,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
       ReviewerStatusUpdatedEvent.OutputObject
     >;
 
-    "RoyaltyClaimed(string,address,uint256)": TypedContractEvent<
+    "RoyaltyClaimed(string,address,uint256,string)": TypedContractEvent<
       RoyaltyClaimedEvent.InputTuple,
       RoyaltyClaimedEvent.OutputTuple,
       RoyaltyClaimedEvent.OutputObject
@@ -997,7 +1020,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
       RoyaltyTokenChangedEvent.OutputObject
     >;
 
-    "SubmissionRegistered(string,address)": TypedContractEvent<
+    "SubmissionRegistered(string,address,string)": TypedContractEvent<
       SubmissionRegisteredEvent.InputTuple,
       SubmissionRegisteredEvent.OutputTuple,
       SubmissionRegisteredEvent.OutputObject
@@ -1008,7 +1031,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
       SubmissionRegisteredEvent.OutputObject
     >;
 
-    "SubmissionReviewed(string,address,uint16)": TypedContractEvent<
+    "SubmissionReviewed(string,address,uint16,string)": TypedContractEvent<
       SubmissionReviewedEvent.InputTuple,
       SubmissionReviewedEvent.OutputTuple,
       SubmissionReviewedEvent.OutputObject
@@ -1019,7 +1042,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
       SubmissionReviewedEvent.OutputObject
     >;
 
-    "SubmissionRevoked(string)": TypedContractEvent<
+    "SubmissionRevoked(string,string)": TypedContractEvent<
       SubmissionRevokedEvent.InputTuple,
       SubmissionRevokedEvent.OutputTuple,
       SubmissionRevokedEvent.OutputObject
@@ -1030,7 +1053,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
       SubmissionRevokedEvent.OutputObject
     >;
 
-    "SubmissionRoyaltyRecipientUpdated(string,address,address)": TypedContractEvent<
+    "SubmissionRoyaltyRecipientUpdated(string,address,address,string)": TypedContractEvent<
       SubmissionRoyaltyRecipientUpdatedEvent.InputTuple,
       SubmissionRoyaltyRecipientUpdatedEvent.OutputTuple,
       SubmissionRoyaltyRecipientUpdatedEvent.OutputObject
