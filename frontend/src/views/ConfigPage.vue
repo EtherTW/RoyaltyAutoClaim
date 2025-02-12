@@ -14,43 +14,130 @@ const isBtnDisabled = computed(
 		!royaltyAutoClaimStore.royaltyAutoClaim4337 ||
 		isRegisterLoading.value ||
 		isUpdateLoading.value ||
-		isRevokeLoading.value,
+		isRevokeLoading.value ||
+		isAddReviewerLoading.value ||
+		isRemoveReviewerLoading.value ||
+		isChangeAdminLoading.value ||
+		isChangeTokenLoading.value ||
+		isEmergencyWithdrawLoading.value,
 )
+
+// ===================================== Submission Management =====================================
 
 const title = ref('test')
 const recipient = ref('0x1234567890123456789012345678901234567890')
 
+// Register Submission
 const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useContractCall({
-	calldata: computed(() =>
+	getCalldata: () =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('registerSubmission', [
 			title.value,
 			recipient.value,
 		]),
-	),
 	successTitle: 'Successfully Registered Submission',
 	waitingTitle: 'Waiting for Register Submission',
 	errorTitle: 'Error Registering Submission',
 })
 
+// Update Recipient
 const { isLoading: isUpdateLoading, send: onClickUpdateRecipient } = useContractCall({
-	calldata: computed(() =>
+	getCalldata: () =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateRoyaltyRecipient', [
 			title.value,
 			recipient.value,
 		]),
-	),
 	successTitle: 'Successfully Updated Recipient',
 	waitingTitle: 'Waiting for Update Recipient',
 	errorTitle: 'Error Updating Recipient',
 })
 
+// Revoke Submission
 const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContractCall({
-	calldata: computed(() =>
+	getCalldata: () =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('revokeSubmission', [title.value]),
-	),
 	successTitle: 'Successfully Revoked Submission',
 	waitingTitle: 'Waiting for Revoke Submission',
 	errorTitle: 'Error Revoking Submission',
+})
+
+// ===================================== Reviewer Management =====================================
+
+const reviewer = ref('0x1234567890123456789012345678901234567890')
+
+// Add Reviewer
+const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContractCall({
+	getCalldata: () =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateReviewers', [
+			[reviewer.value],
+			[true],
+		]),
+	successTitle: 'Successfully Added Reviewer',
+	waitingTitle: 'Waiting to Add Reviewer',
+	errorTitle: 'Error Adding Reviewer',
+	onBeforeCall: async () => {
+		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
+		if (isReviewer) {
+			throw new Error('Reviewer already exists')
+		}
+	},
+})
+
+// Remove Reviewer
+const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useContractCall({
+	getCalldata: () =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateReviewers', [
+			[reviewer.value],
+			[false],
+		]),
+	successTitle: 'Successfully Removed Reviewer',
+	waitingTitle: 'Waiting to Remove Reviewer',
+	errorTitle: 'Error Removing Reviewer',
+	onBeforeCall: async () => {
+		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
+		if (!isReviewer) {
+			throw new Error('Reviewer does not exist')
+		}
+	},
+})
+
+// ===================================== Admin Management =====================================
+
+const newAdmin = ref('0x1234567890123456789012345678901234567890')
+const newToken = ref('0x1234567890123456789012345678901234567890')
+
+// Change Admin
+const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContractCall({
+	getCalldata: () =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('changeAdmin', [newAdmin.value]),
+	successTitle: 'Successfully Changed Admin',
+	waitingTitle: 'Waiting to Change Admin',
+	errorTitle: 'Error Changing Admin',
+})
+
+// Change Token
+const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContractCall({
+	getCalldata: () =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('changeRoyaltyToken', [newToken.value]),
+	successTitle: 'Successfully Changed Token',
+	waitingTitle: 'Waiting to Change Token',
+	errorTitle: 'Error Changing Token',
+})
+
+// ===================================== Emergency Withdraw =====================================
+
+const withdrawToken = ref('0x1234567890123456789012345678901234567890')
+const withdrawAmount = ref('0')
+
+// Emergency Withdraw
+const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCall({
+	getCalldata: () =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('emergencyWithdraw', [
+			withdrawToken.value,
+			withdrawAmount.value,
+		]),
+	successTitle: 'Successfully Withdrew Tokens',
+	waitingTitle: 'Waiting for Emergency Withdraw',
+	errorTitle: 'Error Withdrawing Tokens',
 })
 </script>
 
@@ -116,11 +203,25 @@ const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContrac
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
 						<Label for="reviewer">Reviewer Address</Label>
-						<Input id="reviewer" placeholder="0x..." />
+						<Input id="reviewer" v-model="reviewer" placeholder="0x..." />
 					</div>
 					<div class="flex gap-4">
-						<Button variant="default">Add Reviewer</Button>
-						<Button variant="destructive">Remove Reviewer</Button>
+						<Button
+							variant="default"
+							:loading="isAddReviewerLoading"
+							:disabled="isBtnDisabled"
+							@click="onClickAddReviewer"
+						>
+							Add Reviewer
+						</Button>
+						<Button
+							variant="destructive"
+							:loading="isRemoveReviewerLoading"
+							:disabled="isBtnDisabled"
+							@click="onClickRemoveReviewer"
+						>
+							Remove Reviewer
+						</Button>
 					</div>
 				</div>
 			</CardContent>
@@ -138,15 +239,19 @@ const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContrac
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
 						<Label for="admin">New Admin Address</Label>
-						<Input id="admin" placeholder="0x..." />
+						<Input id="admin" v-model="newAdmin" placeholder="0x..." />
 					</div>
-					<Button>Change Admin</Button>
+					<Button :loading="isChangeAdminLoading" :disabled="isBtnDisabled" @click="onClickChangeAdmin">
+						Change Admin
+					</Button>
 
 					<div class="flex flex-col space-y-1.5">
 						<Label for="token">New Royalty Token Address</Label>
-						<Input id="token" placeholder="0x..." />
+						<Input id="token" v-model="newToken" placeholder="0x..." />
 					</div>
-					<Button>Change Token</Button>
+					<Button :loading="isChangeTokenLoading" :disabled="isBtnDisabled" @click="onClickChangeToken">
+						Change Token
+					</Button>
 				</div>
 			</CardContent>
 		</Card>
@@ -163,13 +268,20 @@ const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContrac
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
 						<Label for="withdrawToken">Token Address</Label>
-						<Input id="withdrawToken" placeholder="0x..." />
+						<Input id="withdrawToken" v-model="withdrawToken" placeholder="0x..." />
 					</div>
 					<div class="flex flex-col space-y-1.5">
 						<Label for="amount">Amount</Label>
-						<Input id="amount" type="number" placeholder="0.0" />
+						<Input id="amount" v-model="withdrawAmount" type="number" placeholder="0.0" />
 					</div>
-					<Button variant="destructive">Emergency Withdraw</Button>
+					<Button
+						variant="destructive"
+						:loading="isEmergencyWithdrawLoading"
+						:disabled="isBtnDisabled"
+						@click="onClickEmergencyWithdraw"
+					>
+						Emergency Withdraw
+					</Button>
 				</div>
 			</CardContent>
 		</Card>

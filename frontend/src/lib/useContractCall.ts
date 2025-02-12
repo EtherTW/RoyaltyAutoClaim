@@ -5,10 +5,11 @@ import { notify } from '@kyvg/vue3-notification'
 import { Interface } from 'ethers'
 
 export function useContractCall(options: {
-	calldata: ComputedRef<string>
+	getCalldata: () => string
 	successTitle: string
 	waitingTitle: string
 	errorTitle: string
+	onBeforeCall?: () => Promise<void> | void
 }) {
 	const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 	const isLoading = ref(false)
@@ -21,7 +22,11 @@ export function useContractCall(options: {
 		try {
 			isLoading.value = true
 
-			const op = await royaltyAutoClaimStore.royaltyAutoClaim4337.sendCalldata(options.calldata.value)
+			if (options.onBeforeCall) {
+				await options.onBeforeCall()
+			}
+
+			const op = await royaltyAutoClaimStore.royaltyAutoClaim4337.sendCalldata(options.getCalldata())
 
 			notify({
 				title: options.waitingTitle,
