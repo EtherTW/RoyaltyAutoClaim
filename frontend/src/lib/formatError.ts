@@ -31,8 +31,6 @@ export function formatError(error: any): string {
 			}
 		} else if (reason) {
 			return `Simulation failed: ${reason}`
-		} else if (hexData) {
-			return `Simulation failed: 0x${hexData}`
 		} else {
 			return `Simulation failed`
 		}

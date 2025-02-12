@@ -72,6 +72,7 @@ const ROYALTY_LEVELS = [
 ]
 
 const selectedRoyaltyLevel = ref<'20' | '40' | '60' | '80'>('20')
+const submissionBeingOperated = ref<string | null>(null)
 
 // Submit Review
 const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContractCall({
@@ -83,6 +84,9 @@ const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContr
 	successTitle: 'Successfully Submitted Review',
 	waitingTitle: 'Waiting for Review Submission',
 	errorTitle: 'Error Submitting Review',
+	onBeforeCall: async (submissionTitle: string) => {
+		submissionBeingOperated.value = submissionTitle
+	},
 	onAfterCall: async (submissionTitle: string) => {
 		const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submissionTitle)
 		const found = submissions.value.find(submission => submission.title === submissionTitle)
@@ -101,6 +105,9 @@ const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContr
 	successTitle: 'Successfully Claimed Royalty',
 	waitingTitle: 'Waiting for Royalty Claim',
 	errorTitle: 'Error Claiming Royalty',
+	onBeforeCall: async (submissionTitle: string) => {
+		submissionBeingOperated.value = submissionTitle
+	},
 	onAfterCall: async (submissionTitle: string) => {
 		const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submissionTitle)
 		const found = submissions.value.find(submission => submission.title === submissionTitle)
@@ -111,11 +118,21 @@ const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContr
 	},
 })
 
+const isButtonDisabled = computed(() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value)
+
 function getAvgRoyaltyLevel(submission: Submission) {
 	if (!submission.reviewCount || !submission.totalRoyaltyLevel) {
 		return null
 	}
 	return submission.totalRoyaltyLevel / submission.reviewCount
+}
+
+function isSubmittingReview(submissionTitle: string) {
+	return isSubmitReviewLoading.value && submissionBeingOperated.value === submissionTitle
+}
+
+function isClaimingRoyalty(submissionTitle: string) {
+	return isClaimRoyaltyLoading.value && submissionBeingOperated.value === submissionTitle
 }
 </script>
 
@@ -161,14 +178,19 @@ function getAvgRoyaltyLevel(submission: Submission) {
 							</Select>
 						</div>
 
-						<Button @click="() => onClickSubmitReview(submission.title)" :loading="isSubmitReviewLoading">
+						<Button
+							@click="() => onClickSubmitReview(submission.title)"
+							:loading="isSubmittingReview(submission.title)"
+							:disabled="isButtonDisabled"
+						>
 							Submit Review
 						</Button>
 						<Button
 							v-if="submission.reviewCount && submission.reviewCount >= 2"
 							variant="secondary"
 							@click="() => onClickClaimRoyalty(submission.title)"
-							:loading="isClaimRoyaltyLoading"
+							:loading="isClaimingRoyalty(submission.title)"
+							:disabled="isButtonDisabled"
 						>
 							Claim Royalty
 						</Button>
