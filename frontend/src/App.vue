@@ -84,16 +84,18 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 	>
 		<template #body="{ item, close }">
 			<div class="vue-notification" :class="[item.type]">
-				<div v-if="item.title" class="notification-title">{{ item.title }}</div>
+				<div v-if="item.title" class="notification-title flex items-center justify-between">
+					{{ item.title }}
+					<Button
+						variant="outline"
+						size="icon"
+						class="w-5 h-5 rounded-full border-none bg-transparent hover:bg-transparent shadow-none text-gray-200 hover:text-white"
+						@click="close"
+					>
+						<X />
+					</Button>
+				</div>
 				<div class="notification-content">{{ item.text }}</div>
-				<Button
-					variant="outline"
-					size="icon"
-					class="w-5 h-5 absolute top-1.5 right-2.5 border-none bg-transparent hover:bg-transparent text-gray-200 hover:text-white"
-					@click="close"
-				>
-					<X class="" />
-				</Button>
 			</div>
 		</template>
 	</Notifications>
