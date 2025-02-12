@@ -1,6 +1,8 @@
 {
 	"extends": "@vue/tsconfig/tsconfig.dom.json",
 	"compilerOptions": {
+		"lib": ["ESNext"],
+
 		/* Linting */
 		"strict": true,
 		"noUnusedLocals": true,

@@ -5,7 +5,7 @@ import router from './router'
 import { createPinia } from 'pinia'
 import Notifications, { notify } from '@kyvg/vue3-notification'
 import { ERROR_NOTIFICATION_DURATION } from './config'
-import { formatError } from './lib/formatError'
+import { formatErrMsg, normalizeError, AppError } from './lib/error'
 const pinia = createPinia()
 const app = createApp(App)
 
@@ -15,19 +15,14 @@ app.use(Notifications)
 
 app.mount('#app')
 
-class AppError extends Error {
-	constructor(message: string) {
-		super(message)
-	}
-}
-
-app.config.errorHandler = (err: any, _vm, _info) => {
-	const appError = new AppError(err)
+app.config.errorHandler = (error: unknown, _vm, _info) => {
+	const err = normalizeError(error)
+	const appError = new AppError(err.message, { cause: err })
 	console.error(appError)
 
 	notify({
-		title: 'Error',
-		text: formatError(appError),
+		title: 'App Error',
+		text: formatErrMsg(appError),
 		type: 'error',
 		duration: ERROR_NOTIFICATION_DURATION,
 	})

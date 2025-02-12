@@ -1,7 +1,7 @@
 import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { notify } from '@kyvg/vue3-notification'
-import { formatError } from './formatError'
+import { formatErrMsg, normalizeError, UserRejectedActionError } from './error'
 
 export function useContractCall<T extends any[] = []>(options: {
 	getCalldata: (...args: T) => string
@@ -45,17 +45,18 @@ export function useContractCall<T extends any[] = []>(options: {
 			if (options.onAfterCall) {
 				await options.onAfterCall(...args)
 			}
-		} catch (err: any) {
+		} catch (error: unknown) {
+			const err = normalizeError(error)
 			console.error(err)
 
-			// ignore user rejected action ex. cancel the transaction in the wallet
-			if (err.message.includes('user rejected action')) {
+			// Do not show error when the user cancels their action
+			if (err instanceof UserRejectedActionError) {
 				return
 			}
 
 			notify({
 				title: options.errorTitle,
-				text: formatError(err),
+				text: formatErrMsg(err),
 				type: 'error',
 				duration: ERROR_NOTIFICATION_DURATION,
 			})
