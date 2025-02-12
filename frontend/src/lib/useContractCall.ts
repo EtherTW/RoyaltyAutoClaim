@@ -1,6 +1,6 @@
 import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { IRoyaltyAutoClaim__factory } from '@/typechain-types'
+import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { notify } from '@kyvg/vue3-notification'
 import { Interface } from 'ethers'
 
@@ -77,11 +77,13 @@ export function parseError(error: any): string {
 			const reason = reasonMatch?.[1]
 			const hexDataMatch = reason.match(/(0x[a-fA-F0-9]+)(?![0-9a-fA-F])/)
 			const hexData = hexDataMatch?.[1]
-
+			// console.log('reason', reason)
+			// console.log('hexData', hexData)
 			if (reason) {
-				const iface = new Interface(IRoyaltyAutoClaim__factory.abi)
+				const iface = new Interface(RoyaltyAutoClaim__factory.abi)
 				const decodedError = iface.parseError(hexData)
 				if (decodedError) {
+					// console.log('decodedError', decodedError.name)
 					const reasonWithoutHexData = reason.replace(hexData, '').trim()
 					const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
 					return `Simulation failed:${reasonWithoutHexData ? ' ' + reasonWithoutHexData : ''} ${
