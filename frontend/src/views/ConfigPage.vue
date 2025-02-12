@@ -172,7 +172,7 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 </script>
 
 <template>
-	<div class="container mx-auto p-8">
+	<div class="container mx-auto p-8 max-w-2xl">
 		<Card class="mb-8">
 			<CardHeader>
 				<div class="flex items-center justify-between">
@@ -323,9 +323,3 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 		</Card>
 	</div>
 </template>
-
-<style scoped>
-.container {
-	max-width: 768px;
-}
-</style>

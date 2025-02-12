@@ -137,7 +137,7 @@ function isClaimingRoyalty(submissionTitle: string) {
 </script>
 
 <template>
-	<div class="container mx-auto p-8">
+	<div class="container mx-auto p-8 max-w-2xl">
 		<div class="space-y-4">
 			<div
 				v-if="isLoadingBasicSubmissions || isLoadingSubmissionData"
