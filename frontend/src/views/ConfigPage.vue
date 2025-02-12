@@ -121,6 +121,11 @@ const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContrac
 	successTitle: 'Successfully Changed Admin',
 	waitingTitle: 'Waiting to Change Admin',
 	errorTitle: 'Error Changing Admin',
+	onBeforeCall: async () => {
+		if (newAdmin.value === currentAdmin.value) {
+			throw new Error('New admin is the same as the current admin')
+		}
+	},
 	onAfterCall: async () => {
 		currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
 	},
@@ -133,6 +138,11 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 	successTitle: 'Successfully Changed Token',
 	waitingTitle: 'Waiting to Change Token',
 	errorTitle: 'Error Changing Token',
+	onBeforeCall: async () => {
+		if (newToken.value === currentToken.value) {
+			throw new Error('New token is the same as the current token')
+		}
+	},
 	onAfterCall: async () => {
 		currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
 	},
