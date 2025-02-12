@@ -47,6 +47,8 @@ export function useContractCall(options: {
 				await options.onAfterCall()
 			}
 		} catch (err: any) {
+			console.error(err)
+
 			// ignore user rejected action ex. cancel the transaction in the wallet
 			if (err.message.includes('user rejected action')) {
 				return
@@ -98,10 +100,14 @@ export function parseError(error: any): string {
 			return error.message
 		}
 
-		// Extract everything before the first parenthesis
-		const match = error.message.match(/^([^(]+)/)
-		if (match) {
-			return match[1].trim()
+		// ethers error
+		if (error.message.includes('version=6.13.5')) {
+			console.log(error.message)
+			// Extract everything before the first parenthesis
+			const match = error.message.match(/^([^(]+)/)
+			if (match) {
+				return `ethers.js: ${match[1].trim()}`
+			}
 		}
 	}
 	return error?.message || 'Unknown error occurred'

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useContractCall } from '@/lib/useContractCall'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+import { parseEther } from 'ethers'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
@@ -33,7 +34,7 @@ onMounted(async () => {
 // ===================================== Submission Management =====================================
 
 const title = ref('test')
-const recipient = ref('0x1234567890123456789012345678901234567890')
+const recipient = ref('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')
 
 // Register Submission
 const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useContractCall({
@@ -70,7 +71,7 @@ const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContrac
 
 // ===================================== Reviewer Management =====================================
 
-const reviewer = ref('0x1234567890123456789012345678901234567890')
+const reviewer = ref('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')
 
 // Add Reviewer
 const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContractCall({
@@ -110,8 +111,8 @@ const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useC
 
 // ===================================== Admin Management =====================================
 
-const newAdmin = ref('0x1234567890123456789012345678901234567890')
-const newToken = ref('0x1234567890123456789012345678901234567890')
+const newAdmin = ref('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')
+const newToken = ref('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
 
 // Change Admin
 const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContractCall({
@@ -139,19 +140,24 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 
 // ===================================== Emergency Withdraw =====================================
 
-const withdrawToken = ref('0x1234567890123456789012345678901234567890')
-const withdrawAmount = ref('0')
+const withdrawToken = ref('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
+const withdrawAmount = ref<number>(0.01)
 
 // Emergency Withdraw
 const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCall({
 	getCalldata: () =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('emergencyWithdraw', [
 			withdrawToken.value,
-			withdrawAmount.value,
+			parseEther(withdrawAmount.value.toString()),
 		]),
 	successTitle: 'Successfully Withdrew Tokens',
 	waitingTitle: 'Waiting for Emergency Withdraw',
 	errorTitle: 'Error Withdrawing Tokens',
+	onBeforeCall: async () => {
+		if (parseEther(withdrawAmount.value.toString()) <= 0) {
+			throw new Error('Amount must be greater than 0')
+		}
+	},
 })
 </script>
 
@@ -292,7 +298,7 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 					</div>
 					<div class="flex flex-col space-y-1.5">
 						<Label for="amount">Amount</Label>
-						<Input id="amount" v-model="withdrawAmount" type="number" placeholder="0.0" />
+						<Input id="amount" v-model="withdrawAmount" type="number" placeholder="ether" />
 					</div>
 					<Button
 						variant="destructive"
