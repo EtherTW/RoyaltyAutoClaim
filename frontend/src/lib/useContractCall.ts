@@ -1,8 +1,7 @@
 import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { notify } from '@kyvg/vue3-notification'
-import { Interface } from 'ethers'
+import { formatError } from './formatError'
 
 export function useContractCall<T extends any[] = []>(options: {
 	getCalldata: (...args: T) => string
@@ -56,7 +55,7 @@ export function useContractCall<T extends any[] = []>(options: {
 
 			notify({
 				title: options.errorTitle,
-				text: parseError(err),
+				text: formatError(err),
 				type: 'error',
 				duration: ERROR_NOTIFICATION_DURATION,
 			})
@@ -69,46 +68,4 @@ export function useContractCall<T extends any[] = []>(options: {
 		isLoading,
 		send,
 	}
-}
-
-export function parseError(error: any): string {
-	if (typeof error?.message === 'string') {
-		// Special handling for simulation errors
-		if (error.message.includes('eth_estimateUserOperationGas')) {
-			const reasonMatch = error.message.match(/UserOperation reverted during simulation with reason: (.+)$/)
-			const reason = reasonMatch?.[1]
-			const hexDataMatch = reason.match(/(0x[a-fA-F0-9]+)(?![0-9a-fA-F])/)
-			const hexData = hexDataMatch?.[1]
-			// console.log('reason', reason)
-			// console.log('hexData', hexData)
-			if (reason) {
-				const iface = new Interface(RoyaltyAutoClaim__factory.abi)
-				const decodedError = iface.parseError(hexData)
-				if (decodedError) {
-					// console.log('decodedError', decodedError.name)
-					const reasonWithoutHexData = reason.replace(hexData, '').trim()
-					const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
-					return `Simulation failed:${reasonWithoutHexData ? ' ' + reasonWithoutHexData : ''} ${
-						decodedError.name
-					}${errorArgs}`
-				}
-			}
-		}
-
-		// Don't extract if it's a different JSON-RPC Error
-		if (error.message.startsWith('JSON-RPC Error:')) {
-			return error.message
-		}
-
-		// ethers error
-		if (error.message.includes('version=6.13.5')) {
-			console.log(error.message)
-			// Extract everything before the first parenthesis
-			const match = error.message.match(/^([^(]+)/)
-			if (match) {
-				return `ethers.js: ${match[1].trim()}`
-			}
-		}
-	}
-	return error?.message || 'Unknown error occurred'
 }
