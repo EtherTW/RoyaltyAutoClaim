@@ -6,12 +6,10 @@ import { describe, expect, it } from 'vitest'
 
 const ACCOUNT_0_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
 const RPC_URL = 'http://localhost:8545'
+const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
 describe('deploy', () => {
 	let client: JsonRpcProvider
-
-	const token = hexlify(ethers.randomBytes(20))
-
 	let owner: ethers.Wallet
 	let admin: ethers.Wallet
 	let reviewer: ethers.Wallet
@@ -42,7 +40,7 @@ describe('deploy', () => {
 		const initData = impl.interface.encodeFunctionData('initialize', [
 			owner.address,
 			admin.address,
-			token,
+			NATIVE_TOKEN,
 			reviewers,
 		])
 

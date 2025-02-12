@@ -10,6 +10,7 @@ export function useContractCall(options: {
 	waitingTitle: string
 	errorTitle: string
 	onBeforeCall?: () => Promise<void> | void
+	onAfterCall?: () => Promise<void> | void
 }) {
 	const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 	const isLoading = ref(false)
@@ -41,6 +42,10 @@ export function useContractCall(options: {
 				text: `op hash: ${op.hash}`,
 				type: 'success',
 			})
+
+			if (options.onAfterCall) {
+				await options.onAfterCall()
+			}
 		} catch (err: any) {
 			// ignore user rejected action ex. cancel the transaction in the wallet
 			if (err.message.includes('user rejected action')) {

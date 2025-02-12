@@ -22,6 +22,14 @@ const isBtnDisabled = computed(
 		isEmergencyWithdrawLoading.value,
 )
 
+const currentAdmin = ref('')
+const currentToken = ref('')
+
+onMounted(async () => {
+	currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
+	currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
+})
+
 // ===================================== Submission Management =====================================
 
 const title = ref('test')
@@ -112,6 +120,9 @@ const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContrac
 	successTitle: 'Successfully Changed Admin',
 	waitingTitle: 'Waiting to Change Admin',
 	errorTitle: 'Error Changing Admin',
+	onAfterCall: async () => {
+		currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
+	},
 })
 
 // Change Token
@@ -121,6 +132,9 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 	successTitle: 'Successfully Changed Token',
 	waitingTitle: 'Waiting to Change Token',
 	errorTitle: 'Error Changing Token',
+	onAfterCall: async () => {
+		currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
+	},
 })
 
 // ===================================== Emergency Withdraw =====================================
@@ -238,7 +252,10 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
-						<Label for="admin">New Admin Address</Label>
+						<Label>Current Admin Address</Label>
+						<div class="text-sm text-muted-foreground break-all">{{ currentAdmin }}</div>
+
+						<Label for="admin" class="mt-4">New Admin Address</Label>
 						<Input id="admin" v-model="newAdmin" placeholder="0x..." />
 					</div>
 					<Button :loading="isChangeAdminLoading" :disabled="isBtnDisabled" @click="onClickChangeAdmin">
@@ -246,7 +263,10 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 					</Button>
 
 					<div class="flex flex-col space-y-1.5">
-						<Label for="token">New Royalty Token Address</Label>
+						<Label>Current Token Address</Label>
+						<div class="text-sm text-muted-foreground break-all">{{ currentToken }}</div>
+
+						<Label for="token" class="mt-4">New Token Address</Label>
 						<Input id="token" v-model="newToken" placeholder="0x..." />
 					</div>
 					<Button :loading="isChangeTokenLoading" :disabled="isBtnDisabled" @click="onClickChangeToken">
