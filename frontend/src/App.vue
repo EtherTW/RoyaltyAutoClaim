@@ -6,6 +6,7 @@ import '@vue-dapp/modal/dist/style.css'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { LogOut, Settings } from 'lucide-vue-next'
 import { useEOAStore } from './stores/useEOA'
+import { X } from 'lucide-vue-next'
 
 const { addConnectors, status, address, isConnected, disconnect, watchWalletChanged, watchDisconnect } = useVueDapp()
 
@@ -76,5 +77,24 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 	</div>
 	<VueDappModal autoConnect autoConnectBrowserWalletIfSolo />
 
-	<Notifications :position="breakpoints.isSmaller('md') ? 'bottom center' : 'bottom right'" />
+	<Notifications
+		class="break-words"
+		:closeOnClick="false"
+		:position="breakpoints.isSmaller('md') ? 'bottom center' : 'bottom right'"
+	>
+		<template #body="{ item, close }">
+			<div class="vue-notification" :class="[item.type]">
+				<div v-if="item.title" class="notification-title">{{ item.title }}</div>
+				<div class="notification-content">{{ item.text }}</div>
+				<Button
+					variant="outline"
+					size="icon"
+					class="w-5 h-5 absolute top-1.5 right-2.5 border-none bg-transparent hover:bg-transparent text-gray-200 hover:text-white"
+					@click="close"
+				>
+					<X class="" />
+				</Button>
+			</div>
+		</template>
+	</Notifications>
 </template>
