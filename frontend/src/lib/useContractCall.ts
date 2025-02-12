@@ -69,18 +69,24 @@ export function useContractCall(options: {
 	}
 }
 
-function parseError(error: any): string {
+export function parseError(error: any): string {
 	if (typeof error?.message === 'string') {
 		// Special handling for simulation errors
 		if (error.message.includes('eth_estimateUserOperationGas')) {
-			const match = error.message.match(/UserOperation reverted during simulation with reason: (.+)$/)
-			const contractError = match?.[1]
+			const reasonMatch = error.message.match(/UserOperation reverted during simulation with reason: (.+)$/)
+			const reason = reasonMatch?.[1]
+			const hexDataMatch = reason.match(/(0x[a-fA-F0-9]+)(?![0-9a-fA-F])/)
+			const hexData = hexDataMatch?.[1]
 
-			if (contractError) {
+			if (reason) {
 				const iface = new Interface(IRoyaltyAutoClaim__factory.abi)
-				const decodedError = iface.parseError(contractError)
+				const decodedError = iface.parseError(hexData)
 				if (decodedError) {
-					return `${decodedError.name}(${decodedError.args.join(', ')})`
+					const reasonWithoutHexData = reason.replace(hexData, '').trim()
+					const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
+					return `Simulation failed:${reasonWithoutHexData ? ' ' + reasonWithoutHexData : ''} ${
+						decodedError.name
+					}${errorArgs}`
 				}
 			}
 		}
