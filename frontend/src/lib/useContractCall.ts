@@ -4,18 +4,18 @@ import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { notify } from '@kyvg/vue3-notification'
 import { Interface } from 'ethers'
 
-export function useContractCall(options: {
-	getCalldata: () => string
+export function useContractCall<T extends any[] = []>(options: {
+	getCalldata: (...args: T) => string
 	successTitle: string
 	waitingTitle: string
 	errorTitle: string
-	onBeforeCall?: () => Promise<void> | void
-	onAfterCall?: () => Promise<void> | void
+	onBeforeCall?: (...args: T) => Promise<void> | void
+	onAfterCall?: (...args: T) => Promise<void> | void
 }) {
 	const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 	const isLoading = ref(false)
 
-	async function send() {
+	async function send(...args: T) {
 		if (!royaltyAutoClaimStore.royaltyAutoClaim4337) {
 			throw new Error('useContractCall: No royaltyAutoClaim4337')
 		}
@@ -24,10 +24,10 @@ export function useContractCall(options: {
 			isLoading.value = true
 
 			if (options.onBeforeCall) {
-				await options.onBeforeCall()
+				await options.onBeforeCall(...args)
 			}
 
-			const op = await royaltyAutoClaimStore.royaltyAutoClaim4337.sendCalldata(options.getCalldata())
+			const op = await royaltyAutoClaimStore.royaltyAutoClaim4337.sendCalldata(options.getCalldata(...args))
 
 			notify({
 				title: options.waitingTitle,
@@ -44,7 +44,7 @@ export function useContractCall(options: {
 			})
 
 			if (options.onAfterCall) {
-				await options.onAfterCall()
+				await options.onAfterCall(...args)
 			}
 		} catch (err: any) {
 			console.error(err)

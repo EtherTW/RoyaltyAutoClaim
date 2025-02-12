@@ -7,18 +7,7 @@ import { fetchExistingSubmissions } from '@/lib/RoyaltyAutoClaim'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { notify } from '@kyvg/vue3-notification'
 import { Loader2 } from 'lucide-vue-next'
-
-const selectedRoyaltyLevel = ref('')
-const royaltyLevels = [
-	{ value: '20', label: '20' },
-	{ value: '40', label: '40' },
-	{ value: '60', label: '60' },
-	{ value: '80', label: '80' },
-]
-
-const handleReviewSubmit = () => {}
-
-const handleClaimRoyalty = () => {}
+import { useContractCall } from '@/lib/useContractCall'
 
 type Submission = {
 	title: string
@@ -72,6 +61,62 @@ onMounted(async () => {
 		isLoadingSubmissionData.value = false
 	}
 })
+
+// ===================================== submit review & claim royalty =====================================
+
+const ROYALTY_LEVELS = [
+	{ value: '20', label: '20' },
+	{ value: '40', label: '40' },
+	{ value: '60', label: '60' },
+	{ value: '80', label: '80' },
+]
+
+const selectedRoyaltyLevel = ref<'20' | '40' | '60' | '80'>('20')
+
+// Submit Review
+const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContractCall({
+	getCalldata: (submissionTitle: string) =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', [
+			submissionTitle,
+			selectedRoyaltyLevel.value,
+		]),
+	successTitle: 'Successfully Submitted Review',
+	waitingTitle: 'Waiting for Review Submission',
+	errorTitle: 'Error Submitting Review',
+	onAfterCall: async (submissionTitle: string) => {
+		const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submissionTitle)
+		const found = submissions.value.find(submission => submission.title === submissionTitle)
+		if (!found) {
+			throw new Error('reviewSubmission onAfterCall: Submission not found')
+		}
+		found.reviewCount = Number(submissionData.reviewCount)
+		found.totalRoyaltyLevel = Number(submissionData.totalRoyaltyLevel)
+	},
+})
+
+// Claim Royalty
+const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContractCall({
+	getCalldata: (submissionTitle: string) =>
+		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('claimRoyalty', [submissionTitle]),
+	successTitle: 'Successfully Claimed Royalty',
+	waitingTitle: 'Waiting for Royalty Claim',
+	errorTitle: 'Error Claiming Royalty',
+	onAfterCall: async (submissionTitle: string) => {
+		const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submissionTitle)
+		const found = submissions.value.find(submission => submission.title === submissionTitle)
+		if (!found) {
+			throw new Error('claimRoyalty onAfterCall: Submission not found')
+		}
+		found.status = Number(submissionData.status) === 1 ? 'registered' : 'claimed'
+	},
+})
+
+function getAvgRoyaltyLevel(submission: Submission) {
+	if (!submission.reviewCount || !submission.totalRoyaltyLevel) {
+		return null
+	}
+	return submission.totalRoyaltyLevel / submission.reviewCount
+}
 </script>
 
 <template>
@@ -98,7 +143,7 @@ onMounted(async () => {
 						<div>
 							<div>Recipient: <Address :address="submission.recipient" /></div>
 							<p>Reviews: {{ submission.reviewCount }}</p>
-							<p>Avg Royalty Level: {{ submission.totalRoyaltyLevel }} USD</p>
+							<p>Avg Royalty Level: {{ getAvgRoyaltyLevel(submission) }} USD</p>
 						</div>
 					</div>
 
@@ -109,17 +154,21 @@ onMounted(async () => {
 									<SelectValue placeholder="Select royalty level" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem v-for="level in royaltyLevels" :key="level.value" :value="level.value">
+									<SelectItem v-for="level in ROYALTY_LEVELS" :key="level.value" :value="level.value">
 										{{ level.label }}
 									</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
 
-						<Button variant="secondary" @click="handleReviewSubmit">Submit Review</Button>
+						<Button @click="() => onClickSubmitReview(submission.title)" :loading="isSubmitReviewLoading">
+							Submit Review
+						</Button>
 						<Button
 							v-if="submission.reviewCount && submission.reviewCount >= 2"
-							@click="handleClaimRoyalty"
+							variant="secondary"
+							@click="() => onClickClaimRoyalty(submission.title)"
+							:loading="isClaimRoyaltyLoading"
 						>
 							Claim Royalty
 						</Button>
