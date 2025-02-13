@@ -31,3 +31,4 @@ export const BUNDLER_URL: { [key: string]: string } = {
 }
 
 export const ERROR_NOTIFICATION_DURATION = -1
+export const GITHUB_REPO_NAME = 'RoyaltyAutoClaim'

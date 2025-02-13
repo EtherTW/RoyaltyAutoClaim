@@ -9,6 +9,7 @@ import NotificationsResolver from '@kyvg/vue3-notification/auto-import-resolver'
 
 // https://vite.dev/config/
 export default defineConfig({
+	base: '/RoyaltyAutoClaim/', // for github pages
 	css: {
 		postcss: {
 			plugins: [tailwind(), autoprefixer()],
