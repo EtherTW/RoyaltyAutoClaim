@@ -29,40 +29,34 @@ export function formatErrMsg(error: Error): string {
 		// Try to extract JSON data for AlchemyBundler format
 		const jsonMatch = error.message.match(/\{.*\}/)
 		if (jsonMatch) {
-			try {
-				const errorData = JSON.parse(jsonMatch[0])
-				const { reason, revertData } = errorData
-				const decodedErrMsg = revertData ? decodeContractError(revertData) : ''
+			const errorData: { reason: string; revertData: string } = JSON.parse(jsonMatch[0])
+			const revertData = errorData.revertData === '0x' ? '' : errorData.revertData
+			const reason = errorData.reason
 
-				const parts: string[] = []
-				if (reason) parts.push(reason)
-				if (decodedErrMsg) {
-					parts.push(decodedErrMsg)
-				} else if (revertData) {
-					parts.push(revertData)
-				}
+			const decodedErrMsg = revertData ? decodeContractError(revertData) : ''
 
-				return parts.length > 0 ? `Estimation failed: ${parts.join(' ')}` : 'Estimation failed'
-			} catch (err) {
-				console.error('formatErrMsg: Failed to parse JSON error data', err)
+			const parts: string[] = []
+			if (reason) parts.push(reason)
+			if (decodedErrMsg) {
+				parts.push(decodedErrMsg)
+			} else if (revertData) {
+				parts.push(revertData)
 			}
+
+			return parts.length > 0 ? `Estimation failed: ${parts.join(' ')}` : 'Estimation failed'
 		}
 
 		function decodeContractError(revertData: string): string {
 			const ifaceRAC = new Interface(RoyaltyAutoClaim__factory.abi)
 			const ifaceERC20 = new Interface(MockERC20__factory.abi)
-			try {
-				let decodedError = ifaceRAC.parseError(revertData)
-				if (!decodedError) {
-					decodedError = ifaceERC20.parseError(revertData)
-				}
-				if (!decodedError) return ''
-				const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
-				return `${decodedError.name}${errorArgs}`
-			} catch (err) {
-				console.error('formatErrMsg: Failed to parse contract error', err)
-				return ''
+
+			let decodedError = ifaceRAC.parseError(revertData)
+			if (!decodedError) {
+				decodedError = ifaceERC20.parseError(revertData)
 			}
+			if (!decodedError) return ''
+			const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
+			return `${decodedError.name}${errorArgs}`
 		}
 
 		// Fallback to existing logic for PimlicoBundler format
@@ -75,17 +69,14 @@ export function formatErrMsg(error: Error): string {
 
 		if (reason && hexData) {
 			const iface = new Interface(RoyaltyAutoClaim__factory.abi)
-			try {
-				const decodedError = iface.parseError(hexData)
-				if (decodedError) {
-					const reasonWithoutHexData = reason.replace(hexData, '').trim()
-					const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
-					return `Estimation failed:${reasonWithoutHexData ? ' ' + reasonWithoutHexData : ''} ${
-						decodedError.name
-					}${errorArgs}`
-				}
-			} catch (err) {
-				console.error('formatErrMsg: Failed to parse contract error', err)
+
+			const decodedError = iface.parseError(hexData)
+			if (decodedError) {
+				const reasonWithoutHexData = reason.replace(hexData, '').trim()
+				const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
+				return `Estimation failed:${reasonWithoutHexData ? ' ' + reasonWithoutHexData : ''} ${
+					decodedError.name
+				}${errorArgs}`
 			}
 		} else if (reason) {
 			return `Estimation failed: ${reason}`

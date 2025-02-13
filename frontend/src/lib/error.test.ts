@@ -95,5 +95,13 @@ describe('formatErrMsg', () => {
 				'Estimation failed: ERC20InsufficientBalance(0x3d44146ec2Fe06910026cBB047b0EE492cD000F2, 0, 20000000000000000000)',
 			)
 		})
+
+		it('should format if revertData is empty', () => {
+			const errMsg =
+				'JsonRpcError: eth_estimateUserOperationGas (-32521): execution reverted - {"revertData":"0x"} (sendop@0.2.0-beta.0)'
+			const error = new Error(errMsg)
+			const result = formatErrMsg(error)
+			expect(result).toBe('Estimation failed')
+		})
 	})
 })
