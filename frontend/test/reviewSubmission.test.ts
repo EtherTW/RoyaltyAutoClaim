@@ -1,16 +1,8 @@
-import {
-	concat,
-	ContractTransactionResponse,
-	ethers,
-	getBytes,
-	hexlify,
-	Interface,
-	JsonRpcProvider,
-	toBeHex,
-} from 'ethers'
+import { concat, ethers, hexlify, JsonRpcProvider, toBeHex } from 'ethers'
 import { Execution, getEntryPointContract, PimlicoBundler, sendop } from 'sendop'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '../typechain-types'
+import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '../src/typechain-types'
+import { waitForTransaction } from '../src/lib/ethers'
 
 const ACCOUNT_0_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
 const ACCOUNT_1_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'
@@ -144,50 +136,3 @@ describe('reviewSubmission', () => {
 		expect(hasReviewed).to.be.true
 	}, 20_000)
 })
-
-async function waitForTransaction(promise: Promise<ContractTransactionResponse>) {
-	try {
-		const tx = await promise
-		return await tx.wait()
-	} catch (error: any) {
-		if (error.transaction?.data) {
-			const functionName = findSelector(error.transaction.data)
-			const errorMessage = `${functionName || 'unknown function'}`
-
-			if (error.data) {
-				const errorName = findSelector(error.data, 'error')
-				throw new Error(`${errorMessage} ${errorName || 'Unknown'} (${error.data})`)
-			}
-			throw new Error(errorMessage + ' ' + error.message)
-		} else {
-			throw error
-		}
-	}
-}
-
-function findSelector(data: string, type?: 'function' | 'error'): string | undefined {
-	// Get the selector (first 4 bytes after '0x')
-	const selector = data.startsWith('0x') ? data.slice(0, 10) : '0x' + data.slice(0, 8)
-
-	const iface = new Interface(RoyaltyAutoClaim__factory.abi)
-
-	// Get all fragments from the interface
-	const fragments = iface.fragments.filter(f => !type || f.type === type)
-
-	// Find matching fragment
-	const matchingFragment = fragments.find(fragment => {
-		let fragmentSelector: string | undefined
-		try {
-			if (fragment.type === 'function') {
-				fragmentSelector = iface.getFunction(fragment.format('sighash'))?.selector
-			} else if (fragment.type === 'error') {
-				fragmentSelector = iface.getError(fragment.format('sighash'))?.selector
-			}
-		} catch {
-			return false
-		}
-		return fragmentSelector === selector
-	})
-
-	return matchingFragment?.format('sighash') + ` (${selector})`
-}

@@ -1,17 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
-	history: createWebHistory(),
+	history: createWebHistory('/RoyaltyAutoClaim/'),
 	routes: [
 		{
 			path: '/',
 			name: 'home',
-			component: () => import('@/views/Home.vue'),
+			component: () => import('@/views/HomePage.vue'),
 		},
 		{
 			path: '/config',
 			name: 'config',
-			component: () => import('@/views/Config.vue'),
+			component: () => import('@/views/ConfigPage.vue'),
 		},
 	],
 })

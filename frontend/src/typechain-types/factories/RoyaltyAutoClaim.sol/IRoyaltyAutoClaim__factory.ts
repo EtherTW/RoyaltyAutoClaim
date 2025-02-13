@@ -591,6 +591,11 @@ const _abi = [
   },
   {
     type: "error",
+    name: "SameAddress",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "SubmissionNotClaimable",
     inputs: [],
   },
