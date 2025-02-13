@@ -1,4 +1,4 @@
-import { RoyaltyAutoClaim__factory } from '@/typechain-types'
+import { MockERC20__factory, RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { Interface } from 'ethers'
 import { isError, ErrorCode } from 'ethers'
 import type { ethers } from 'ethers'
@@ -26,29 +26,42 @@ export function normalizeError(unknownError: unknown): Error {
 export function formatErrMsg(error: Error): string {
 	// Special handling for eth_estimateUserOperationGas errors
 	if (error.message.includes('eth_estimateUserOperationGas')) {
-		// Try to extract JSON data for Alchemy Bundler format
+		// Try to extract JSON data for AlchemyBundler format
 		const jsonMatch = error.message.match(/\{.*\}/)
 		if (jsonMatch) {
 			try {
 				const errorData = JSON.parse(jsonMatch[0])
-				const reason = errorData.reason
-				const revertData = errorData.revertData
+				const { reason, revertData } = errorData
+				const decodedErrMsg = revertData ? decodeContractError(revertData) : ''
 
-				if (reason && revertData) {
-					const iface = new Interface(RoyaltyAutoClaim__factory.abi)
-					try {
-						const decodedError = iface.parseError(revertData)
-						if (decodedError) {
-							const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
-							return `Estimation failed: ${reason} ${decodedError.name}${errorArgs}`
-						}
-					} catch (err) {
-						console.error('formatErrMsg: Failed to parse contract error', err)
-					}
+				const parts: string[] = []
+				if (reason) parts.push(reason)
+				if (decodedErrMsg) {
+					parts.push(decodedErrMsg)
+				} else if (revertData) {
+					parts.push(revertData)
 				}
-				return `Estimation failed: ${reason || ''}`
+
+				return parts.length > 0 ? `Estimation failed: ${parts.join(' ')}` : 'Estimation failed'
 			} catch (err) {
 				console.error('formatErrMsg: Failed to parse JSON error data', err)
+			}
+		}
+
+		function decodeContractError(revertData: string): string {
+			const ifaceRAC = new Interface(RoyaltyAutoClaim__factory.abi)
+			const ifaceERC20 = new Interface(MockERC20__factory.abi)
+			try {
+				let decodedError = ifaceRAC.parseError(revertData)
+				if (!decodedError) {
+					decodedError = ifaceERC20.parseError(revertData)
+				}
+				if (!decodedError) return ''
+				const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
+				return `${decodedError.name}${errorArgs}`
+			} catch (err) {
+				console.error('formatErrMsg: Failed to parse contract error', err)
+				return ''
 			}
 		}
 

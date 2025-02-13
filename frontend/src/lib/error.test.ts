@@ -67,5 +67,33 @@ describe('formatErrMsg', () => {
 				'Estimation failed: AA23 reverted Unauthorized(0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)',
 			)
 		})
+
+		it('should format if only revertData is provided', () => {
+			const errMsg =
+				'JsonRpcError: eth_estimateUserOperationGas (-32521): execution reverted - {"revertData":"0x96c3b411"} (sendop@0.2.0-beta.0)'
+			const error = new Error(errMsg)
+			const result = formatErrMsg(error)
+			expect(result).toBe('Estimation failed: AlreadyReviewed')
+		})
+
+		it('should format if revertData cannot be decoded', () => {
+			const errMsg =
+				'JsonRpcError: eth_estimateUserOperationGas (-32521): execution reverted - {"revertData":"0xe350d38c0000000000000000000000003d44146ec2fe06910026cbb047b0ee492cd000f20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001158e460913d00000"} (sendop@0.2.0-beta.0)'
+			const error = new Error(errMsg)
+			const result = formatErrMsg(error)
+			expect(result).toBe(
+				'Estimation failed: 0xe350d38c0000000000000000000000003d44146ec2fe06910026cbb047b0ee492cd000f20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001158e460913d00000',
+			)
+		})
+
+		it('should format if error is from ERC20 contract', () => {
+			const errMsg =
+				'JsonRpcError: eth_estimateUserOperationGas (-32521): execution reverted - {"revertData":"0xe450d38c0000000000000000000000003d44146ec2fe06910026cbb047b0ee492cd000f20000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001158e460913d00000"} (sendop@0.2.0-beta.0)'
+			const error = new Error(errMsg)
+			const result = formatErrMsg(error)
+			expect(result).toBe(
+				'Estimation failed: ERC20InsufficientBalance(0x3d44146ec2Fe06910026cBB047b0EE492cD000F2, 0, 20000000000000000000)',
+			)
+		})
 	})
 })
