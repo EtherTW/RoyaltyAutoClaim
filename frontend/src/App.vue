@@ -74,6 +74,8 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 		<main class="flex-1 pt-14">
 			<router-view />
 		</main>
+
+		<FooterMeta />
 	</div>
 	<VueDappModal autoConnect autoConnectBrowserWalletIfSolo />
 

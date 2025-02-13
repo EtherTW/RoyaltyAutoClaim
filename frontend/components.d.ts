@@ -16,6 +16,7 @@ declare module 'vue' {
     CardFooter: typeof import('./src/components/ui/card/CardFooter.vue')['default']
     CardHeader: typeof import('./src/components/ui/card/CardHeader.vue')['default']
     CardTitle: typeof import('./src/components/ui/card/CardTitle.vue')['default']
+    FooterMeta: typeof import('./src/components/FooterMeta.vue')['default']
     Input: typeof import('./src/components/ui/input/Input.vue')['default']
     Label: typeof import('./src/components/ui/label/Label.vue')['default']
     Notifications: typeof import('@kyvg/vue3-notification')['Notifications']
