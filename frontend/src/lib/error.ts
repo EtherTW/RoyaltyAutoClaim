@@ -24,8 +24,35 @@ export function normalizeError(unknownError: unknown): Error {
 
 // Returned string is used for UI notification
 export function formatErrMsg(error: Error): string {
-	// Special handling for simulation errors
+	// Special handling for eth_estimateUserOperationGas errors
 	if (error.message.includes('eth_estimateUserOperationGas')) {
+		// Try to extract JSON data for Alchemy Bundler format
+		const jsonMatch = error.message.match(/\{.*\}/)
+		if (jsonMatch) {
+			try {
+				const errorData = JSON.parse(jsonMatch[0])
+				const reason = errorData.reason
+				const revertData = errorData.revertData
+
+				if (reason && revertData) {
+					const iface = new Interface(RoyaltyAutoClaim__factory.abi)
+					try {
+						const decodedError = iface.parseError(revertData)
+						if (decodedError) {
+							const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
+							return `Estimation failed: ${reason} ${decodedError.name}${errorArgs}`
+						}
+					} catch (err) {
+						console.error('formatErrMsg: Failed to parse contract error', err)
+					}
+				}
+				return `Estimation failed: ${reason || ''}`
+			} catch (err) {
+				console.error('formatErrMsg: Failed to parse JSON error data', err)
+			}
+		}
+
+		// Fallback to existing logic for PimlicoBundler format
 		const reasonMatch = error.message.match(/UserOperation reverted during simulation with reason: (.+)$/)
 		const reason = reasonMatch?.[1]
 
@@ -40,7 +67,7 @@ export function formatErrMsg(error: Error): string {
 				if (decodedError) {
 					const reasonWithoutHexData = reason.replace(hexData, '').trim()
 					const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
-					return `Simulation failed:${reasonWithoutHexData ? ' ' + reasonWithoutHexData : ''} ${
+					return `Estimation failed:${reasonWithoutHexData ? ' ' + reasonWithoutHexData : ''} ${
 						decodedError.name
 					}${errorArgs}`
 				}
@@ -48,9 +75,9 @@ export function formatErrMsg(error: Error): string {
 				console.error('formatErrMsg: Failed to parse contract error', err)
 			}
 		} else if (reason) {
-			return `Simulation failed: ${reason}`
+			return `Estimation failed: ${reason}`
 		} else {
-			return `Simulation failed`
+			return `Estimation failed`
 		}
 	}
 
