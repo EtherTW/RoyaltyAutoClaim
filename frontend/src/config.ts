@@ -22,7 +22,7 @@ export const RPC_URL: { [key: string]: string } = {
 
 export const EXPLORER_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: '',
-	[CHAIN_ID.SEPOLIA]: 'https://scope.sh/11155111',
+	[CHAIN_ID.SEPOLIA]: 'https://sepolia.etherscan.io',
 }
 
 export const BUNDLER_URL: { [key: string]: string } = {
