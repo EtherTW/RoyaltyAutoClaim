@@ -21,6 +21,12 @@ forge inspect ./src/RoyaltyAutoClaim.sol:RoyaltyAutoClaim storage
 forge clean
 ```
 
+### Reference
+
+- https://github.com/consenlabs/ethtaipei2023-aa-workshop
+- https://github.com/erc7579/erc7579-implementation
+
+
 ## Frontend
 
 ```
@@ -30,19 +36,21 @@ pnpm generate-types
 ```
 - 若合約有更新，記得先 `forge build`後再 `pnpm generate-types`，前端測試才會更新
 
-### Local dev net
+### Local Development
 
 - anvil http://localhost:8545
 - alto http://localhost:4337
 
 ```
 docker compose up -d
+pnpm deploy-contracts:local
 ```
 
 ```
+pnpm dev
 pnpm test 
 pnpm test <path>
-pnpm test -t <test_name>
+pnpm vitest -t <test_name>
 ```
 
 
@@ -50,7 +58,3 @@ pnpm test -t <test_name>
 - For Component, use [shadcn-vue](https://www.shadcn-vue.com/docs/components/accordion.html)
 
 
-## Reference
-
-- https://github.com/consenlabs/ethtaipei2023-aa-workshop
-- https://github.com/erc7579/erc7579-implementation
