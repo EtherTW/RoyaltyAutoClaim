@@ -1,7 +1,6 @@
 import {
 	MockToken,
 	MockToken__factory,
-	RoyaltyAutoClaim,
 	RoyaltyAutoClaim__factory,
 	RoyaltyAutoClaimProxy__factory,
 } from '@/typechain-types'
@@ -21,7 +20,6 @@ describe('deploy', () => {
 	let erc20Address: string
 
 	let proxyAddress: string
-	let royaltyAutoClaim: RoyaltyAutoClaim
 
 	beforeAll(async () => {
 		client = new ethers.JsonRpcProvider(RPC_URL)
@@ -65,8 +63,6 @@ describe('deploy', () => {
 		// Verify deployments
 		expect(implAddress).to.match(/^0x[0-9a-fA-F]{40}$/)
 		expect(proxyAddress).to.match(/^0x[0-9a-fA-F]{40}$/)
-
-		royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(proxyAddress, account0)
 
 		// give proxy address some ether
 		const tx = await account0.sendTransaction({

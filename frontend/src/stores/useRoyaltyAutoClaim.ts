@@ -4,6 +4,7 @@ import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { defineStore } from 'pinia'
 import { useBlockchainStore } from './useBlockchain'
 import { useEOAStore } from './useEOA'
+import { JsonRpcSigner } from 'ethers'
 
 export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', () => {
 	const blockchainStore = useBlockchainStore()
@@ -14,13 +15,12 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 
 	const royaltyAutoClaim4337 = computed(() => {
 		const eoaStore = useEOAStore()
-		const { signer } = storeToRefs(eoaStore)
 
-		if (signer.value) {
+		if (eoaStore.signer) {
 			return new RoyaltyAutoClaim4337({
 				client: blockchainStore.client,
 				bundler: blockchainStore.bundler,
-				signer: signer.value,
+				signer: eoaStore.signer as JsonRpcSigner,
 			})
 		}
 
