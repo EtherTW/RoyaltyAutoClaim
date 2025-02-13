@@ -16,7 +16,7 @@ forge coverage --report lcov
 forge inspect ./src/RoyaltyAutoClaim.sol:RoyaltyAutoClaim storage
 ```
 
-- 有時出現奇怪錯誤，需要先清理再重新編譯
+- 如果出現 `Error: failed to read artifact source file for...`，需要先清理再重新編譯
 ```
 forge clean
 ```
