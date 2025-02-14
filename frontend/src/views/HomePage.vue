@@ -23,6 +23,10 @@ const isLoadingSubmissionData = ref(false)
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
+const isButtonDisabled = computed(
+	() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value || !royaltyAutoClaimStore.royaltyAutoClaim4337,
+)
+
 onMounted(async () => {
 	try {
 		isLoadingBasicSubmissions.value = true
@@ -117,8 +121,6 @@ const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContr
 		found.status = Number(submissionData.status) === 1 ? 'registered' : 'claimed'
 	},
 })
-
-const isButtonDisabled = computed(() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value)
 
 function getAvgRoyaltyLevel(submission: Submission) {
 	if (!submission.reviewCount || !submission.totalRoyaltyLevel) {

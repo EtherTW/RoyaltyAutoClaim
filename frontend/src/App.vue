@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import { BrowserWalletConnector, useVueDapp } from '@vue-dapp/core'
-import { VueDappModal, useVueDappModal } from '@vue-dapp/modal'
+import { VueDappModal } from '@vue-dapp/modal'
 import '@vue-dapp/modal/dist/style.css'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
-import { LogOut, Settings } from 'lucide-vue-next'
+import { Settings, X } from 'lucide-vue-next'
 import { useEOAStore } from './stores/useEOA'
-import { X } from 'lucide-vue-next'
 
-const { addConnectors, status, address, isConnected, disconnect, watchWalletChanged, watchDisconnect } = useVueDapp()
+const { addConnectors, watchWalletChanged, watchDisconnect } = useVueDapp()
 
 addConnectors([new BrowserWalletConnector()])
 
@@ -22,15 +21,6 @@ watchDisconnect(() => {
 	eoaStore.resetWallet()
 })
 
-const onClickConnect = () => {
-	const { open } = useVueDappModal()
-	open()
-}
-
-const onClickDisconnect = () => {
-	disconnect()
-}
-
 const breakpoints = useBreakpoints(breakpointsTailwind)
 </script>
 
@@ -40,38 +30,26 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 			<div class="flex w-full max-w-6xl mx-auto justify-between items-center">
 				<div class="flex items-center gap-6">
 					<router-link to="/" class="">
-						<h1 class="font-semibold text-lg">RoyaltyAutoClaim</h1>
+						<h1 class="font-semibold text-lg" :class="{ 'text-md': breakpoints.isSmaller('sm') }">
+							RoyaltyAutoClaim
+						</h1>
 					</router-link>
 				</div>
 
-				<div class="flex items-center gap-6">
-					<Address v-if="isConnected" :address="address">
-						<template #button>
-							<Button class="address-button" variant="link" size="icon" @click="onClickDisconnect">
-								<LogOut />
-							</Button>
-						</template>
-					</Address>
-					<Button
-						v-else
-						@click="onClickConnect"
-						:variant="isConnected ? 'default' : 'outline'"
-						:disabled="status === 'connecting'"
-					>
-						{{ status === 'connecting' ? 'Connecting...' : isConnected ? 'Connected' : 'Connect' }}
-					</Button>
+				<div class="flex items-center sm:gap-4" :class="{ 'gap-3': breakpoints.isSmaller('sm') }">
+					<ConnectButton />
 
 					<RouterLink
 						to="/config"
 						class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
 					>
-						<Settings />
+						<Settings class="hover:text-gray-600" />
 					</RouterLink>
 				</div>
 			</div>
 		</header>
 
-		<main class="flex-1 pt-14">
+		<main class="flex-1 pt-14 pb-5">
 			<router-view />
 		</main>
 

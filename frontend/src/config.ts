@@ -11,6 +11,7 @@ if (!ALCHEMY_API_KEY) {
 export enum CHAIN_ID {
 	LOCAL = '1337',
 	SEPOLIA = '11155111',
+	MAINNET = '1',
 }
 
 export const DEFAULT_CHAIN_ID = CHAIN_ID.SEPOLIA
@@ -18,17 +19,21 @@ export const DEFAULT_CHAIN_ID = CHAIN_ID.SEPOLIA
 export const RPC_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: `http://localhost:8545`,
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 }
 
 export const EXPLORER_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: '',
 	[CHAIN_ID.SEPOLIA]: 'https://sepolia.etherscan.io',
+	[CHAIN_ID.MAINNET]: 'https://etherscan.io',
 }
 
 export const BUNDLER_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: 'http://localhost:4337',
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 }
 
+// Duration of error notification in ms, -1 means it will not disappear automatically
 export const ERROR_NOTIFICATION_DURATION = -1
 export const GITHUB_REPO_NAME = 'RoyaltyAutoClaim'

@@ -1,6 +1,6 @@
 import { JsonRpcProvider } from 'ethers'
 import { defineStore } from 'pinia'
-import { AlchemyBundler } from 'sendop'
+import { AlchemyBundler, PimlicoBundler } from 'sendop'
 import { CHAIN_ID, DEFAULT_CHAIN_ID, RPC_URL, EXPLORER_URL, BUNDLER_URL } from '@/config'
 
 export const useBlockchainStore = defineStore('useBlockchainStore', () => {
@@ -18,7 +18,12 @@ export const useBlockchainStore = defineStore('useBlockchainStore', () => {
 
 	const bundlerUrl = computed(() => BUNDLER_URL[chainId.value])
 
-	const bundler = computed(() => new AlchemyBundler(chainId.value, bundlerUrl.value))
+	const bundler = computed(() => {
+		if (chainId.value === CHAIN_ID.LOCAL) {
+			return new PimlicoBundler(chainId.value, bundlerUrl.value)
+		}
+		return new AlchemyBundler(chainId.value, bundlerUrl.value)
+	})
 
 	return {
 		chainId,

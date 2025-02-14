@@ -49,6 +49,11 @@ jobs:
                   VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS: ${{ secrets.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS }}
                   VITE_ALCHEMY_API_KEY: ${{ secrets.VITE_ALCHEMY_API_KEY }}
 
+            # Workaround for 404 error with vue-router: https://stackoverflow.com/a/65539760/10752354
+            - name: Copy index.html to 404.html
+              working-directory: ./frontend/dist
+              run: cp index.html 404.html
+
             - name: Setup Pages
               uses: actions/configure-pages@v4
 
