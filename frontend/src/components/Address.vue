@@ -30,22 +30,22 @@ const onClickCopyAddress = () => {
 <template>
 	<div class="inline-flex gap-1.5 items-center justify-between bg-gray-200 py-0.5 rounded-3xl">
 		<!-- Address -->
-		<span class="text-sm pl-3">{{ address && shortenAddress(address) }}</span>
+		<span class="text-xs pl-3">{{ address && shortenAddress(address) }}</span>
 
-		<div class="flex gap-1 items-center pr-1">
+		<div class="flex gap-0.5 items-center pr-0.5">
 			<!-- Copy -->
-			<Button class="address-button" variant="link" size="icon" @click="onClickCopyAddress">
+			<div class="address-button" @click="onClickCopyAddress">
 				<Transition name="fade" mode="out-in">
 					<Copy v-if="!isCopied" key="copy" class="address-button-icon" />
 					<Check v-else key="check" class="address-button-icon" />
 				</Transition>
-			</Button>
+			</div>
 
 			<!-- Link -->
 			<a v-if="externalLink" :href="externalLink" target="_blank">
-				<Button class="address-button" variant="link" size="icon">
+				<div class="address-button">
 					<ExternalLink class="address-button-icon" />
-				</Button>
+				</div>
 			</a>
 
 			<slot name="button" />
@@ -55,15 +55,15 @@ const onClickCopyAddress = () => {
 
 <style lang="css">
 .address-button {
-	@apply w-5 h-5 rounded-full bg-gray-100;
+	@apply w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-black;
 }
 
 .address-button:hover {
-	@apply bg-gray-50;
+	@apply bg-gray-50 cursor-pointer;
 }
 
 .address-button-icon {
-	@apply w-3 h-3;
+	@apply w-2.5;
 }
 
 .fade-enter-active,
