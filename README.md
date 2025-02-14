@@ -36,16 +36,6 @@ pnpm generate-types
 ```
 - 若合約有更新，記得先 `forge build`後再 `pnpm generate-types`，前端測試才會更新
 
-### Local Development
-
-- anvil http://localhost:8545
-- alto http://localhost:4337
-
-```
-docker compose up -d
-pnpm deploy-contracts:local
-```
-
 ```
 pnpm dev
 pnpm test 
@@ -53,8 +43,32 @@ pnpm test <path>
 pnpm vitest -t <test_name>
 ```
 
-
 - For icon, use [lucide-vue-next](https://lucide.dev/icons)
 - For Component, use [shadcn-vue](https://www.shadcn-vue.com/docs/components/accordion.html)
+
+
+### Sepolia Development
+
+- use AlchemyBundler
+
+### Local Development
+
+- use PimlicoBundler
+
+```
+docker compose up -d
+pnpm deploy-contracts:local
+```
+
+.env 合約地址改成於 local network 部署的地址
+```
+VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS=0xa818cA7A4869c7C7101d0Ea5E4c455Ef00e698d5
+```
+
+frontend/src/config.ts 要改成 LOCAL
+```ts
+export const DEFAULT_CHAIN_ID = CHAIN_ID.LOCAL
+```
+
 
 
