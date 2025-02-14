@@ -33,8 +33,8 @@ onMounted(async () => {
 
 // ===================================== Submission Management =====================================
 
-const title = ref('test')
-const recipient = ref('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')
+const title = ref('')
+const recipient = ref('')
 
 // Register Submission
 const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useContractCall({
@@ -71,7 +71,7 @@ const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContrac
 
 // ===================================== Reviewer Management =====================================
 
-const reviewer = ref('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')
+const reviewer = ref('')
 
 // Add Reviewer
 const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContractCall({
@@ -111,8 +111,8 @@ const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useC
 
 // ===================================== Admin Management =====================================
 
-const newAdmin = ref('0x70997970C51812dc3A010C7d01b50e0d17dc79C8')
-const newToken = ref('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
+const newAdmin = ref('')
+const newToken = ref('')
 
 // Change Admin
 const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContractCall({
@@ -150,8 +150,8 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 
 // ===================================== Emergency Withdraw =====================================
 
-const withdrawToken = ref('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE')
-const withdrawAmount = ref<number>(0.01)
+const withdrawToken = ref('')
+const withdrawAmount = ref<number>(0)
 
 // Emergency Withdraw
 const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCall({
