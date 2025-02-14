@@ -34,9 +34,11 @@ export function useContractCall<T extends any[] = []>(options: {
 				type: 'info',
 			})
 
-			await op.wait()
+			const receipt = await op.wait()
 
-			// TODO: check receipt.success
+			if (!receipt.success) {
+				throw new TransactionError(`UserOp is unsuccessful: ${JSON.stringify(receipt)}`)
+			}
 
 			notify({
 				title: options.successTitle,
@@ -70,5 +72,12 @@ export function useContractCall<T extends any[] = []>(options: {
 	return {
 		isLoading,
 		send,
+	}
+}
+
+export class TransactionError extends Error {
+	constructor(message: string, options?: ErrorOptions) {
+		super(message, options)
+		this.name = 'TransactionError'
 	}
 }
