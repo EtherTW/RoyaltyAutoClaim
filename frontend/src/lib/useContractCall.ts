@@ -36,6 +36,8 @@ export function useContractCall<T extends any[] = []>(options: {
 
 			await op.wait()
 
+			// TODO: check receipt.success
+
 			notify({
 				title: options.successTitle,
 				text: `op hash: ${op.hash}`,
