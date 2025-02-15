@@ -4,8 +4,9 @@ import { BrowserWalletConnector, useVueDapp } from '@vue-dapp/core'
 import { VueDappModal } from '@vue-dapp/modal'
 import '@vue-dapp/modal/dist/style.css'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
-import { Settings, X } from 'lucide-vue-next'
+import { Loader2, Settings, X } from 'lucide-vue-next'
 import { useEOAStore } from './stores/useEOA'
+import { useRoyaltyAutoClaimStore } from './stores/useRoyaltyAutoClaim'
 
 const { addConnectors, watchWalletChanged, watchDisconnect } = useVueDapp()
 
@@ -22,6 +23,7 @@ watchDisconnect(() => {
 })
 
 const breakpoints = useBreakpoints(breakpointsTailwind)
+const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 </script>
 
 <template>
@@ -29,10 +31,11 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 		<header class="fixed top-0 left-0 right-0 z-50 bg-background border-b px-4 lg:px-6 h-14 flex items-center">
 			<div class="flex w-full max-w-6xl mx-auto justify-between items-center">
 				<div class="flex items-center gap-6">
-					<router-link to="/" class="">
+					<router-link to="/" class="flex items-center gap-2">
 						<h1 class="font-semibold text-lg" :class="{ 'text-md': breakpoints.isSmaller('sm') }">
 							RoyaltyAutoClaim
 						</h1>
+						<Loader2 v-if="royaltyAutoClaimStore.isLoading" :size="16" class="animate-spin" />
 					</router-link>
 				</div>
 
