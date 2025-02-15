@@ -185,7 +185,7 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
 						<Label for="submissionTitle">Submission Title</Label>
-						<Input id="submissionTitle" v-model="title" placeholder="Enter submission title" />
+						<Input id="submissionTitle" v-model="title" placeholder="title" />
 					</div>
 					<div class="flex flex-col space-y-1.5">
 						<Label for="royaltyRecipient">Royalty Recipient Address</Label>
@@ -269,7 +269,9 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
 						<Label>Current Admin Address</Label>
-						<div class="text-sm text-muted-foreground break-all">{{ currentAdmin }}</div>
+						<div class="text-sm text-muted-foreground break-all">
+							<Address :address="currentAdmin" />
+						</div>
 
 						<Label for="admin" class="mt-4">New Admin Address</Label>
 						<Input id="admin" v-model="newAdmin" placeholder="0x..." />
@@ -280,7 +282,9 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 
 					<div class="flex flex-col space-y-1.5">
 						<Label>Current Token Address</Label>
-						<div class="text-sm text-muted-foreground break-all">{{ currentToken }}</div>
+						<div class="text-sm text-muted-foreground break-all">
+							<Address :address="currentToken" />
+						</div>
 
 						<Label for="token" class="mt-4">New Token Address</Label>
 						<Input id="token" v-model="newToken" placeholder="0x..." />
