@@ -6,27 +6,27 @@ import "./BaseTest.t.sol";
 
 /*
 
-測試 _handleUserOp 的預期錯誤
+    Expected Error of _handleUserOp
 
-1. EntryPoint Error
-(ex.1) AA24 signature error
-vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+    1. validateUserOp Error
+    (ex.1) AA24 signature error
+    vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
 
-(ex.2) AA23 reverted
-vm.expectRevert(
-    abi.encodeWithSelector(
-        IEntryPoint.FailedOpWithRevert.selector,
-        0,
-        "AA23 reverted",
-        abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fakeOwner)
-    )
-);
+    (ex.2) AA23 reverted
+    vm.expectRevert(
+        abi.encodeWithSelector(
+            IEntryPoint.FailedOpWithRevert.selector,
+            0,
+            "AA23 reverted",
+            abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fakeOwner)
+        )
+    );
 
-3. 交易成功，但預期 userop 失敗
-vm.expectEmit(false, true, true, true);
-emit IEntryPoint.UserOperationRevertReason(
-    bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
-);
+    2. execution Error
+    vm.expectEmit(false, true, true, true);
+    emit IEntryPoint.UserOperationRevertReason(
+        bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
+    );
 
 */
 
