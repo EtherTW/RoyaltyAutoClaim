@@ -27,12 +27,13 @@ abstract contract AATest is Test {
     {
         PackedUserOperation memory userOp = _createUserOp();
         userOp.sender = sender;
-        userOp.nonce = entryPoint.getNonce(sender, 0);
+        address signer = vm.addr(privateKey);
+        userOp.nonce = entryPoint.getNonce(sender, uint192(bytes24(abi.encodePacked(bytes4(0), bytes20(signer)))));
         userOp.callData = callData;
         (uint8 v, bytes32 r, bytes32 s) =
             vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
-        address signer = vm.addr(privateKey);
-        userOp.signature = abi.encodePacked(r, s, v, signer);
+
+        userOp.signature = abi.encodePacked(r, s, v);
         return userOp;
     }
 

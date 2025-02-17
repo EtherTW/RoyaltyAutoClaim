@@ -54,7 +54,10 @@ class RoyaltyAutoClaim4337 implements OperationGetter {
 	}
 
 	async getNonce() {
-		const nonce: bigint = await getEntryPointContract(this.client).getNonce(ROYALTY_AUTO_CLAIM_PROXY_ADDRESS, 0)
+		const nonce: bigint = await getEntryPointContract(this.client).getNonce(
+			ROYALTY_AUTO_CLAIM_PROXY_ADDRESS,
+			this.signer.address,
+		)
 		return toBeHex(nonce)
 	}
 
@@ -65,13 +68,12 @@ class RoyaltyAutoClaim4337 implements OperationGetter {
 	async getDummySignature() {
 		return concat([
 			'0xfffffffffffffffffffffffffffffff0000000000000000000000000000000007aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1c',
-			this.signer.address,
 		])
 	}
 
 	async getSignature(userOpHash: Uint8Array) {
 		const sig = await this.signer.signMessage(userOpHash)
-		return concat([sig, this.signer.address])
+		return sig
 	}
 }
 

@@ -334,12 +334,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             revert ForbiddenPaymaster();
         }
 
-        if (userOp.signature.length != 85) {
-            revert InvalidSignatureLength();
-        }
+        // if (userOp.signature.length != 85) {
+        //     revert InvalidSignatureLength();
+        // }
 
         bytes memory actualSignature = bytes(userOp.signature[:65]);
-        address claimedSigner = address(bytes20(userOp.signature[65:]));
+        // address claimedSigner = address(bytes20(userOp.signature[65:]));
+        uint192 nonceKey = uint192(userOp.nonce >> 64);
+        address claimedSigner = address(uint160(nonceKey));
         bytes32 ethHash = ECDSA.toEthSignedMessageHash(userOpHash);
         address actualSigner = ECDSA.recover(ethHash, actualSignature);
 
