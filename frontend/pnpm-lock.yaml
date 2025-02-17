@@ -12,11 +12,11 @@ importers:
         specifier: ^3.4.1
         version: 3.4.1(vue@3.5.13(typescript@5.6.3))
       '@vue-dapp/core':
-        specifier: ^1.5.2
-        version: 1.5.2(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
+        specifier: ^1.5.5
+        version: 1.5.5(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
       '@vue-dapp/modal':
-        specifier: ^1.5.2
-        version: 1.5.2(@vue-dapp/core@1.5.2(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3)))(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
+        specifier: ^1.5.5
+        version: 1.5.5(@vue-dapp/core@1.5.5(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3)))(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
       '@vueuse/core':
         specifier: ^12.4.0
         version: 12.4.0(typescript@5.6.3)
@@ -683,14 +683,14 @@ packages:
   '@volar/typescript@2.4.11':
     resolution: {integrity: sha512-2DT+Tdh88Spp5PyPbqhyoYavYCPDsqbHLFwcUI9K1NlY1YgUJvujGdrqUp0zWxnW7KWNTr3xSpMuv2WnaTKDAw==}
 
-  '@vue-dapp/core@1.5.2':
-    resolution: {integrity: sha512-uwLHEHg3Ib92B7OsD09iOZU0q72joOrXZHUwGV7TxWgA+3Tezs+xPeRREBEXzfrXqjYmH6TbGt0y3vAJyi6Q5Q==}
+  '@vue-dapp/core@1.5.5':
+    resolution: {integrity: sha512-7WtcE6WovPXwdzROQN59LdaFgEeIffhqFb8HMcRochvdN+4iDEVPprgt1J5YdzC9/DgY6yiDRQBQGwrMKP91YQ==}
     peerDependencies:
       pinia: ^2.1.7
       vue: ^3.3.7
 
-  '@vue-dapp/modal@1.5.2':
-    resolution: {integrity: sha512-+IVwwlSmo8HnZexsEiawS/28r0/w/o+ssHyM+czFYbDo/+3Ccp9wKJQvO2N4qA4imiPzku60J491CFu9f2mgQw==}
+  '@vue-dapp/modal@1.5.5':
+    resolution: {integrity: sha512-gTaWFSf1StgMgydZjVKAoRs9ROXKcTy8kYfs0vG8wWCXlfJzK/KgS+5Ly/2EVxFIse9YjxhXocmk8llbgIX4Sg==}
     peerDependencies:
       '@vue-dapp/core': '*'
       pinia: '>=2.1.7'
@@ -2160,14 +2160,14 @@ snapshots:
       path-browserify: 1.0.1
       vscode-uri: 3.0.8
 
-  '@vue-dapp/core@1.5.2(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))':
+  '@vue-dapp/core@1.5.5(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))':
     dependencies:
       pinia: 2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))
       vue: 3.5.13(typescript@5.6.3)
 
-  '@vue-dapp/modal@1.5.2(@vue-dapp/core@1.5.2(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3)))(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))':
+  '@vue-dapp/modal@1.5.5(@vue-dapp/core@1.5.5(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3)))(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))':
     dependencies:
-      '@vue-dapp/core': 1.5.2(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
+      '@vue-dapp/core': 1.5.5(pinia@2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3)))(vue@3.5.13(typescript@5.6.3))
       pinia: 2.3.0(typescript@5.6.3)(vue@3.5.13(typescript@5.6.3))
       vue: 3.5.13(typescript@5.6.3)
 
