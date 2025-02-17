@@ -388,10 +388,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             }
             return 0;
         } else if (selector == this.claimRoyalty.selector) {
-            // ===== Anybody =====
-            if (actualSigner != claimedSigner) {
-                return SIG_VALIDATION_FAILED;
-            }
+            bytes memory titleBytes = userOp.callData[4:];
+            string memory title = string(titleBytes);
+            require(isSubmissionClaimable(title), SubmissionNotClaimable());
+
             return 0;
         }
 

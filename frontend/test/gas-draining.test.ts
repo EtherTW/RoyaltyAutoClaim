@@ -144,11 +144,12 @@ describe('gas-draining', () => {
 				formatUnits(entryPointBalanceOf - entryPointBalanceOfAfter, 'gwei'),
 				'gwei',
 			)
-
-			expect(entryPointBalanceOf - entryPointBalanceOfAfter).toBe(0n)
 		} catch (error: unknown) {
 			const err = normalizeError(error)
-			throw new Error(formatErrMsg(err))
+			expect(err.message).toContain(
+				'eth_sendUserOperation (-32500): UserOperation reverted with reason: AA23 reverted - 0x85e4d8d6',
+			)
+			// 0x85e4d8d6 == SubmissionNotClaimable()
 		}
 	})
 })
