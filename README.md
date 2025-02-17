@@ -70,5 +70,15 @@ frontend/src/config.ts 要改成 LOCAL
 export const DEFAULT_CHAIN_ID = CHAIN_ID.LOCAL
 ```
 
+## branch test/send2op
+
+原本合約實作的 signer address 是放在 signature 後方
+
+### commit 100ec717347b5e06ba0831c7d293093feffb2860
+新增 send2op.test.ts 測試同時送兩個 userop，預期一個成功一個失敗，失敗是因為 nonce 被成功的 userop 用掉了。
+
+### commit 4b9cfa9f362f173689220574ddb3eb39a5ce4adb
+將合約改成 signer address 放在 nonceKey，修正 send2op.test.ts 進行測試，成功平行送出兩個 userop。
+
 
 
