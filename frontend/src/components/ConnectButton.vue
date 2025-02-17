@@ -28,29 +28,31 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 </script>
 
 <template>
-	<div>
+	<div id="connect-button">
 		<div v-if="isConnected" class="flex items-center flex-col">
 			<div
-				class="h-[36px] rounded-3xl flex sm:inline-flex items-center bg-gray-100 sm:px-4 sm:gap-x-2"
+				class="h-[36px] rounded-3xl flex sm:inline-flex items-center bg-gray-200 pl-3.5 pr-1.5 sm:gap-x-2"
 				:class="{
-					'px-3 gap-x-1': breakpoints.isSmaller('sm'),
+					'gap-x-1': breakpoints.isSmaller('sm'),
 				}"
 			>
 				<!-- Address -->
 				<p class="text-sm">{{ address ? shortenAddress(address, 6, 2) : '' }}</p>
 
-				<!-- Copy Button -->
-				<Button class="address-button" variant="link" size="icon" @click="onClickCopyAddress">
-					<Transition name="fade" mode="out-in">
-						<Copy v-if="!isCopied" key="copy" class="address-button-icon" />
-						<Check v-else key="check" class="address-button-icon" />
-					</Transition>
-				</Button>
+				<div class="flex gap-0.5 items-center">
+					<!-- Copy Button -->
+					<div class="address-button" @click="onClickCopyAddress">
+						<Transition name="fade" mode="out-in">
+							<Copy v-if="!isCopied" class="address-button-icon" />
+							<Check v-else class="address-button-icon" />
+						</Transition>
+					</div>
 
-				<!-- Disconnect Button -->
-				<Button class="address-button" variant="link" size="icon" @click="onClickDisconnect">
-					<LogOut />
-				</Button>
+					<!-- Disconnect Button -->
+					<div class="address-button" @click="onClickDisconnect">
+						<LogOut class="address-button-icon" />
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -62,15 +64,15 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 </template>
 
 <style lang="css">
-.address-button {
-	@apply w-5 h-5 rounded-full bg-gray-100;
+#connect-button .address-button {
+	@apply w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-black;
 }
 
-.address-button:hover {
-	@apply bg-gray-50;
+#connect-button .address-button:hover {
+	@apply bg-gray-50 cursor-pointer;
 }
 
-.address-button-icon {
-	@apply w-3 h-3;
+#connect-button .address-button-icon {
+	@apply w-3;
 }
 </style>

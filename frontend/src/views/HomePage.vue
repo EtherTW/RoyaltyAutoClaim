@@ -2,68 +2,18 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ERROR_NOTIFICATION_DURATION } from '@/config'
-import { fetchExistingSubmissions } from '@/lib/RoyaltyAutoClaim'
-import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { notify } from '@kyvg/vue3-notification'
-import { Loader2 } from 'lucide-vue-next'
 import { useContractCall } from '@/lib/useContractCall'
-
-type Submission = {
-	title: string
-	recipient: string
-	reviewCount: number | null
-	totalRoyaltyLevel: number | null
-	status: 'registered' | 'claimed' | null
-}
-
-const submissions = ref<Submission[]>([])
-const isLoadingBasicSubmissions = ref(false)
-const isLoadingSubmissionData = ref(false)
-
-const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
+import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+import { Loader2 } from 'lucide-vue-next'
 
 const isButtonDisabled = computed(
 	() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value || !royaltyAutoClaimStore.royaltyAutoClaim4337,
 )
 
-onMounted(async () => {
-	try {
-		isLoadingBasicSubmissions.value = true
+const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
-		const basicSubmissions = await fetchExistingSubmissions(royaltyAutoClaimStore.royaltyAutoClaim)
-
-		submissions.value = basicSubmissions.map(submission => ({
-			title: submission.title,
-			recipient: submission.recipient,
-			reviewCount: null,
-			totalRoyaltyLevel: null,
-			status: null,
-		}))
-
-		isLoadingBasicSubmissions.value = false
-
-		isLoadingSubmissionData.value = true
-		await Promise.all(
-			submissions.value.map(async submission => {
-				const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submission.title)
-				submission.reviewCount = Number(submissionData.reviewCount)
-				submission.totalRoyaltyLevel = Number(submissionData.totalRoyaltyLevel)
-				submission.status = Number(submissionData.status) === 1 ? 'registered' : 'claimed'
-			}),
-		)
-		isLoadingSubmissionData.value = false
-	} catch (err: any) {
-		notify({
-			title: 'Error fetching submissions',
-			text: err.message,
-			type: 'error',
-			duration: ERROR_NOTIFICATION_DURATION,
-		})
-	} finally {
-		isLoadingBasicSubmissions.value = false
-		isLoadingSubmissionData.value = false
-	}
+onMounted(() => {
+	royaltyAutoClaimStore.fetchSubmissions()
 })
 
 // ===================================== submit review & claim royalty =====================================
@@ -93,7 +43,7 @@ const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContr
 	},
 	onAfterCall: async (submissionTitle: string) => {
 		const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submissionTitle)
-		const found = submissions.value.find(submission => submission.title === submissionTitle)
+		const found = royaltyAutoClaimStore.submissions.find(submission => submission.title === submissionTitle)
 		if (!found) {
 			throw new Error('reviewSubmission onAfterCall: Submission not found')
 		}
@@ -114,7 +64,7 @@ const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContr
 	},
 	onAfterCall: async (submissionTitle: string) => {
 		const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submissionTitle)
-		const found = submissions.value.find(submission => submission.title === submissionTitle)
+		const found = royaltyAutoClaimStore.submissions.find(submission => submission.title === submissionTitle)
 		if (!found) {
 			throw new Error('claimRoyalty onAfterCall: Submission not found')
 		}
@@ -136,21 +86,21 @@ function isSubmittingReview(submissionTitle: string) {
 function isClaimingRoyalty(submissionTitle: string) {
 	return isClaimRoyaltyLoading.value && submissionBeingOperated.value === submissionTitle
 }
+
+const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions].reverse())
 </script>
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
 		<div class="space-y-4">
 			<div
-				v-if="isLoadingBasicSubmissions || isLoadingSubmissionData"
-				class="flex items-center justify-center mb-6"
+				v-if="!royaltyAutoClaimStore.submissions.length && !royaltyAutoClaimStore.isLoading"
+				class="text-gray-500 text-center"
 			>
-				<Loader2 class="w-4 h-4 ml-2 animate-spin" />
+				No Submissions
 			</div>
 
-			<div v-else-if="!submissions.length" class="text-gray-500 text-center">No Submissions</div>
-
-			<Card v-for="submission in [...submissions].reverse()" :key="submission.title">
+			<Card v-for="submission in reversedSubmissions" :key="submission.title">
 				<CardHeader>
 					<div class="flex items-center justify-between">
 						<CardTitle>{{ submission.title }}</CardTitle>
