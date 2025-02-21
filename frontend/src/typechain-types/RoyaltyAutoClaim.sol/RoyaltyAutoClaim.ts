@@ -97,6 +97,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "getRoyalty"
       | "hasReviewed"
       | "initialize"
+      | "isRecipient"
       | "isReviewer"
       | "isSubmissionClaimable"
       | "owner"
@@ -187,6 +188,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   encodeFunctionData(
     functionFragment: "initialize",
     values: [AddressLike, AddressLike, AddressLike, AddressLike[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isRecipient",
+    values: [string, AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "isReviewer",
@@ -292,6 +297,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "isRecipient",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "isReviewer", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "isSubmissionClaimable",
@@ -411,19 +420,12 @@ export namespace ReviewerStatusUpdatedEvent {
 
 export namespace RoyaltyClaimedEvent {
   export type InputTuple = [
-    titleHash: string,
     recipient: AddressLike,
     amount: BigNumberish,
     title: string
   ];
-  export type OutputTuple = [
-    titleHash: string,
-    recipient: string,
-    amount: bigint,
-    title: string
-  ];
+  export type OutputTuple = [recipient: string, amount: bigint, title: string];
   export interface OutputObject {
-    titleHash: string;
     recipient: string;
     amount: bigint;
     title: string;
@@ -640,6 +642,12 @@ export interface RoyaltyAutoClaim extends BaseContract {
     "nonpayable"
   >;
 
+  isRecipient: TypedContractMethod<
+    [title: string, recipient: AddressLike],
+    [boolean],
+    "view"
+  >;
+
   isReviewer: TypedContractMethod<[reviewer: AddressLike], [boolean], "view">;
 
   isSubmissionClaimable: TypedContractMethod<
@@ -778,6 +786,13 @@ export interface RoyaltyAutoClaim extends BaseContract {
     ],
     [void],
     "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "isRecipient"
+  ): TypedContractMethod<
+    [title: string, recipient: AddressLike],
+    [boolean],
+    "view"
   >;
   getFunction(
     nameOrSignature: "isReviewer"
@@ -998,7 +1013,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
       ReviewerStatusUpdatedEvent.OutputObject
     >;
 
-    "RoyaltyClaimed(string,address,uint256,string)": TypedContractEvent<
+    "RoyaltyClaimed(address,uint256,string)": TypedContractEvent<
       RoyaltyClaimedEvent.InputTuple,
       RoyaltyClaimedEvent.OutputTuple,
       RoyaltyClaimedEvent.OutputObject

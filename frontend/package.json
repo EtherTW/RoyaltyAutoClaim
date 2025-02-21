@@ -8,7 +8,7 @@
 		"build": "vue-tsc --noEmit && vite build",
 		"preview": "vite preview",
 		"test": "vitest --run",
-		"generate-types": "typechain --target ethers-v6 --out-dir 'src/typechain-types' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json'",
+		"generate-types": "rm -rf src/typechain-types && typechain --target ethers-v6 --out-dir 'src/typechain-types' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json'",
 		"deploy-contracts:local": "pnpm test test/deploy-local.test.ts"
 	},
 	"dependencies": {

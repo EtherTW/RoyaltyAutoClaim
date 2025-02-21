@@ -11,7 +11,7 @@ const ACCOUNT_0_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5ef
 const ACCOUNT_1_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'
 const RPC_URL = 'http://localhost:8545'
 
-describe('deploy', () => {
+describe('deploy-local', () => {
 	let client: JsonRpcProvider
 	let account0: ethers.Wallet
 	let account1: ethers.Wallet

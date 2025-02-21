@@ -7,7 +7,8 @@
 ```
 forge test
 forge coverage
-forge coverage --report lcov 
+forge coverage --report lcov
+forge test --gas-report
 ```
 
 - 確保 storage layout 為空，避免未來升級時 storage collision 風險

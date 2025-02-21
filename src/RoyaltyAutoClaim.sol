@@ -28,7 +28,7 @@ interface IRoyaltyAutoClaim {
     // Reviewer functions
     function reviewSubmission(string memory title, uint16 royaltyLevel) external;
 
-    // Submitter functions
+    // Recipient functions
     function claimRoyalty(string memory title) external;
 
     // Events
@@ -43,7 +43,7 @@ interface IRoyaltyAutoClaim {
     );
     event SubmissionRevoked(string indexed titleHash, string title);
     event SubmissionReviewed(string indexed titleHash, address indexed reviewer, uint16 royaltyLevel, string title);
-    event RoyaltyClaimed(string indexed titleHash, address indexed recipient, uint256 amount, string title);
+    event RoyaltyClaimed(address indexed recipient, uint256 amount, string title);
 
     // View functions
     function admin() external view returns (address);
@@ -160,6 +160,11 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     modifier onlyReviewerOrEntryPoint() {
         require(isReviewer(msg.sender) || msg.sender == entryPoint(), Unauthorized(msg.sender));
+        _;
+    }
+
+    modifier onlyRecipientOrEntryPoint(string memory title) {
+        require(isRecipient(title, msg.sender) || msg.sender == entryPoint(), Unauthorized(msg.sender));
         _;
     }
 
@@ -291,17 +296,38 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         emit SubmissionReviewed(title, reviewer, royaltyLevel, title);
     }
 
-    // ================================ Submitter ================================
+    // ================================ Recipient ================================
 
-    function claimRoyalty(string memory title) public nonReentrant {
-        require(isSubmissionClaimable(title), SubmissionNotClaimable());
+    function claimRoyalty(string memory title) public nonReentrant onlyRecipientOrEntryPoint(title) {
+        address recipient;
+        if (msg.sender == entryPoint()) {
+            recipient = _getUserOpSigner();
+            // If it comes from EntryPoint, _claimRoyalty has already been verified in validateUserOp
+        } else {
+            recipient = msg.sender;
+            // If the user calls claimRoyalty directly using an EOA, we must check
+            _claimRoyalty(title, recipient);
+        }
 
         uint256 amount = getRoyalty(title);
+
+        // We cannot write the withdrawal in the validation phase
+        // We cannot prevent this part from being reverted in the execution phase, for example, if a malicious user lowers the maxFeePerGas or callGasLimit.
+        // We can only know which recipient caused the transaction to fail from the signer address at the end of userOp.signature.
+        IERC20(token()).safeTransfer(recipient, amount);
+        emit RoyaltyClaimed(recipient, amount, title);
+    }
+
+    /**
+     * If the 4337 process is followed, it will be called in validateUserOp to ensure most reverts occur in the validation phase.
+     * Since the user is not the owner of this contract account, we should avoid malicious userOps being reverted in the execution phase, consuming this contract's ETH.
+     */
+    function _claimRoyalty(string memory title, address recipient) internal {
+        require(isSubmissionClaimable(title), SubmissionNotClaimable());
+        require(isRecipient(title, recipient), Unauthorized(recipient));
+
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
-
-        IERC20(token()).safeTransfer(submissions(title).royaltyRecipient, amount);
-        emit RoyaltyClaimed(title, submissions(title).royaltyRecipient, amount, title);
     }
 
     // ================================ ERC-4337 ================================
@@ -378,7 +404,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
                 revert Unauthorized(claimedSigner);
             }
 
-            // Store the signer for reviewSubmission before signature verification to pass estimateUserOpGas
+            // Must store the signer before signature verification for eth_estimateUserOperationGas
             assembly {
                 tstore(TRANSIENT_SIGNER_SLOT, claimedSigner)
             }
@@ -388,7 +414,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             }
             return 0;
         } else if (selector == this.claimRoyalty.selector) {
-            // ===== Anybody =====
+            // ===== Recipient =====
+            _claimRoyalty(abi.decode(userOp.callData[4:], (string)), claimedSigner);
+
+            // Must store the signer before signature verification for eth_estimateUserOperationGas
+            assembly {
+                tstore(TRANSIENT_SIGNER_SLOT, claimedSigner)
+            }
+
             if (actualSigner != claimedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
@@ -430,6 +463,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         return _getMainStorage().configs.reviewers[reviewer];
     }
 
+    function isRecipient(string memory title, address recipient) public view returns (bool) {
+        return _getMainStorage().submissions[title].royaltyRecipient == recipient;
+    }
+
     function hasReviewed(string memory title, address reviewer) public view returns (bool) {
         return _getMainStorage().hasReviewed[title][reviewer];
     }
@@ -441,8 +478,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         return submissions(title).reviewCount >= 2;
     }
 
+    // Note that if submission is claimed, the royalty will still be calculated instead of returning 0
+    // Make sure to check isSubmissionClaimable before calling this function
     function getRoyalty(string memory title) public view returns (uint256 royalty) {
-        if (!isSubmissionClaimable(title)) {
+        if (submissions(title).reviewCount == 0) {
             return 0;
         }
         uint8 decimals = IERC20Metadata(token()).decimals();

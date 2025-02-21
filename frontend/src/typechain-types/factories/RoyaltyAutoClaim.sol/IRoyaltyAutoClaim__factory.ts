@@ -387,12 +387,6 @@ const _abi = [
     name: "RoyaltyClaimed",
     inputs: [
       {
-        name: "titleHash",
-        type: "string",
-        indexed: true,
-        internalType: "string",
-      },
-      {
         name: "recipient",
         type: "address",
         indexed: true,
@@ -587,6 +581,11 @@ const _abi = [
   {
     type: "error",
     name: "RenounceOwnershipDisabled",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "RoyaltyIsZero",
     inputs: [],
   },
   {

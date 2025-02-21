@@ -20,7 +20,7 @@ describe('reviewSubmission', () => {
 	let owner: ethers.Wallet
 	let admin: ethers.Wallet
 	let reviewer: ethers.Wallet
-	let submitter: ethers.Wallet
+	let recipient: ethers.Wallet
 
 	let proxyAddress: string
 	let royaltyAutoClaim: RoyaltyAutoClaim
@@ -33,7 +33,7 @@ describe('reviewSubmission', () => {
 		owner = new ethers.Wallet(ACCOUNT_0_PRIVATE_KEY, client)
 		admin = new ethers.Wallet(ACCOUNT_0_PRIVATE_KEY, client)
 		reviewer = new ethers.Wallet(ACCOUNT_1_PRIVATE_KEY, client)
-		submitter = new ethers.Wallet(ACCOUNT_1_PRIVATE_KEY, client)
+		recipient = new ethers.Wallet(ACCOUNT_1_PRIVATE_KEY, client)
 
 		// Deploy implementation contract
 		const RoyaltyAutoClaimFactory = new RoyaltyAutoClaim__factory(owner)
@@ -81,11 +81,11 @@ describe('reviewSubmission', () => {
 		console.log('owner', owner.address)
 		console.log('admin', admin.address)
 		console.log('reviewer', reviewer.address)
-		console.log('submitter', submitter.address)
+		console.log('recipient', recipient.address)
 	}, 20_000)
 
 	it('should review a submission', async () => {
-		await waitForTransaction(royaltyAutoClaim.connect(admin).registerSubmission('test', submitter.address))
+		await waitForTransaction(royaltyAutoClaim.connect(admin).registerSubmission('test', recipient.address))
 		await waitForTransaction(royaltyAutoClaim.connect(reviewer).reviewSubmission('test', 20))
 		const hasReviewed = await royaltyAutoClaim.hasReviewed('test', reviewer.address)
 		expect(hasReviewed).to.be.true
@@ -95,7 +95,7 @@ describe('reviewSubmission', () => {
 		const title = 'test4337'
 		// wait for one second
 		await new Promise(resolve => setTimeout(resolve, 1000))
-		await waitForTransaction(royaltyAutoClaim.connect(admin).registerSubmission(title, submitter.address))
+		await waitForTransaction(royaltyAutoClaim.connect(admin).registerSubmission(title, recipient.address))
 
 		const op = await sendop({
 			bundler: new PimlicoBundler(CHAIN_ID, BUNDLER_URL),

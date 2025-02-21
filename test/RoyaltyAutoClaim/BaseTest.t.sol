@@ -3,15 +3,9 @@ pragma solidity ^0.8.28;
 
 import "../../src/RoyaltyAutoClaim.sol";
 import "../../src/RoyaltyAutoClaimProxy.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import "../utils/AATest.t.sol";
-
-contract MockERC20 is ERC20 {
-    constructor(address owner) ERC20("Test", "TEST") {
-        _mint(owner, 100 ether);
-    }
-}
+import {MockToken} from "../../src/MockToken.sol";
 
 /// @dev for testing internal functions
 contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
@@ -44,8 +38,8 @@ abstract contract BaseTest is AATest {
     uint256 reviewer1Key;
     address reviewer2;
     uint256 reviewer2Key;
-    address submitter;
-    uint256 submitterKey;
+    address recipient;
+    uint256 recipientKey;
 
     address[] initialReviewers = new address[](2);
 
@@ -69,7 +63,7 @@ abstract contract BaseTest is AATest {
         (newAdmin, newAdminKey) = makeAddrAndKey("newAdmin");
         (reviewer1, reviewer1Key) = makeAddrAndKey("reviewer1");
         (reviewer2, reviewer2Key) = makeAddrAndKey("reviewer2");
-        (submitter, submitterKey) = makeAddrAndKey("submitter");
+        (recipient, recipientKey) = makeAddrAndKey("recipient");
 
         initialReviewers[0] = reviewer1;
         initialReviewers[1] = reviewer2;
@@ -79,10 +73,10 @@ abstract contract BaseTest is AATest {
         console.log("admin", admin);
         console.log("reviewer1", reviewer1);
         console.log("reviewer2", reviewer2);
-        console.log("submitter", submitter);
+        console.log("recipient", recipient);
 
-        token = new MockERC20(owner);
-        newToken = new MockERC20(owner);
+        token = new MockToken(owner, 100 ether);
+        newToken = new MockToken(owner, 100 ether);
 
         harness = new RoyaltyAutoClaimHarness();
 

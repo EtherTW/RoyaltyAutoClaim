@@ -1,4 +1,4 @@
-import { MockERC20__factory, RoyaltyAutoClaim__factory } from '@/typechain-types'
+import { MockToken__factory, RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { Interface } from 'ethers'
 import { isError, ErrorCode } from 'ethers'
 import type { ethers } from 'ethers'
@@ -48,7 +48,7 @@ export function formatErrMsg(error: Error): string {
 
 		function decodeContractError(revertData: string): string {
 			const ifaceRAC = new Interface(RoyaltyAutoClaim__factory.abi)
-			const ifaceERC20 = new Interface(MockERC20__factory.abi)
+			const ifaceERC20 = new Interface(MockToken__factory.abi)
 
 			let decodedError = ifaceRAC.parseError(revertData)
 			if (!decodedError) {
