@@ -46,7 +46,8 @@ jobs:
               working-directory: ./frontend
               run: pnpm build
               env:
-                  VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS: ${{ secrets.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS }}
+                  VITE_CHAIN_ID: ${{ vars.VITE_CHAIN_ID }}
+                  VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS }}
                   VITE_ALCHEMY_API_KEY: ${{ secrets.VITE_ALCHEMY_API_KEY }}
 
             # Workaround for 404 error with vue-router: https://stackoverflow.com/a/65539760/10752354
