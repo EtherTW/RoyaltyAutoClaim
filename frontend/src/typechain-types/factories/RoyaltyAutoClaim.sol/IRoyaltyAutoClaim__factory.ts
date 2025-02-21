@@ -544,6 +544,11 @@ const _abi = [
   },
   {
     type: "error",
+    name: "AlreadyTransientClaimed",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "EmptyTitle",
     inputs: [],
   },
@@ -556,6 +561,17 @@ const _abi = [
     type: "error",
     name: "InvalidArrayLength",
     inputs: [],
+  },
+  {
+    type: "error",
+    name: "InvalidCallGasLimit",
+    inputs: [
+      {
+        name: "callGasLimit",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
   },
   {
     type: "error",
@@ -581,11 +597,6 @@ const _abi = [
   {
     type: "error",
     name: "RenounceOwnershipDisabled",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "RoyaltyIsZero",
     inputs: [],
   },
   {

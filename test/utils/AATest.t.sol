@@ -36,6 +36,23 @@ abstract contract AATest is Test {
         return userOp;
     }
 
+    function _buildUserOp(uint256 privateKey, address sender, bytes memory callData, uint256 callGasLimit)
+        internal
+        view
+        returns (PackedUserOperation memory)
+    {
+        PackedUserOperation memory userOp = _createUserOp();
+        userOp.accountGasLimits = _pack(999_999, callGasLimit);
+        userOp.sender = sender;
+        userOp.nonce = entryPoint.getNonce(sender, 0);
+        userOp.callData = callData;
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        address signer = vm.addr(privateKey);
+        userOp.signature = abi.encodePacked(r, s, v, signer);
+        return userOp;
+    }
+
     function _handleUserOp(PackedUserOperation memory userOp) internal {
         PackedUserOperation[] memory ops = new PackedUserOperation[](1);
         ops[0] = userOp;

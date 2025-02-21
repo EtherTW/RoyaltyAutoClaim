@@ -162,7 +162,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         _handleUserOp(userOp);
 
         // Should fail if not recipient
-        userOp = _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        userOp = _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")), 80_000);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -174,7 +174,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         _handleUserOp(userOp);
 
         // Should return 1 for invalid signature
-        userOp = _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        userOp = _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")), 80_000);
         (uint8 v, bytes32 r, bytes32 s) =
             vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
         // Put recipient address but signed with fakeKey
@@ -183,7 +183,8 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         _handleUserOp(userOp);
 
         // Should succeed for recipient
-        userOp = _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        userOp =
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")), 80_000);
         _handleUserOp(userOp);
     }
 
@@ -400,19 +401,19 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     function testCannot_claimRoyalty_if_already_claimed() public {
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", recipient);
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(initialReviewers[1]);
+        vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
 
         // First claim should succeed
         _handleUserOp(
-            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")))
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")), 80_000)
         );
 
         // Second claim should fail
         PackedUserOperation memory userOp =
-            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")), 80_000);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -420,6 +421,62 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 "AA23 reverted",
                 abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector)
             )
+        );
+
+        _handleUserOp(userOp);
+    }
+
+    function testCannot_claimRoyalty_revert_in_execution_by_low_callGasLimit() public {
+        // Setup: Register submission and add reviews to make it claimable
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission("test", recipient);
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission("test2", recipient);
+        vm.prank(reviewer1);
+        royaltyAutoClaim.reviewSubmission("test", 20);
+        vm.prank(reviewer1);
+        royaltyAutoClaim.reviewSubmission("test2", 20);
+        vm.prank(reviewer2);
+        royaltyAutoClaim.reviewSubmission("test", 40);
+        vm.prank(reviewer2);
+        royaltyAutoClaim.reviewSubmission("test2", 40);
+
+        // Test case 1: callGasLimit too low (below 80,000)
+        PackedUserOperation memory userOp =
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")), 79_999);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                IEntryPoint.FailedOpWithRevert.selector,
+                0,
+                "AA23 reverted",
+                abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidCallGasLimit.selector, 79_999)
+            )
+        );
+        _handleUserOp(userOp);
+
+        // Test case 2: callGasLimit too high (above 100,000)
+        // userOp =
+        //     _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")), 100_001);
+
+        // vm.expectRevert(
+        //     abi.encodeWithSelector(
+        //         IEntryPoint.FailedOpWithRevert.selector,
+        //         0,
+        //         "AA23 reverted",
+        //         abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidCallGasLimit.selector, 100_001)
+        //     )
+        // );
+        // _handleUserOp(userOp);
+
+        // Test case 3: callGasLimit at minimum boundary (80,000) should succeed
+        userOp =
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")), 80_000);
+        _handleUserOp(userOp);
+
+        // Test case 4: callGasLimit at maximum boundary (100,000) should succeed
+        userOp = _buildUserOp(
+            recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test2")), 100_000
         );
         _handleUserOp(userOp);
     }

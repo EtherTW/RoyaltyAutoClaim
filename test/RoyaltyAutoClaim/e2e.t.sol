@@ -85,7 +85,8 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         );
 
         // Try to claim before reviews - should fail
-        userOp = _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")));
+        userOp =
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")), 80_000);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -102,7 +103,8 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         _handleUserOp(userOp);
 
         // Try to claim after one review - should still fail
-        userOp = _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")));
+        userOp =
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")), 80_000);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -123,7 +125,8 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         uint256 proxyBalanceBefore = token.balanceOf(address(proxy));
 
         // Claim royalty
-        userOp = _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")));
+        userOp =
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")), 80_000);
         _handleUserOp(userOp);
 
         // Verify final state

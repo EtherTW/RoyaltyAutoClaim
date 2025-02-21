@@ -71,6 +71,8 @@ interface IRoyaltyAutoClaim {
     error AlreadyReviewed();
     error InvalidSignatureLength();
     error SameAddress();
+    // error AlreadyTransientClaimed();
+    error InvalidCallGasLimit(uint256 callGasLimit);
 
     // Structs
     struct Configs {
@@ -116,6 +118,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     bytes32 private constant MAIN_STORAGE_SLOT = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
     /// @dev cast index-erc7201 royaltyautoclaim.storage.signer
     bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
+    /// @dev cast index-erc7201 royaltyautoclaim.storage.claimed
+    // bytes32 private constant TRANSIENT_CLAIMED_SLOT = 0x03e32d3ece583f03450e2d556e74ceb11c29023842200cad97c3c4a14311c500;
 
     function _getMainStorage() private pure returns (MainStorage storage $) {
         assembly {
@@ -302,18 +306,21 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         address recipient;
         if (msg.sender == entryPoint()) {
             recipient = _getUserOpSigner();
-            // If it comes from EntryPoint, _claimRoyalty has already been verified in validateUserOp
+            // If it comes from EntryPoint, _checkClaimable has already been verified in validateUserOp
         } else {
             recipient = msg.sender;
             // If the user calls claimRoyalty directly using an EOA, we must check
-            _claimRoyalty(title, recipient);
+            _checkClaimable(title, recipient);
         }
 
+        // We cannot modify the following state in the validation phase.
+        // We cannot fully prevent this part from being reverted in the execution phase
+        // for example, if a malicious user lowers the maxFeePerGas
+        // or sends multiple userOps in one bundle for one success and multiple reverts.
+        // We can know which recipient caused the transaction to fail from the signer address at the end of userOp.signature.
+        MainStorage storage $ = _getMainStorage();
+        $.submissions[title].status = SubmissionStatus.Claimed;
         uint256 amount = getRoyalty(title);
-
-        // We cannot write the withdrawal in the validation phase
-        // We cannot prevent this part from being reverted in the execution phase, for example, if a malicious user lowers the maxFeePerGas or callGasLimit.
-        // We can only know which recipient caused the transaction to fail from the signer address at the end of userOp.signature.
         IERC20(token()).safeTransfer(recipient, amount);
         emit RoyaltyClaimed(recipient, amount, title);
     }
@@ -322,12 +329,9 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
      * If the 4337 process is followed, it will be called in validateUserOp to ensure most reverts occur in the validation phase.
      * Since the user is not the owner of this contract account, we should avoid malicious userOps being reverted in the execution phase, consuming this contract's ETH.
      */
-    function _claimRoyalty(string memory title, address recipient) internal {
+    function _checkClaimable(string memory title, address recipient) internal view {
         require(isSubmissionClaimable(title), SubmissionNotClaimable());
         require(isRecipient(title, recipient), Unauthorized(recipient));
-
-        MainStorage storage $ = _getMainStorage();
-        $.submissions[title].status = SubmissionStatus.Claimed;
     }
 
     // ================================ ERC-4337 ================================
@@ -415,7 +419,24 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             return 0;
         } else if (selector == this.claimRoyalty.selector) {
             // ===== Recipient =====
-            _claimRoyalty(abi.decode(userOp.callData[4:], (string)), claimedSigner);
+            // To prevent malicious users from sending multiple low callGasLimit transactions,
+            // causing all userOps to fail and thereby consuming a large amount of ETH in the contract
+            uint256 callGasLimit = uint128(uint256(userOp.accountGasLimits));
+            require(callGasLimit >= 80_000, InvalidCallGasLimit(callGasLimit));
+
+            // To avoid multiple claimRoyalty operations that could be reverted in the same handleOps,
+            // One solution is to use transientClaimed to record the recipient that has already been claimed during the validation phase
+            // So in this case, bundler's simulation would reject the userOp bundle
+            // address transientClaimed;
+            // assembly {
+            //     transientClaimed := tload(TRANSIENT_CLAIMED_SLOT)
+            // }
+
+            // if (transientClaimed == claimedSigner) {
+            //     revert AlreadyTransientClaimed();
+            // }
+
+            _checkClaimable(abi.decode(userOp.callData[4:], (string)), claimedSigner);
 
             // Must store the signer before signature verification for eth_estimateUserOperationGas
             assembly {
@@ -425,6 +446,11 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             if (actualSigner != claimedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
+
+            // assembly {
+            //     tstore(TRANSIENT_CLAIMED_SLOT, claimedSigner)
+            // }
+
             return 0;
         }
 

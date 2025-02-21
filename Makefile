@@ -24,3 +24,6 @@ test-e2e-local:
 
 test-e2e-sepolia:
 	make build && cd frontend && pnpm test test/e2e-sepolia.test.ts
+
+test-gas-draining:
+	make build && cd frontend && pnpm test test/gas-draining.test.ts
