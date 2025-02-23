@@ -71,8 +71,6 @@ interface IRoyaltyAutoClaim {
     error AlreadyReviewed();
     error InvalidSignatureLength();
     error SameAddress();
-    // error AlreadyTransientClaimed();
-    error InvalidCallGasLimit(uint256 callGasLimit);
 
     // Structs
     struct Configs {
@@ -113,13 +111,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     uint256 public constant SIG_VALIDATION_FAILED = 1;
 
-    // keccak256(abi.encode(uint256(keccak256("royaltyautoclaim.storage.main")) - 1)) & ~bytes32(uint256(0xff));
     /// @dev cast index-erc7201 royaltyautoclaim.storage.main
     bytes32 private constant MAIN_STORAGE_SLOT = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
     /// @dev cast index-erc7201 royaltyautoclaim.storage.signer
     bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
-    /// @dev cast index-erc7201 royaltyautoclaim.storage.claimed
-    // bytes32 private constant TRANSIENT_CLAIMED_SLOT = 0x03e32d3ece583f03450e2d556e74ceb11c29023842200cad97c3c4a14311c500;
 
     function _getMainStorage() private pure returns (MainStorage storage $) {
         assembly {
@@ -159,16 +154,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     modifier onlyAdminOrEntryPoint() {
         require(msg.sender == admin() || msg.sender == entryPoint(), Unauthorized(msg.sender));
-        _;
-    }
-
-    modifier onlyReviewerOrEntryPoint() {
-        require(isReviewer(msg.sender) || msg.sender == entryPoint(), Unauthorized(msg.sender));
-        _;
-    }
-
-    modifier onlyRecipientOrEntryPoint(string memory title) {
-        require(isRecipient(title, msg.sender) || msg.sender == entryPoint(), Unauthorized(msg.sender));
         _;
     }
 
@@ -275,49 +260,44 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     // ================================ Reviewer ================================
 
-    function reviewSubmission(string memory title, uint16 royaltyLevel) public onlyReviewerOrEntryPoint {
-        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
-        require(
-            royaltyLevel == ROYALTY_LEVEL_20 || royaltyLevel == ROYALTY_LEVEL_40 || royaltyLevel == ROYALTY_LEVEL_60
-                || royaltyLevel == ROYALTY_LEVEL_80,
-            InvalidRoyaltyLevel(royaltyLevel)
-        );
-
+    function reviewSubmission(string memory title, uint16 royaltyLevel) public {
         address reviewer;
         if (msg.sender == entryPoint()) {
             reviewer = _getUserOpSigner();
         } else {
             reviewer = msg.sender;
+            _requireReviewable(reviewer, title, royaltyLevel);
         }
 
         MainStorage storage $ = _getMainStorage();
-        if ($.hasReviewed[title][reviewer]) {
-            revert AlreadyReviewed();
-        }
         $.hasReviewed[title][reviewer] = true;
         $.submissions[title].reviewCount++;
         $.submissions[title].totalRoyaltyLevel += royaltyLevel;
         emit SubmissionReviewed(title, reviewer, royaltyLevel, title);
     }
 
+    function _requireReviewable(address reviewer, string memory title, uint16 royaltyLevel) internal view {
+        require(isReviewer(reviewer), Unauthorized(reviewer));
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
+        require(
+            royaltyLevel == ROYALTY_LEVEL_20 || royaltyLevel == ROYALTY_LEVEL_40 || royaltyLevel == ROYALTY_LEVEL_60
+                || royaltyLevel == ROYALTY_LEVEL_80,
+            InvalidRoyaltyLevel(royaltyLevel)
+        );
+        require(!hasReviewed(title, reviewer), AlreadyReviewed());
+    }
+
     // ================================ Recipient ================================
 
-    function claimRoyalty(string memory title) public nonReentrant onlyRecipientOrEntryPoint(title) {
+    function claimRoyalty(string memory title) public nonReentrant {
         address recipient;
         if (msg.sender == entryPoint()) {
             recipient = _getUserOpSigner();
-            // If it comes from EntryPoint, _checkClaimable has already been verified in validateUserOp
         } else {
             recipient = msg.sender;
-            // If the user calls claimRoyalty directly using an EOA, we must check
-            _checkClaimable(title, recipient);
+            _requireClaimable(recipient, title);
         }
 
-        // We cannot modify the following state in the validation phase.
-        // We cannot fully prevent this part from being reverted in the execution phase
-        // for example, if a malicious user lowers the maxFeePerGas
-        // or sends multiple userOps in one bundle for one success and multiple reverts.
-        // We can know which recipient caused the transaction to fail from the signer address at the end of userOp.signature.
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
         uint256 amount = getRoyalty(title);
@@ -325,35 +305,16 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         emit RoyaltyClaimed(recipient, amount, title);
     }
 
-    /**
-     * If the 4337 process is followed, it will be called in validateUserOp to ensure most reverts occur in the validation phase.
-     * Since the user is not the owner of this contract account, we should avoid malicious userOps being reverted in the execution phase, consuming this contract's ETH.
-     */
-    function _checkClaimable(string memory title, address recipient) internal view {
-        require(isSubmissionClaimable(title), SubmissionNotClaimable());
+    function _requireClaimable(address recipient, string memory title) internal view {
         require(isRecipient(title, recipient), Unauthorized(recipient));
+        require(isSubmissionClaimable(title), SubmissionNotClaimable());
     }
 
     // ================================ ERC-4337 ================================
 
-    /**
-     * @dev userOp.signature[0:65]: actual signature
-     * @dev userOp.signature[65:85]: claimed signer address
-     * @dev Forbid to use paymaster
-     * TODO: 檢查手續費最多不能超過 X ETH（X 的值待定）
-     *
-     * docs from ERC-4337: https://github.com/ethereum/ERCs/blob/b0573d36d07cdff90783a33959de4fece930deae/ERCS/erc-4337.md?plain=1#L105-L129
-     *   MUST validate the caller is a trusted EntryPoint
-     *   MUST validate that the signature is a valid signature of the `userOpHash`, and
-     *   SHOULD return SIG_VALIDATION_FAILED (and not revert) on signature mismatch. Any other error MUST revert.
-     *   MUST pay the entryPoint (caller) at least the "missingAccountFunds" (which might be zero, in case the current account's deposit is high enough)
-     *
-     *   The account MAY pay more than this minimum, to cover future transactions (it can always issue `withdrawTo` to retrieve it)
-     *   The return value MUST be packed of `authorizer`, `validUntil` and `validAfter` timestamps.
-     *     authorizer - 0 for valid signature, 1 to mark signature failure. Otherwise, an address of an authorizer contract, as defined in [ERC-7766](./eip-7766.md).
-     *     `validUntil` is 6-byte timestamp value, or zero for "infinite". The UserOp is valid only up to this time.
-     *     `validAfter` is 6-byte timestamp. The UserOp is valid only after this time.
-     */
+    /// @dev userOp.signature[0:65]: actual signature
+    /// @dev userOp.signature[65:85]: appended signer address
+    /// @dev Forbid to use paymaster
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
         onlyEntryPoint
@@ -368,24 +329,20 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             revert InvalidSignatureLength();
         }
 
-        bytes memory actualSignature = bytes(userOp.signature[:65]);
-        address claimedSigner = address(bytes20(userOp.signature[65:]));
-        bytes32 ethHash = ECDSA.toEthSignedMessageHash(userOpHash);
-        address actualSigner = ECDSA.recover(ethHash, actualSignature);
-
         bytes4 selector = bytes4(userOp.callData[0:4]);
+        bytes memory actualSignature = bytes(userOp.signature[:65]);
+        address appendedSigner = address(bytes20(userOp.signature[65:]));
+        address signer = ECDSA.recover(ECDSA.toEthSignedMessageHash(userOpHash), actualSignature);
 
         if (
             selector == this.upgradeToAndCall.selector || selector == this.changeAdmin.selector
                 || selector == this.changeRoyaltyToken.selector || selector == this.transferOwnership.selector
                 || selector == this.emergencyWithdraw.selector
         ) {
-            // ===== Owner =====
-            if (claimedSigner != owner()) {
-                revert Unauthorized(claimedSigner);
-            }
+            // ========================================= Owner =========================================
 
-            if (actualSigner != claimedSigner) {
+            require(appendedSigner == owner(), Unauthorized(appendedSigner));
+            if (signer != appendedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
@@ -393,71 +350,45 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             selector == this.updateReviewers.selector || selector == this.registerSubmission.selector
                 || selector == this.updateRoyaltyRecipient.selector || selector == this.revokeSubmission.selector
         ) {
-            // ===== Admin =====
-            if (claimedSigner != admin()) {
-                revert Unauthorized(claimedSigner);
-            }
+            // ========================================= Admin =========================================
 
-            if (actualSigner != claimedSigner) {
+            require(appendedSigner == admin(), Unauthorized(appendedSigner));
+            if (signer != appendedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
         } else if (selector == this.reviewSubmission.selector) {
-            // ===== Reviewer =====
-            if (!isReviewer(claimedSigner)) {
-                revert Unauthorized(claimedSigner);
-            }
+            // ========================================= Reviewer =========================================
 
-            // Must store the signer before signature verification for eth_estimateUserOperationGas
+            (string memory title, uint16 royaltyLevel) = abi.decode(userOp.callData[4:], (string, uint16));
+            _requireReviewable(appendedSigner, title, royaltyLevel);
+
             assembly {
-                tstore(TRANSIENT_SIGNER_SLOT, claimedSigner)
+                tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
             }
 
-            if (actualSigner != claimedSigner) {
+            if (signer != appendedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
         } else if (selector == this.claimRoyalty.selector) {
-            // ===== Recipient =====
-            // To prevent malicious users from sending multiple low callGasLimit transactions,
-            // causing all userOps to fail and thereby consuming a large amount of ETH in the contract
-            uint256 callGasLimit = uint128(uint256(userOp.accountGasLimits));
-            require(callGasLimit >= 80_000, InvalidCallGasLimit(callGasLimit));
+            // ========================================= Recipient =========================================
 
-            // To avoid multiple claimRoyalty operations that could be reverted in the same handleOps,
-            // One solution is to use transientClaimed to record the recipient that has already been claimed during the validation phase
-            // So in this case, bundler's simulation would reject the userOp bundle
-            // address transientClaimed;
-            // assembly {
-            //     transientClaimed := tload(TRANSIENT_CLAIMED_SLOT)
-            // }
+            _requireClaimable(appendedSigner, abi.decode(userOp.callData[4:], (string)));
 
-            // if (transientClaimed == claimedSigner) {
-            //     revert AlreadyTransientClaimed();
-            // }
-
-            _checkClaimable(abi.decode(userOp.callData[4:], (string)), claimedSigner);
-
-            // Must store the signer before signature verification for eth_estimateUserOperationGas
             assembly {
-                tstore(TRANSIENT_SIGNER_SLOT, claimedSigner)
+                tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
             }
 
-            if (actualSigner != claimedSigner) {
+            if (signer != appendedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
-
-            // assembly {
-            //     tstore(TRANSIENT_CLAIMED_SLOT, claimedSigner)
-            // }
-
             return 0;
         }
 
         revert UnsupportSelector(selector);
     }
 
-    /// @dev 當函式透過 4337 flow 呼叫且需要 signer address 時使用 ex. hasReviewed in reviewSubmission
     function _getUserOpSigner() internal view onlyEntryPoint returns (address) {
         address signer;
         assembly {
@@ -504,8 +435,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         return submissions(title).reviewCount >= 2;
     }
 
-    // Note that if submission is claimed, the royalty will still be calculated instead of returning 0
-    // Make sure to check isSubmissionClaimable before calling this function
     function getRoyalty(string memory title) public view returns (uint256 royalty) {
         if (submissions(title).reviewCount == 0) {
             return 0;

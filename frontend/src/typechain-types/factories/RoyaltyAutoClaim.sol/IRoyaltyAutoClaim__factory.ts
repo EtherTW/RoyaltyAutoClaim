@@ -544,11 +544,6 @@ const _abi = [
   },
   {
     type: "error",
-    name: "AlreadyTransientClaimed",
-    inputs: [],
-  },
-  {
-    type: "error",
     name: "EmptyTitle",
     inputs: [],
   },
