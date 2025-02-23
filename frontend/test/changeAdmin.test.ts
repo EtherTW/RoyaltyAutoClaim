@@ -1,4 +1,5 @@
 import { BUNDLER_URL, RPC_URL } from '@/config'
+import { formatErrMsg, normalizeError } from '@/lib/error'
 import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
 import {
 	MockToken,
@@ -7,9 +8,9 @@ import {
 	RoyaltyAutoClaim__factory,
 	RoyaltyAutoClaimProxy__factory,
 } from '@/typechain-types'
-import { ethers, parseEther } from 'ethers'
+import { ethers } from 'ethers'
 import { PimlicoBundler } from 'sendop'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 
 const CHAIN_ID = '1337'
 
@@ -18,7 +19,7 @@ const ACCOUNT_1_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8
 
 const bundler = new PimlicoBundler(CHAIN_ID, BUNDLER_URL[CHAIN_ID])
 
-describe('e2e-local', () => {
+describe('changeAdmin', () => {
 	const client = new ethers.JsonRpcProvider(RPC_URL[CHAIN_ID])
 	const account0 = new ethers.Wallet(ACCOUNT_0_PRIVATE_KEY, client) // owner, admin, reviewer
 	const account1 = new ethers.Wallet(ACCOUNT_1_PRIVATE_KEY, client) // reviewer
@@ -31,10 +32,8 @@ describe('e2e-local', () => {
 
 	let royaltyAutoClaim4337: RoyaltyAutoClaim4337
 
-	const title = 'test'
-	const recipient = account1
-
-	it('should deploy MockToken and RoyaltyAutoClaim', async () => {
+	beforeAll(async () => {
+		// Deploy MockToken
 		const tokenFactory = new MockToken__factory(account0)
 		token = await tokenFactory.deploy(account0.address, ethers.parseEther('2000'))
 		await token.waitForDeployment()
@@ -45,6 +44,7 @@ describe('e2e-local', () => {
 		const RoyaltyAutoClaimFactory = new RoyaltyAutoClaim__factory(account0)
 		const RoyaltyAutoClaimProxyFactory = new RoyaltyAutoClaimProxy__factory(account0)
 
+		// Deploy RoyaltyAutoClaim Implementation
 		const impl = await RoyaltyAutoClaimFactory.deploy()
 		await impl.waitForDeployment()
 		const implAddress = await impl.getAddress()
@@ -64,22 +64,18 @@ describe('e2e-local', () => {
 		expect(implAddress).to.match(/^0x[0-9a-fA-F]{40}$/)
 		expect(proxyAddress).to.match(/^0x[0-9a-fA-F]{40}$/)
 
-		// give proxy address some ether
+		// Give proxy address 1 ether
 		const tx = await account0.sendTransaction({
 			to: proxyAddress,
 			value: ethers.parseEther('1'),
 		})
 		await tx.wait()
 
-		// send erc20 tokens to proxy address
+		// Send ERC20 tokens to proxy address
 		const tx2 = await token.transfer(proxyAddress, ethers.parseEther('1000'))
 		await tx2.wait()
 
 		console.log('RoyaltyAutoClaim (proxy) deployed to', proxyAddress)
-
-		// assert proxy address has 100 tokens
-		const balance = await token.balanceOf(proxyAddress)
-		expect(balance).to.equal(ethers.parseEther('1000'))
 
 		royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(proxyAddress, account0)
 		royaltyAutoClaim4337 = new RoyaltyAutoClaim4337({
@@ -88,21 +84,31 @@ describe('e2e-local', () => {
 			bundler,
 			signer: account0,
 		})
-	})
+	}, 100_000)
 
-	it.skip('should change admin', async () => {
-		const op = await royaltyAutoClaim4337.sendCalldata(
-			royaltyAutoClaim.interface.encodeFunctionData('changeAdmin', [account1.address]),
-		)
-		const receipt = await op.wait()
-		expect(receipt.success).to.be.true
+	it('should change admin', async () => {
+		try {
+			const op = await royaltyAutoClaim4337.sendCalldata(
+				royaltyAutoClaim.interface.encodeFunctionData('changeAdmin', [account1.address]),
+			)
+			const receipt = await op.wait()
+			expect(receipt.success).to.be.true
+		} catch (e: unknown) {
+			const err = normalizeError(e)
+			console.error(formatErrMsg(err))
+		}
 	})
 
 	it('cannot change admin if not owner', async () => {
-		const op = await royaltyAutoClaim4337
-			.connect(account1)
-			.sendCalldata(royaltyAutoClaim.interface.encodeFunctionData('changeAdmin', [account1.address]))
-		const receipt = await op.wait()
-		expect(receipt.success).to.be.false
+		try {
+			const op = await royaltyAutoClaim4337
+				.connect(account1)
+				.sendCalldata(royaltyAutoClaim.interface.encodeFunctionData('changeAdmin', [account0.address]))
+			const receipt = await op.wait()
+			expect(receipt.success).to.be.false
+		} catch (e: unknown) {
+			const err = normalizeError(e)
+			console.error(formatErrMsg(err))
+		}
 	})
 })

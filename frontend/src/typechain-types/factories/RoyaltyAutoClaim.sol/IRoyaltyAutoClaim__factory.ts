@@ -559,17 +559,6 @@ const _abi = [
   },
   {
     type: "error",
-    name: "InvalidCallGasLimit",
-    inputs: [
-      {
-        name: "callGasLimit",
-        type: "uint256",
-        internalType: "uint256",
-      },
-    ],
-  },
-  {
-    type: "error",
     name: "InvalidRoyaltyLevel",
     inputs: [
       {
