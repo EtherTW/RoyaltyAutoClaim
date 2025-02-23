@@ -1,7 +1,7 @@
 build:
 	forge build && cd frontend && pnpm generate-types
 
-devnet:
+start:
 	make build && cd frontend && docker compose up -d && pnpm deploy-contracts:local
 
 restart:
@@ -24,6 +24,3 @@ test-e2e-local:
 
 test-e2e-sepolia:
 	make build && cd frontend && pnpm test test/e2e-sepolia.test.ts
-
-test-gas-draining:
-	make build && cd frontend && pnpm test test/gas-draining.test.ts
