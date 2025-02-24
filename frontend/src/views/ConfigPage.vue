@@ -4,9 +4,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ERROR_NOTIFICATION_DURATION } from '@/config'
+import { formatErrMsg, normalizeError } from '@/lib/error'
 import { useContractCall } from '@/lib/useContractCall'
+import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { parseEther } from 'ethers'
+import { notify } from '@kyvg/vue3-notification'
+import { useThrottleFn } from '@vueuse/core'
+import { parseEther, formatEther } from 'ethers'
+import { Contract } from 'ethers'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
@@ -150,7 +156,8 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 
 // ===================================== Emergency Withdraw =====================================
 
-const withdrawToken = ref('')
+const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+const withdrawToken = ref(NATIVE_TOKEN)
 const withdrawAmount = ref<number>(0)
 
 // Emergency Withdraw
@@ -158,7 +165,7 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 	getCalldata: () =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('emergencyWithdraw', [
 			withdrawToken.value,
-			parseEther(withdrawAmount.value.toString()),
+			withdrawAmount.value.toString(),
 		]),
 	successTitle: 'Successfully Withdrew Tokens',
 	waitingTitle: 'Waiting for Emergency Withdraw',
@@ -169,6 +176,41 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 		}
 	},
 })
+
+const onClickMax = useThrottleFn(async () => {
+	const blockchainStore = useBlockchainStore()
+	const client = blockchainStore.client
+
+	if (!withdrawToken.value) {
+		withdrawAmount.value = 0
+		return
+	}
+
+	try {
+		if (withdrawToken.value === NATIVE_TOKEN) {
+			const balance = await client.getBalance(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
+			withdrawAmount.value = Number(balance)
+		} else {
+			const erc20 = new Contract(
+				withdrawToken.value,
+				['function balanceOf(address) view returns (uint256)'],
+				client,
+			)
+			const balance = await erc20.balanceOf(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
+			withdrawAmount.value = Number(balance)
+		}
+	} catch (e: unknown) {
+		withdrawAmount.value = 0
+		const err = normalizeError(e)
+		console.error(err)
+		notify({
+			title: 'Error Fetching Balance',
+			text: formatErrMsg(err),
+			type: 'error',
+			duration: ERROR_NOTIFICATION_DURATION,
+		})
+	}
+}, 1000)
 </script>
 
 <template>
@@ -311,8 +353,16 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 						<Input id="withdrawToken" v-model="withdrawToken" placeholder="0x..." />
 					</div>
 					<div class="flex flex-col space-y-1.5">
-						<Label for="amount">Amount</Label>
-						<Input id="amount" v-model="withdrawAmount" type="number" placeholder="ether" />
+						<Label for="amount">
+							Amount:
+							<span class="font-normal">
+								{{ withdrawAmount ? formatEther(withdrawAmount.toString()) : '0' }} ether
+							</span>
+						</Label>
+						<div class="flex gap-2">
+							<Input id="amount" v-model="withdrawAmount" type="number" placeholder="wei" />
+							<Button variant="outline" class="whitespace-nowrap" @click="onClickMax"> Max </Button>
+						</div>
 					</div>
 					<Button
 						variant="destructive"

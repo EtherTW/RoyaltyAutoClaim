@@ -19,7 +19,11 @@ const contractLink = computed(() => {
 		class="px-2 h-[20px] text-xs text-gray-800 bg-gray-200 fixed bottom-0 flex justify-between items-center w-full"
 	>
 		<div class="flex items-center gap-1">
-			<a class="text-gray-600 hover:text-gray-800" :href="contractLink" target="_blank">
+			<a
+				class="text-gray-600 hover:text-gray-800"
+				:href="contractLink ? contractLink : undefined"
+				target="_blank"
+			>
 				{{ shortenAddress(ROYALTY_AUTO_CLAIM_PROXY_ADDRESS) }}
 			</a>
 			<CopyButton size="xs" :address="ROYALTY_AUTO_CLAIM_PROXY_ADDRESS" :is-round="false" />
