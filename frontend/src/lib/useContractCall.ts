@@ -27,11 +27,15 @@ export function useContractCall<T extends any[] = []>(options: {
 			}
 
 			const op = await royaltyAutoClaimStore.royaltyAutoClaim4337.sendCalldata(options.getCalldata(...args))
+			console.info(`${options.waitingTitle} opHash: ${op.hash}`)
 
+			const waitingToast = Date.now()
 			notify({
+				id: waitingToast,
 				title: options.waitingTitle,
 				text: `op hash: ${op.hash}`,
 				type: 'info',
+				duration: -1,
 			})
 
 			const receipt = await op.wait()
@@ -39,6 +43,8 @@ export function useContractCall<T extends any[] = []>(options: {
 			if (!receipt.success) {
 				throw new TransactionError(`UserOp is unsuccessful: ${JSON.stringify(receipt)}`)
 			}
+
+			notify.close(waitingToast)
 
 			notify({
 				title: options.successTitle,

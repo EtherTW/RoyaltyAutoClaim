@@ -2,7 +2,7 @@
 import { shortenAddress, useVueDapp } from '@vue-dapp/core'
 import { useVueDappModal } from '@vue-dapp/modal'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
-import { Copy, Check, LogOut } from 'lucide-vue-next'
+import { LogOut } from 'lucide-vue-next'
 
 const { disconnect, status, isConnected, address } = useVueDapp()
 
@@ -13,15 +13,6 @@ function onClickConnect() {
 
 function onClickDisconnect() {
 	disconnect()
-}
-
-const isCopied = ref(false)
-function onClickCopyAddress() {
-	navigator.clipboard.writeText(address.value || '')
-	isCopied.value = true
-	setTimeout(() => {
-		isCopied.value = false
-	}, 500)
 }
 
 const breakpoints = useBreakpoints(breakpointsTailwind)
@@ -41,12 +32,7 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 
 				<div class="flex gap-0.5 items-center">
 					<!-- Copy Button -->
-					<div class="address-button" @click="onClickCopyAddress">
-						<Transition name="fade" mode="out-in">
-							<Copy v-if="!isCopied" class="address-button-icon" />
-							<Check v-else class="address-button-icon" />
-						</Transition>
-					</div>
+					<CopyButton :address="address" />
 
 					<!-- Disconnect Button -->
 					<div class="address-button" @click="onClickDisconnect">

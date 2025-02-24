@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ERROR_NOTIFICATION_DURATION } from '@/config'
+import { formatErrMsg, normalizeError } from '@/lib/error'
 import { useContractCall } from '@/lib/useContractCall'
+import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { parseEther } from 'ethers'
+import { notify } from '@kyvg/vue3-notification'
+import { useThrottleFn } from '@vueuse/core'
+import { Contract, formatEther, parseEther } from 'ethers'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
@@ -150,15 +154,16 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 
 // ===================================== Emergency Withdraw =====================================
 
-const withdrawToken = ref('')
-const withdrawAmount = ref<number>(0)
+const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+const withdrawToken = ref(NATIVE_TOKEN)
+const withdrawAmount = ref<string>('0')
 
 // Emergency Withdraw
 const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCall({
 	getCalldata: () =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('emergencyWithdraw', [
 			withdrawToken.value,
-			parseEther(withdrawAmount.value.toString()),
+			withdrawAmount.value.toString(),
 		]),
 	successTitle: 'Successfully Withdrew Tokens',
 	waitingTitle: 'Waiting for Emergency Withdraw',
@@ -169,6 +174,54 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 		}
 	},
 })
+
+const isMaxBtnDisabled = ref(false)
+
+const onClickMax = useThrottleFn(async () => {
+	const blockchainStore = useBlockchainStore()
+	const client = blockchainStore.client
+
+	if (!withdrawToken.value) {
+		withdrawAmount.value = '0'
+		return
+	}
+
+	try {
+		isMaxBtnDisabled.value = true
+		if (withdrawToken.value === NATIVE_TOKEN) {
+			const balance = await client.getBalance(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
+			withdrawAmount.value = balance.toString()
+		} else {
+			const erc20 = new Contract(
+				withdrawToken.value,
+				['function balanceOf(address) view returns (uint256)'],
+				client,
+			)
+			const balance: bigint = await erc20.balanceOf(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
+			withdrawAmount.value = balance.toString()
+		}
+	} catch (e: unknown) {
+		withdrawAmount.value = '0'
+		const err = normalizeError(e)
+		console.error(err)
+		notify({
+			title: 'Error Fetching Balance',
+			text: formatErrMsg(err),
+			type: 'error',
+			duration: ERROR_NOTIFICATION_DURATION,
+		})
+	} finally {
+		isMaxBtnDisabled.value = false
+	}
+}, 1000)
+
+const displayTokenAmount = computed(() => {
+	try {
+		return formatEther(BigInt(withdrawAmount.value))
+	} catch {
+		return '0'
+	}
+})
 </script>
 
 <template>
@@ -177,9 +230,8 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle>Submission Management</CardTitle>
-					<Badge variant="secondary">onlyAdmin</Badge>
 				</div>
-				<CardDescription>Register, update, or revoke submissions</CardDescription>
+				<CardDescription>onlyAdmin</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
@@ -225,9 +277,8 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle>Reviewer Management</CardTitle>
-					<Badge variant="secondary">onlyAdmin</Badge>
 				</div>
-				<CardDescription>Add or remove reviewers</CardDescription>
+				<CardDescription>onlyAdmin</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
@@ -261,19 +312,18 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle>Admin Management</CardTitle>
-					<Badge variant="secondary">onlyOwner</Badge>
 				</div>
-				<CardDescription>Change admin address and royalty token</CardDescription>
+				<CardDescription>onlyOwner</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
-						<Label>Current Admin Address</Label>
+						<Label>Current Admin</Label>
 						<div class="text-sm text-muted-foreground break-all">
 							<Address :address="currentAdmin" />
 						</div>
 
-						<Label for="admin" class="mt-4">New Admin Address</Label>
+						<Label for="admin" class="mt-4">New Admin</Label>
 						<Input id="admin" v-model="newAdmin" placeholder="0x..." />
 					</div>
 					<Button :loading="isChangeAdminLoading" :disabled="isBtnDisabled" @click="onClickChangeAdmin">
@@ -281,12 +331,12 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 					</Button>
 
 					<div class="flex flex-col space-y-1.5">
-						<Label>Current Token Address</Label>
+						<Label>Current Token</Label>
 						<div class="text-sm text-muted-foreground break-all">
 							<Address :address="currentToken" />
 						</div>
 
-						<Label for="token" class="mt-4">New Token Address</Label>
+						<Label for="token" class="mt-4">New Token</Label>
 						<Input id="token" v-model="newToken" placeholder="0x..." />
 					</div>
 					<Button :loading="isChangeTokenLoading" :disabled="isBtnDisabled" @click="onClickChangeToken">
@@ -300,19 +350,31 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle>Emergency Withdraw</CardTitle>
-					<Badge variant="secondary">onlyOwner</Badge>
 				</div>
-				<CardDescription>Withdraw tokens in case of emergency</CardDescription>
+				<CardDescription>onlyOwner</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
-						<Label for="withdrawToken">Token Address</Label>
+						<Label for="withdrawToken">Token</Label>
 						<Input id="withdrawToken" v-model="withdrawToken" placeholder="0x..." />
 					</div>
 					<div class="flex flex-col space-y-1.5">
-						<Label for="amount">Amount</Label>
-						<Input id="amount" v-model="withdrawAmount" type="number" placeholder="ether" />
+						<Label for="amount">
+							Amount:
+							<span class="font-normal"> {{ displayTokenAmount }} token </span>
+						</Label>
+						<div class="flex gap-2">
+							<Input id="amount" v-model="withdrawAmount" placeholder="wei" />
+							<Button
+								variant="outline"
+								class="whitespace-nowrap"
+								:disabled="isMaxBtnDisabled"
+								@click="onClickMax"
+							>
+								Max
+							</Button>
+						</div>
 					</div>
 					<Button
 						variant="destructive"
