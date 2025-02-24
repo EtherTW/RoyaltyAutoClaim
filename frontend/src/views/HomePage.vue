@@ -111,7 +111,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 						<div>
 							<div>Recipient: <Address :address="submission.recipient" /></div>
 							<p>Reviews: {{ submission.reviewCount }}</p>
-							<p>Avg Royalty Level: {{ getAvgRoyaltyLevel(submission) }} USD</p>
+							<p>Avg Royalty: {{ getAvgRoyaltyLevel(submission) || 0 }} USD</p>
 							<p v-if="submission.status === 'claimed'">Status: {{ submission.status }}</p>
 						</div>
 					</div>

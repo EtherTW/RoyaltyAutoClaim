@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -219,9 +218,8 @@ const onClickMax = useThrottleFn(async () => {
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle>Submission Management</CardTitle>
-					<Badge variant="secondary">onlyAdmin</Badge>
 				</div>
-				<CardDescription>Register, update, or revoke submissions</CardDescription>
+				<CardDescription>onlyAdmin</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
@@ -267,9 +265,8 @@ const onClickMax = useThrottleFn(async () => {
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle>Reviewer Management</CardTitle>
-					<Badge variant="secondary">onlyAdmin</Badge>
 				</div>
-				<CardDescription>Add or remove reviewers</CardDescription>
+				<CardDescription>onlyAdmin</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
@@ -303,19 +300,18 @@ const onClickMax = useThrottleFn(async () => {
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle>Admin Management</CardTitle>
-					<Badge variant="secondary">onlyOwner</Badge>
 				</div>
-				<CardDescription>Change admin address and royalty token</CardDescription>
+				<CardDescription>onlyOwner</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
-						<Label>Current Admin Address</Label>
+						<Label>Current Admin</Label>
 						<div class="text-sm text-muted-foreground break-all">
 							<Address :address="currentAdmin" />
 						</div>
 
-						<Label for="admin" class="mt-4">New Admin Address</Label>
+						<Label for="admin" class="mt-4">New Admin</Label>
 						<Input id="admin" v-model="newAdmin" placeholder="0x..." />
 					</div>
 					<Button :loading="isChangeAdminLoading" :disabled="isBtnDisabled" @click="onClickChangeAdmin">
@@ -323,12 +319,12 @@ const onClickMax = useThrottleFn(async () => {
 					</Button>
 
 					<div class="flex flex-col space-y-1.5">
-						<Label>Current Token Address</Label>
+						<Label>Current Token</Label>
 						<div class="text-sm text-muted-foreground break-all">
 							<Address :address="currentToken" />
 						</div>
 
-						<Label for="token" class="mt-4">New Token Address</Label>
+						<Label for="token" class="mt-4">New Token</Label>
 						<Input id="token" v-model="newToken" placeholder="0x..." />
 					</div>
 					<Button :loading="isChangeTokenLoading" :disabled="isBtnDisabled" @click="onClickChangeToken">
@@ -342,14 +338,13 @@ const onClickMax = useThrottleFn(async () => {
 			<CardHeader>
 				<div class="flex items-center justify-between">
 					<CardTitle>Emergency Withdraw</CardTitle>
-					<Badge variant="secondary">onlyOwner</Badge>
 				</div>
-				<CardDescription>Withdraw tokens in case of emergency</CardDescription>
+				<CardDescription>onlyOwner</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
-						<Label for="withdrawToken">Token Address</Label>
+						<Label for="withdrawToken">Token</Label>
 						<Input id="withdrawToken" v-model="withdrawToken" placeholder="0x..." />
 					</div>
 					<div class="flex flex-col space-y-1.5">
