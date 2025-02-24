@@ -8,13 +8,22 @@ if (!ALCHEMY_API_KEY) {
 	throw new Error('ALCHEMY_API_KEY is not set in .env')
 }
 
+export const CHAIN_ID_ENV = import.meta.env.VITE_CHAIN_ID
+if (!CHAIN_ID_ENV) {
+	throw new Error('CHAIN_ID is not set in .env')
+}
+
 export enum CHAIN_ID {
 	LOCAL = '1337',
 	SEPOLIA = '11155111',
 	MAINNET = '1',
 }
 
-export const DEFAULT_CHAIN_ID = CHAIN_ID.SEPOLIA
+if (!Object.values(CHAIN_ID).includes(CHAIN_ID_ENV)) {
+	throw new Error(`CHAIN_ID_ENV is unsupported: ${CHAIN_ID_ENV}`)
+}
+
+export const DEFAULT_CHAIN_ID = CHAIN_ID_ENV
 
 export const RPC_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: `http://localhost:8545`,

@@ -1,4 +1,4 @@
-import { concat, JsonRpcProvider, JsonRpcSigner, toBeHex } from 'ethers'
+import { concat, JsonRpcProvider, JsonRpcSigner, toBeHex, Wallet } from 'ethers'
 import {
 	getEntryPointContract,
 	sendop,
@@ -7,33 +7,44 @@ import {
 	type OperationGetter,
 	type SendOpResult,
 } from 'sendop'
-import { ROYALTY_AUTO_CLAIM_PROXY_ADDRESS } from '@/config'
 
 export class RoyaltyAutoClaim4337 implements OperationGetter {
+	sender: string
 	client: JsonRpcProvider
 	bundler: Bundler
-	signer: JsonRpcSigner
+	signer: JsonRpcSigner | Wallet
 
-	constructor(options: { client: JsonRpcProvider; bundler: Bundler; signer: JsonRpcSigner }) {
+	constructor(options: {
+		sender: string
+		client: JsonRpcProvider
+		bundler: Bundler
+		signer: JsonRpcSigner | Wallet
+	}) {
+		this.sender = options.sender
 		this.client = options.client
 		this.bundler = options.bundler
 		this.signer = options.signer
 	}
 
+	connect(signer: JsonRpcSigner | Wallet): RoyaltyAutoClaim4337 {
+		this.signer = signer
+		return this
+	}
+
 	async sendCalldata(calldata: string): Promise<SendOpResult> {
 		return await sendop({
 			bundler: this.bundler,
-			executions: [{ to: ROYALTY_AUTO_CLAIM_PROXY_ADDRESS, data: calldata, value: '0x0' }],
+			executions: [{ to: this.sender, data: calldata, value: '0x0' }],
 			opGetter: this,
 		})
 	}
 
 	getSender() {
-		return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS
+		return this.sender
 	}
 
 	async getNonce() {
-		const nonce: bigint = await getEntryPointContract(this.client).getNonce(ROYALTY_AUTO_CLAIM_PROXY_ADDRESS, 0)
+		const nonce: bigint = await getEntryPointContract(this.client).getNonce(this.sender, 0)
 		return toBeHex(nonce)
 	}
 

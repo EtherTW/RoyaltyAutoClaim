@@ -29,6 +29,7 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 
 		if (eoaStore.signer) {
 			return new RoyaltyAutoClaim4337({
+				sender: ROYALTY_AUTO_CLAIM_PROXY_ADDRESS,
 				client: blockchainStore.client,
 				bundler: blockchainStore.bundler,
 				signer: eoaStore.signer as JsonRpcSigner,

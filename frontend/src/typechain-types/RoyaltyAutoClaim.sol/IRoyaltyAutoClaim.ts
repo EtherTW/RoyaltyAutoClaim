@@ -241,19 +241,12 @@ export namespace ReviewerStatusUpdatedEvent {
 
 export namespace RoyaltyClaimedEvent {
   export type InputTuple = [
-    titleHash: string,
     recipient: AddressLike,
     amount: BigNumberish,
     title: string
   ];
-  export type OutputTuple = [
-    titleHash: string,
-    recipient: string,
-    amount: bigint,
-    title: string
-  ];
+  export type OutputTuple = [recipient: string, amount: bigint, title: string];
   export interface OutputObject {
-    titleHash: string;
     recipient: string;
     amount: bigint;
     title: string;
@@ -666,7 +659,7 @@ export interface IRoyaltyAutoClaim extends BaseContract {
       ReviewerStatusUpdatedEvent.OutputObject
     >;
 
-    "RoyaltyClaimed(string,address,uint256,string)": TypedContractEvent<
+    "RoyaltyClaimed(address,uint256,string)": TypedContractEvent<
       RoyaltyClaimedEvent.InputTuple,
       RoyaltyClaimedEvent.OutputTuple,
       RoyaltyClaimedEvent.OutputObject

@@ -1,10 +1,14 @@
+import { CHAIN_ID, RPC_URL } from '@/config'
 import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '@/typechain-types'
 import { faker } from '@faker-js/faker'
-import { getAddress } from 'ethers'
+import { getAddress, JsonRpcProvider, Wallet } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { account0 } from '../../test/test-utils'
+import { ACCOUNT_0_PRIVATE_KEY } from '../../test/test-utils'
 import { fetchExistingSubmissions } from './RoyaltyAutoClaim'
 import { waitForTransaction } from './ethers'
+
+const client = new JsonRpcProvider(RPC_URL[CHAIN_ID.LOCAL])
+const account0 = new Wallet(ACCOUNT_0_PRIVATE_KEY, client)
 
 describe('RoyaltyAutoClaim.ts with mock contract', () => {
 	/*

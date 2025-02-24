@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useContractCall } from '@/lib/useContractCall'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { Loader2 } from 'lucide-vue-next'
 
 const isButtonDisabled = computed(
 	() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value || !royaltyAutoClaimStore.royaltyAutoClaim4337,

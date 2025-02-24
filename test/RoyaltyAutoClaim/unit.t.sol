@@ -12,7 +12,7 @@ import "../utils/MockV2.sol";
     Owner Functions
     Admin Functions
     Reviewer Functions
-    Submitter Functions
+    Recipient Functions
     View Functions
     Internal Functions
 
@@ -103,6 +103,12 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertEq(royaltyAutoClaim.admin(), newAdmin);
     }
 
+    function testCannot_changeAdmin_if_address_is_same() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
+        royaltyAutoClaim.changeAdmin(admin);
+    }
+
     function test_changeRoyaltyToken() public {
         // Should fail if not owner
         vm.prank(fake);
@@ -117,6 +123,12 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         vm.prank(owner);
         royaltyAutoClaim.changeRoyaltyToken(address(newToken));
         assertEq(royaltyAutoClaim.token(), address(newToken));
+    }
+
+    function testCannot_changeRoyaltyToken_if_address_is_same() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
+        royaltyAutoClaim.changeRoyaltyToken(address(token));
     }
 
     function testCannot_renounceOwnership() public {
@@ -153,6 +165,22 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.emergencyWithdraw(address(token), 1 ether);
     }
 
+    function testCannot_emergencyWithdraw_if_zero_amount() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAmount.selector));
+        royaltyAutoClaim.emergencyWithdraw(NATIVE_TOKEN, 0);
+
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAmount.selector));
+        royaltyAutoClaim.emergencyWithdraw(address(token), 0);
+    }
+
+    function testCannot_emergencyWithdraw_if_zero_address() public {
+        vm.prank(owner);
+        vm.expectRevert();
+        royaltyAutoClaim.emergencyWithdraw(address(0), 1 ether);
+    }
+
     // ======================================== Admin Functions ========================================
 
     function test_updateReviewers() public {
@@ -160,7 +188,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         bool[] memory status = new bool[](2);
 
         newReviewers[0] = vm.randomAddress();
-        newReviewers[1] = vm.randomAddress();
+        newReviewers[1] = reviewer1;
         status[0] = true;
         status[1] = false;
 
@@ -202,12 +230,23 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.updateReviewers(new address[](0), new bool[](0));
     }
 
-    function test_registerSubmission() public {
-        address submitter = vm.randomAddress();
+    function testCannot_updateReviewers_if_status_is_same() public {
+        address[] memory reviewers = new address[](1);
+        reviewers[0] = reviewer1;
+        bool[] memory status = new bool[](1);
+        status[0] = true;
+
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameStatus.selector));
+        royaltyAutoClaim.updateReviewers(reviewers, status);
+    }
+
+    function test_registerSubmission() public {
+        address recipient = vm.randomAddress();
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission("test", recipient);
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
-        assertEq(submission.royaltyRecipient, submitter, "Royalty recipient should be the submitter");
+        assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should be the recipient");
         assertEq(submission.reviewCount, 0, "Review count should be 0");
         assertEq(submission.totalRoyaltyLevel, 0, "Total royalty level should be 0");
         assertEq(
@@ -219,20 +258,21 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function testCannot_registerSubmission_if_the_submission_already_exists_or_is_claimed() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        royaltyAutoClaim.registerSubmission("test", recipient);
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyRegistered.selector));
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        royaltyAutoClaim.registerSubmission("test", recipient);
 
         vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
         vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
 
         vm.expectRevert(); // submission is claimed
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        royaltyAutoClaim.registerSubmission("test", recipient);
     }
 
     function testCannot_registerSubmission_if_not_admin() public {
@@ -278,16 +318,19 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     }
 
     function testCannot_updateRoyaltyRecipient_if_the_submission_is_claimed_or_not_exist() public {
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
-        royaltyAutoClaim.updateRoyaltyRecipient("test", vm.randomAddress());
+        address recipient = vm.randomAddress();
 
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
+        royaltyAutoClaim.updateRoyaltyRecipient("test", recipient);
+
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission("test", recipient);
         vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
         vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
 
         vm.expectRevert();
@@ -307,7 +350,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function test_revokeSubmission() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
+        royaltyAutoClaim.registerSubmission("test", recipient);
 
         vm.prank(admin);
         royaltyAutoClaim.revokeSubmission("test");
@@ -339,11 +382,12 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.revokeSubmission("test");
 
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        royaltyAutoClaim.registerSubmission("test", recipient);
         vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
         vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
 
         vm.expectRevert();
@@ -353,10 +397,8 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     // ======================================== Reviewer Functions ========================================
 
     function test_reviewSubmission() public {
-        address submitter = vm.randomAddress();
-
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
+        royaltyAutoClaim.registerSubmission("test", recipient);
 
         // Add more reviewers for testing
         uint256 randomUint = vm.randomUint();
@@ -404,25 +446,26 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function testCannot_reviewSubmission_if_the_submission_is_claimed_or_not_exist() public {
         // Test non-existent submission
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
         royaltyAutoClaim.reviewSubmission("test", 20);
 
         // Setup a submission and get it to claimed state
-        address submitter = vm.randomAddress();
+        address recipient = vm.randomAddress();
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
+        royaltyAutoClaim.registerSubmission("test", recipient);
 
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(initialReviewers[1]);
+        vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
 
         // Claim the royalty
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
 
         // Test reviewing a claimed submission
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
         royaltyAutoClaim.reviewSubmission("test", 20);
     }
@@ -451,7 +494,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         invalidLevels[3] = 255;
 
         for (uint256 i = 0; i < invalidLevels.length; i++) {
-            vm.prank(initialReviewers[0]);
+            vm.prank(reviewer1);
             vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidRoyaltyLevel.selector, invalidLevels[i]));
             royaltyAutoClaim.reviewSubmission("test", invalidLevels[i]);
         }
@@ -463,31 +506,37 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
 
         // First review should succeed
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
 
         // Second review from same reviewer should fail
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyReviewed.selector));
         royaltyAutoClaim.reviewSubmission("test", 40);
     }
 
-    // ======================================== Submitter Functions ========================================
+    // ======================================== Recipient Functions ========================================
 
     function test_claimRoyalty_with_erc20() public {
-        address submitter = vm.randomAddress();
+        address recipient = vm.randomAddress();
         uint256 initialBalance = token.balanceOf(address(proxy));
         uint256 expectedRoyalty = 30 ether; // (20 + 40) / 2 = 30
 
         // Setup submission and reviews
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
-        vm.prank(initialReviewers[0]);
+        royaltyAutoClaim.registerSubmission("test", recipient);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(initialReviewers[1]);
+        vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
 
+        // Should fail if not recipient
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.claimRoyalty("test");
+
         // Claim royalty
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
 
         // Verify state changes
@@ -495,92 +544,99 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertEq(
             uint256(submission.status), uint256(IRoyaltyAutoClaim.SubmissionStatus.Claimed), "Status should be Claimed"
         );
-        assertEq(token.balanceOf(submitter), expectedRoyalty, "Submitter should receive correct royalty");
+        assertEq(token.balanceOf(recipient), expectedRoyalty, "Recipient should receive correct royalty");
         assertEq(token.balanceOf(address(proxy)), initialBalance - expectedRoyalty, "Proxy balance should decrease");
     }
 
+    function testCannot_claimRoyalty_if_not_recipient() public {
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission("test", recipient);
+
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.claimRoyalty("test");
+    }
+
     function testCannot_claimRoyalty_if_submission_not_registered() public {
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
+        vm.expectRevert();
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("nonexistent");
     }
 
     function testCannot_claimRoyalty_if_already_claimed() public {
-        address submitter = vm.randomAddress();
+        address recipient = vm.randomAddress();
 
         // Setup submission and reviews
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
-        vm.prank(initialReviewers[0]);
+        royaltyAutoClaim.registerSubmission("test", recipient);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(initialReviewers[1]);
+        vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
 
         // First claim should succeed
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
 
         // Second claim should fail
+        vm.prank(recipient);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
         royaltyAutoClaim.claimRoyalty("test");
     }
 
     function testCannot_claimRoyalty_if_not_enough_reviews() public {
-        address submitter = vm.randomAddress();
-
-        // Setup submission with only one review
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
-        vm.prank(initialReviewers[0]);
+        royaltyAutoClaim.registerSubmission("test", recipient);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
 
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
     }
 
     function testCannot_claimRoyalty_if_zero_royalty() public {
-        address submitter = vm.randomAddress();
-
-        // Setup submission with zero royalty reviews
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
+        royaltyAutoClaim.registerSubmission("test", recipient);
 
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
     }
 
     // ======================================== View Functions ========================================
 
     function test_isSubmissionClaimable() public {
-        address submitter = vm.randomAddress();
-
         // Case 1: Submission does not exist
         assertFalse(royaltyAutoClaim.isSubmissionClaimable("test"), "Non-existent submission should not be claimable");
 
         // Case 2: Submission is registered but has no reviews
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", submitter);
+        royaltyAutoClaim.registerSubmission("test", recipient);
         assertFalse(
             royaltyAutoClaim.isSubmissionClaimable("test"), "Submission with no reviews should not be claimable"
         );
 
         // Case 3: Submission has one review (not enough)
-        vm.prank(initialReviewers[0]);
+        vm.prank(reviewer1);
         royaltyAutoClaim.reviewSubmission("test", 20);
         assertFalse(
             royaltyAutoClaim.isSubmissionClaimable("test"), "Submission with one review should not be claimable"
         );
 
         // Case 4: Submission has enough reviews (two or more)
-        vm.prank(initialReviewers[1]);
+        vm.prank(reviewer2);
         royaltyAutoClaim.reviewSubmission("test", 40);
         assertTrue(royaltyAutoClaim.isSubmissionClaimable("test"), "Submission with two reviews should be claimable");
 
         // Case 5: Submission is claimed (should not be claimable)
+        vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
         assertFalse(royaltyAutoClaim.isSubmissionClaimable("test"), "Claimed submission should not be claimable");
 
         // Case 6: Submission is revoked
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test2", submitter);
+        royaltyAutoClaim.registerSubmission("test2", recipient);
         vm.prank(admin);
         royaltyAutoClaim.revokeSubmission("test2");
         assertFalse(royaltyAutoClaim.isSubmissionClaimable("test2"), "Revoked submission should not be claimable");
@@ -588,6 +644,70 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function test_entryPoint() public view {
         assertEq(royaltyAutoClaim.entryPoint(), 0x0000000071727De22E5E9d8BAf0edAc6f37da032);
+    }
+
+    function test_isRecipient() public {
+        string memory title = "test";
+        address recipient = recipient;
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission(title, recipient);
+        assertTrue(royaltyAutoClaim.isRecipient(title, recipient));
+        assertFalse(royaltyAutoClaim.isRecipient(title, fake));
+    }
+
+    function test_getRoyalty() public {
+        string memory title = "test";
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission(title, recipient);
+
+        vm.prank(reviewer1);
+        royaltyAutoClaim.reviewSubmission(title, 20);
+        vm.prank(reviewer2);
+        royaltyAutoClaim.reviewSubmission(title, 40);
+
+        // Expected: (20 + 40) / 2 = 30 ether
+        assertEq(royaltyAutoClaim.getRoyalty(title), 30 ether, "Should calculate average of two reviews correctly");
+
+        // Case 2: Three reviews with same level (all 20)
+        string memory title2 = "test2";
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission(title2, recipient);
+
+        // Add a third reviewer
+        address[] memory newReviewers = new address[](1);
+        bool[] memory status = new bool[](1);
+        newReviewers[0] = vm.randomAddress();
+        status[0] = true;
+        vm.prank(admin);
+        royaltyAutoClaim.updateReviewers(newReviewers, status);
+
+        vm.prank(reviewer1);
+        royaltyAutoClaim.reviewSubmission(title2, 20);
+        vm.prank(reviewer2);
+        royaltyAutoClaim.reviewSubmission(title2, 20);
+        vm.prank(newReviewers[0]);
+        royaltyAutoClaim.reviewSubmission(title2, 20);
+
+        // Expected: (20 + 20 + 20) / 3 = 20 ether
+        assertEq(
+            royaltyAutoClaim.getRoyalty(title2),
+            20 ether,
+            "Should calculate average of three identical reviews correctly"
+        );
+
+        // Case 3: No reviews (should return 0)
+        string memory title3 = "test3";
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission(title3, recipient);
+        assertEq(royaltyAutoClaim.getRoyalty(title3), 0, "Should return 0 for submission with no reviews");
+
+        // Case 4: Claimed submission (should still calculate correctly)
+        vm.prank(recipient);
+        royaltyAutoClaim.claimRoyalty(title); // Claim the first submission
+        assertEq(royaltyAutoClaim.getRoyalty(title), 30 ether, "Should calculate correctly even after claiming");
+
+        // Case 5: Non-existent submission (should return 0)
+        assertEq(royaltyAutoClaim.getRoyalty("nonexistent"), 0, "Should return 0 for non-existent submission");
     }
 
     // ======================================== Internal Functions ========================================
