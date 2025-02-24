@@ -10,8 +10,7 @@ import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { notify } from '@kyvg/vue3-notification'
 import { useThrottleFn } from '@vueuse/core'
-import { parseEther, formatEther } from 'ethers'
-import { Contract } from 'ethers'
+import { Contract, formatEther, parseEther } from 'ethers'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
@@ -157,7 +156,7 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 
 const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 const withdrawToken = ref(NATIVE_TOKEN)
-const withdrawAmount = ref<number>(0)
+const withdrawAmount = ref<string>('0')
 
 // Emergency Withdraw
 const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCall({
@@ -181,25 +180,25 @@ const onClickMax = useThrottleFn(async () => {
 	const client = blockchainStore.client
 
 	if (!withdrawToken.value) {
-		withdrawAmount.value = 0
+		withdrawAmount.value = '0'
 		return
 	}
 
 	try {
 		if (withdrawToken.value === NATIVE_TOKEN) {
 			const balance = await client.getBalance(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
-			withdrawAmount.value = Number(balance)
+			withdrawAmount.value = balance.toString()
 		} else {
 			const erc20 = new Contract(
 				withdrawToken.value,
 				['function balanceOf(address) view returns (uint256)'],
 				client,
 			)
-			const balance = await erc20.balanceOf(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
-			withdrawAmount.value = Number(balance)
+			const balance: bigint = await erc20.balanceOf(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
+			withdrawAmount.value = balance.toString()
 		}
 	} catch (e: unknown) {
-		withdrawAmount.value = 0
+		withdrawAmount.value = '0'
 		const err = normalizeError(e)
 		console.error(err)
 		notify({
@@ -210,6 +209,14 @@ const onClickMax = useThrottleFn(async () => {
 		})
 	}
 }, 1000)
+
+const displayTokenAmount = computed(() => {
+	try {
+		return formatEther(BigInt(withdrawAmount.value))
+	} catch {
+		return '0'
+	}
+})
 </script>
 
 <template>
@@ -350,12 +357,10 @@ const onClickMax = useThrottleFn(async () => {
 					<div class="flex flex-col space-y-1.5">
 						<Label for="amount">
 							Amount:
-							<span class="font-normal">
-								{{ withdrawAmount ? formatEther(withdrawAmount.toString()) : '0' }} ether
-							</span>
+							<span class="font-normal"> {{ displayTokenAmount }} token </span>
 						</Label>
 						<div class="flex gap-2">
-							<Input id="amount" v-model="withdrawAmount" type="number" placeholder="wei" />
+							<Input id="amount" v-model="withdrawAmount" placeholder="wei" />
 							<Button variant="outline" class="whitespace-nowrap" @click="onClickMax"> Max </Button>
 						</div>
 					</div>
