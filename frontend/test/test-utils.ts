@@ -47,10 +47,11 @@ export async function deployContracts(chainId: CHAIN_ID, account0PrivateKey: str
 	await proxy.waitForDeployment()
 	const proxyAddress = await proxy.getAddress()
 
-	// Give proxy address 0.1 ether
+	// Give proxy address initial balance
+	const initialBalance = chainId === CHAIN_ID.LOCAL ? ethers.parseEther('100') : ethers.parseEther('0.1')
 	const tx = await account0.sendTransaction({
 		to: proxyAddress,
-		value: ethers.parseEther('0.1'),
+		value: initialBalance,
 	})
 	await tx.wait()
 

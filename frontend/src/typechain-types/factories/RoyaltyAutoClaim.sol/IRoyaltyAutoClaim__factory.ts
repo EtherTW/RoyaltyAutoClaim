@@ -590,6 +590,11 @@ const _abi = [
   },
   {
     type: "error",
+    name: "SameStatus",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "SubmissionNotClaimable",
     inputs: [],
   },
@@ -623,6 +628,11 @@ const _abi = [
   {
     type: "error",
     name: "ZeroAddress",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "ZeroAmount",
     inputs: [],
   },
 ] as const;
