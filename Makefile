@@ -24,3 +24,6 @@ test-e2e-local:
 
 test-e2e-sepolia:
 	make build && cd frontend && pnpm test test/e2e-sepolia.test.ts
+
+test-change-admin:
+	make build && cd frontend && pnpm test test/changeAdmin.test.ts

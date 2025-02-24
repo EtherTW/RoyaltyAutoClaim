@@ -348,8 +348,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         ) {
             // ========================================= Owner =========================================
 
-            require(appendedSigner == owner(), Unauthorized(appendedSigner));
-            if (signer != appendedSigner) {
+            if (signer != owner()) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
