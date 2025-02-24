@@ -17,6 +17,8 @@ declare module 'vue' {
     CardHeader: typeof import('./src/components/ui/card/CardHeader.vue')['default']
     CardTitle: typeof import('./src/components/ui/card/CardTitle.vue')['default']
     ConnectButton: typeof import('./src/components/ConnectButton.vue')['default']
+    Copy: typeof import('./src/components/Copy.vue')['default']
+    CopyButton: typeof import('./src/components/CopyButton.vue')['default']
     FooterMeta: typeof import('./src/components/FooterMeta.vue')['default']
     Input: typeof import('./src/components/ui/input/Input.vue')['default']
     Label: typeof import('./src/components/ui/label/Label.vue')['default']

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { shortenAddress } from '@vue-dapp/core'
-import { Copy, ExternalLink, Check } from 'lucide-vue-next'
+import { ExternalLink } from 'lucide-vue-next'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 
 const props = defineProps<{
@@ -15,16 +15,6 @@ const externalLink = computed(() => {
 	}
 	return `${blockchainStore.explorerUrl}/address/${props.address}`
 })
-
-const isCopied = ref(false)
-
-const onClickCopyAddress = () => {
-	navigator.clipboard.writeText(props.address || '')
-	isCopied.value = true
-	setTimeout(() => {
-		isCopied.value = false
-	}, 500)
-}
 </script>
 
 <template>
@@ -34,12 +24,7 @@ const onClickCopyAddress = () => {
 
 		<div class="flex gap-0.5 items-center pr-0.5">
 			<!-- Copy -->
-			<div class="address-button" @click="onClickCopyAddress">
-				<Transition name="fade" mode="out-in">
-					<Copy v-if="!isCopied" key="copy" class="address-button-icon" />
-					<Check v-else key="check" class="address-button-icon" />
-				</Transition>
-			</div>
+			<CopyButton :address="address" />
 
 			<!-- Link -->
 			<a v-if="externalLink" :href="externalLink" target="_blank">
