@@ -175,6 +175,8 @@ const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } 
 	},
 })
 
+const isMaxBtnDisabled = ref(false)
+
 const onClickMax = useThrottleFn(async () => {
 	const blockchainStore = useBlockchainStore()
 	const client = blockchainStore.client
@@ -185,6 +187,7 @@ const onClickMax = useThrottleFn(async () => {
 	}
 
 	try {
+		isMaxBtnDisabled.value = true
 		if (withdrawToken.value === NATIVE_TOKEN) {
 			const balance = await client.getBalance(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
 			withdrawAmount.value = balance.toString()
@@ -207,6 +210,8 @@ const onClickMax = useThrottleFn(async () => {
 			type: 'error',
 			duration: ERROR_NOTIFICATION_DURATION,
 		})
+	} finally {
+		isMaxBtnDisabled.value = false
 	}
 }, 1000)
 
@@ -361,7 +366,14 @@ const displayTokenAmount = computed(() => {
 						</Label>
 						<div class="flex gap-2">
 							<Input id="amount" v-model="withdrawAmount" placeholder="wei" />
-							<Button variant="outline" class="whitespace-nowrap" @click="onClickMax"> Max </Button>
+							<Button
+								variant="outline"
+								class="whitespace-nowrap"
+								:disabled="isMaxBtnDisabled"
+								@click="onClickMax"
+							>
+								Max
+							</Button>
 						</div>
 					</div>
 					<Button
