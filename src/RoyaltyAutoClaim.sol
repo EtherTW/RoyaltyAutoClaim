@@ -71,6 +71,8 @@ interface IRoyaltyAutoClaim {
     error AlreadyReviewed();
     error InvalidSignatureLength();
     error SameAddress();
+    error SameStatus();
+    error ZeroAmount();
 
     // Structs
     struct Configs {
@@ -196,6 +198,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function changeAdmin(address _admin) public onlyOwnerOrEntryPoint {
         require(_admin != address(0), ZeroAddress());
+        require(_admin != admin(), SameAddress());
         address oldAdmin = _getMainStorage().configs.admin;
         _getMainStorage().configs.admin = _admin;
         emit AdminChanged(oldAdmin, _admin);
@@ -203,6 +206,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function changeRoyaltyToken(address _token) public onlyOwnerOrEntryPoint {
         require(_token != address(0), ZeroAddress());
+        require(_token != token(), SameAddress());
         address oldToken = _getMainStorage().configs.token;
         _getMainStorage().configs.token = _token;
         emit RoyaltyTokenChanged(oldToken, _token);
@@ -213,6 +217,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     function emergencyWithdraw(address _token, uint256 _amount) public onlyOwnerOrEntryPoint {
+        require(_amount > 0, ZeroAmount());
+
         if (_token == NATIVE_TOKEN) {
             (bool success,) = owner().call{value: _amount}("");
             require(success);
@@ -229,6 +235,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(_reviewers.length > 0, InvalidArrayLength());
 
         for (uint256 i = 0; i < _reviewers.length; i++) {
+            require(_status[i] != isReviewer(_reviewers[i]), SameStatus());
             _getMainStorage().configs.reviewers[_reviewers[i]] = _status[i];
             emit ReviewerStatusUpdated(_reviewers[i], _status[i]);
         }

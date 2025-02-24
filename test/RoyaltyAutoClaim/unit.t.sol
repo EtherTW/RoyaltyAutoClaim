@@ -103,6 +103,12 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertEq(royaltyAutoClaim.admin(), newAdmin);
     }
 
+    function testCannot_changeAdmin_if_address_is_same() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
+        royaltyAutoClaim.changeAdmin(admin);
+    }
+
     function test_changeRoyaltyToken() public {
         // Should fail if not owner
         vm.prank(fake);
@@ -117,6 +123,12 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         vm.prank(owner);
         royaltyAutoClaim.changeRoyaltyToken(address(newToken));
         assertEq(royaltyAutoClaim.token(), address(newToken));
+    }
+
+    function testCannot_changeRoyaltyToken_if_address_is_same() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
+        royaltyAutoClaim.changeRoyaltyToken(address(token));
     }
 
     function testCannot_renounceOwnership() public {
@@ -153,6 +165,22 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.emergencyWithdraw(address(token), 1 ether);
     }
 
+    function testCannot_emergencyWithdraw_if_zero_amount() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAmount.selector));
+        royaltyAutoClaim.emergencyWithdraw(NATIVE_TOKEN, 0);
+
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAmount.selector));
+        royaltyAutoClaim.emergencyWithdraw(address(token), 0);
+    }
+
+    function testCannot_emergencyWithdraw_if_zero_address() public {
+        vm.prank(owner);
+        vm.expectRevert();
+        royaltyAutoClaim.emergencyWithdraw(address(0), 1 ether);
+    }
+
     // ======================================== Admin Functions ========================================
 
     function test_updateReviewers() public {
@@ -160,7 +188,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         bool[] memory status = new bool[](2);
 
         newReviewers[0] = vm.randomAddress();
-        newReviewers[1] = vm.randomAddress();
+        newReviewers[1] = reviewer1;
         status[0] = true;
         status[1] = false;
 
@@ -200,6 +228,17 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidArrayLength.selector));
         royaltyAutoClaim.updateReviewers(new address[](0), new bool[](0));
+    }
+
+    function testCannot_updateReviewers_if_status_is_same() public {
+        address[] memory reviewers = new address[](1);
+        reviewers[0] = reviewer1;
+        bool[] memory status = new bool[](1);
+        status[0] = true;
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameStatus.selector));
+        royaltyAutoClaim.updateReviewers(reviewers, status);
     }
 
     function test_registerSubmission() public {
