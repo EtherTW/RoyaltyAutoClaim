@@ -2,7 +2,7 @@ import { CHAIN_ID } from '@/config'
 import { formatErrMsg, normalizeError } from '@/lib/error'
 import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
 import { MockToken, RoyaltyAutoClaim } from '@/typechain-types'
-import { ethers, parseEther } from 'ethers'
+import { concat, ethers, parseEther } from 'ethers'
 import { describe, expect, it } from 'vitest'
 import { deployContracts } from './test-utils'
 
@@ -52,14 +52,22 @@ describe('e2e-sepolia', () => {
 	it('should review the submission', async () => {
 		try {
 			let op = await royaltyAutoClaim4337.sendCalldata(
-				royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', ['test_title', '20']),
+				concat([
+					royaltyAutoClaim.interface.getFunction('executeUserOp').selector,
+					royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', ['test_title', '20']),
+				]),
 			)
 			let receipt = await op.wait()
 			expect(receipt.success).to.be.true
 
 			op = await royaltyAutoClaim4337
 				.connect(account1)
-				.sendCalldata(royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', ['test_title', '40']))
+				.sendCalldata(
+					concat([
+						royaltyAutoClaim.interface.getFunction('executeUserOp').selector,
+						royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', ['test_title', '40']),
+					]),
+				)
 			receipt = await op.wait()
 			expect(receipt.success).to.be.true
 		} catch (e: unknown) {
@@ -75,7 +83,12 @@ describe('e2e-sepolia', () => {
 
 			const op = await royaltyAutoClaim4337
 				.connect(account0)
-				.sendCalldata(royaltyAutoClaim.interface.encodeFunctionData('claimRoyalty', ['test_title']))
+				.sendCalldata(
+					concat([
+						royaltyAutoClaim.interface.getFunction('executeUserOp').selector,
+						royaltyAutoClaim.interface.encodeFunctionData('claimRoyalty', ['test_title']),
+					]),
+				)
 			const receipt = await op.wait()
 			expect(receipt.success).to.be.true
 

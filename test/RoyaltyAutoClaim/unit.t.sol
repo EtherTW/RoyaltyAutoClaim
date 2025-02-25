@@ -709,34 +709,4 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         // Case 5: Non-existent submission (should return 0)
         assertEq(royaltyAutoClaim.getRoyalty("nonexistent"), 0, "Should return 0 for non-existent submission");
     }
-
-    // ======================================== Internal Functions ========================================
-
-    function test_getUserOpSigner() public {
-        address expectedSigner = vm.randomAddress();
-
-        // Set up the test conditions
-        vm.prank(ENTRY_POINT);
-        harness.setTransientSigner(expectedSigner);
-
-        // Test the function when called from EntryPoint
-        vm.prank(ENTRY_POINT);
-        address actualSigner = harness.exposed_getUserOpSigner();
-        assertEq(actualSigner, expectedSigner, "Should return the correct signer address");
-    }
-
-    function testCannot_getUserOpSigner_if_not_from_entrypoint() public {
-        address signer = vm.randomAddress();
-        harness.setTransientSigner(signer);
-
-        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
-        harness.exposed_getUserOpSigner();
-    }
-
-    function testCannot_getUserOpSigner_if_signer_is_zero() public {
-        // Don't set any signer, so it defaults to address(0)
-        vm.prank(ENTRY_POINT);
-        vm.expectRevert(IRoyaltyAutoClaim.ZeroAddress.selector);
-        harness.exposed_getUserOpSigner();
-    }
 }

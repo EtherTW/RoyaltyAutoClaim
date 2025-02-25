@@ -7,22 +7,6 @@ import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.s
 import "../utils/AATest.t.sol";
 import {MockToken} from "../../src/MockToken.sol";
 
-/// @dev for testing internal functions
-contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
-    bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
-
-    function exposed_getUserOpSigner() external view returns (address) {
-        return _getUserOpSigner();
-    }
-
-    // Helper function to set transient storage for testing
-    function setTransientSigner(address signer) external {
-        assembly {
-            tstore(TRANSIENT_SIGNER_SLOT, signer)
-        }
-    }
-}
-
 abstract contract BaseTest is AATest {
     address fake;
     uint256 fakeKey;
@@ -49,7 +33,7 @@ abstract contract BaseTest is AATest {
 
     IERC20 token;
     IERC20 newToken;
-    RoyaltyAutoClaimHarness harness;
+
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     address constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
@@ -77,8 +61,6 @@ abstract contract BaseTest is AATest {
 
         token = new MockToken(owner, 100 ether);
         newToken = new MockToken(owner, 100 ether);
-
-        harness = new RoyaltyAutoClaimHarness();
 
         impl = new RoyaltyAutoClaim();
         proxy = new RoyaltyAutoClaimProxy(

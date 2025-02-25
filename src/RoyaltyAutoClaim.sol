@@ -115,8 +115,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     /// @dev cast index-erc7201 royaltyautoclaim.storage.main
     bytes32 private constant MAIN_STORAGE_SLOT = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
-    /// @dev cast index-erc7201 royaltyautoclaim.storage.signer
-    bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
 
     function _getMainStorage() private pure returns (MainStorage storage $) {
         assembly {
@@ -268,15 +266,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     // ================================ Reviewer ================================
 
     function reviewSubmission(string memory title, uint16 royaltyLevel) public {
-        if (msg.sender == entryPoint()) {
-            _reviewSubmission(title, royaltyLevel, _getUserOpSigner());
-        } else {
-            _requireReviewable(title, royaltyLevel, msg.sender);
-            _reviewSubmission(title, royaltyLevel, msg.sender);
-        }
+        _reviewSubmission(title, royaltyLevel, msg.sender);
     }
 
-    function _requireReviewable(string memory title, uint16 royaltyLevel, address reviewer) internal view {
+    function _reviewSubmission(string memory title, uint16 royaltyLevel, address reviewer) internal {
         require(isReviewer(reviewer), Unauthorized(reviewer));
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         require(
@@ -285,9 +278,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             InvalidRoyaltyLevel(royaltyLevel)
         );
         require(!hasReviewed(title, reviewer), AlreadyReviewed());
-    }
 
-    function _reviewSubmission(string memory title, uint16 royaltyLevel, address reviewer) internal {
         MainStorage storage $ = _getMainStorage();
         $.hasReviewed[title][reviewer] = true;
         $.submissions[title].reviewCount++;
@@ -297,21 +288,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     // ================================ Recipient ================================
 
-    function claimRoyalty(string memory title) public nonReentrant {
-        if (msg.sender == entryPoint()) {
-            _claimRoyalty(title, _getUserOpSigner());
-        } else {
-            _requireClaimable(title, msg.sender);
-            _claimRoyalty(title, msg.sender);
-        }
+    function claimRoyalty(string memory title) public {
+        _claimRoyalty(title, msg.sender);
     }
 
-    function _requireClaimable(string memory title, address recipient) internal view {
+    function _claimRoyalty(string memory title, address recipient) internal nonReentrant {
         require(isRecipient(title, recipient), Unauthorized(recipient));
         require(isSubmissionClaimable(title), SubmissionNotClaimable());
-    }
 
-    function _claimRoyalty(string memory title, address recipient) internal {
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
         uint256 amount = getRoyalty(title);
@@ -366,29 +350,25 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
-        } else if (selector == this.reviewSubmission.selector) {
+        } else if (
+            selector == this.executeUserOp.selector && bytes4(userOp.callData[4:8]) == this.reviewSubmission.selector
+        ) {
             // ========================================= Reviewer =========================================
 
-            (string memory title, uint16 royaltyLevel) = abi.decode(userOp.callData[4:], (string, uint16));
-            _requireReviewable(title, royaltyLevel, appendedSigner);
-
-            assembly {
-                tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
-            }
+            (string memory title, uint16 royaltyLevel) = abi.decode(userOp.callData[8:], (string, uint16));
+            _reviewSubmission(title, royaltyLevel, appendedSigner);
 
             if (signer != appendedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
-        } else if (selector == this.claimRoyalty.selector) {
+        } else if (
+            selector == this.executeUserOp.selector && bytes4(userOp.callData[4:8]) == this.claimRoyalty.selector
+        ) {
             // ========================================= Recipient =========================================
 
-            (string memory title) = abi.decode(userOp.callData[4:], (string));
-            _requireClaimable(title, appendedSigner);
-
-            assembly {
-                tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
-            }
+            (string memory title) = abi.decode(userOp.callData[8:], (string));
+            _claimRoyalty(title, appendedSigner);
 
             if (signer != appendedSigner) {
                 return SIG_VALIDATION_FAILED;
@@ -399,18 +379,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         revert UnsupportSelector(selector);
     }
 
-    function _getUserOpSigner() internal view onlyEntryPoint returns (address) {
-        address signer;
-        assembly {
-            signer := tload(TRANSIENT_SIGNER_SLOT)
-        }
-
-        if (signer == address(0)) {
-            revert ZeroAddress();
-        }
-
-        return signer;
-    }
+    function executeUserOp(PackedUserOperation calldata userOp, bytes32) external onlyEntryPoint {}
 
     // ================================ View ================================
 
