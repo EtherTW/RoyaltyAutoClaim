@@ -15,7 +15,7 @@ contract DeployRoyaltyAutoClaimScript is Script {
 
         address owner = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // anvil account 0
         address admin = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // anvil account 0
-        address token = 0x1dE2CEc5d130deCF60207f45f7cEfDAE224F0559; // mock token
+        address token = 0x78807f434dE64b9f6CeC488ab633150f13c285d9; // mock token
 
         address[] memory reviewers = new address[](5);
         reviewers[0] = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // anvil account 0

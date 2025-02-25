@@ -17,7 +17,7 @@ dev:
 	cd frontend && pnpm dev --host
 
 deploy-sepolia:
-	forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url $sepolia --broadcast --verify
+	forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url $$sepolia --broadcast --verify
 
 test-e2e-local:
 	make build && cd frontend && pnpm test test/e2e-local.test.ts
