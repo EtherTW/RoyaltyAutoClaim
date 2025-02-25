@@ -725,14 +725,6 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertEq(actualSigner, expectedSigner, "Should return the correct signer address");
     }
 
-    function testCannot_getUserOpSigner_if_not_from_entrypoint() public {
-        address signer = vm.randomAddress();
-        harness.setTransientSigner(signer);
-
-        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
-        harness.exposed_getUserOpSigner();
-    }
-
     function testCannot_getUserOpSigner_if_signer_is_zero() public {
         // Don't set any signer, so it defaults to address(0)
         vm.prank(ENTRY_POINT);

@@ -10,6 +10,7 @@ import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {ECDSA} from "solady/utils/ECDSA.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 interface IRoyaltyAutoClaim {
     // Owner functions
@@ -104,6 +105,7 @@ interface IRoyaltyAutoClaim {
 
 contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradeable, IAccount, ReentrancyGuard {
     using SafeERC20 for IERC20;
+    using SafeTransferLib for address;
 
     uint8 public constant ROYALTY_LEVEL_20 = 20;
     uint8 public constant ROYALTY_LEVEL_40 = 40;
@@ -268,22 +270,15 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     // ================================ Reviewer ================================
 
     function reviewSubmission(string memory title, uint16 royaltyLevel) public {
-        address reviewer;
         if (msg.sender == entryPoint()) {
-            reviewer = _getUserOpSigner();
+            _reviewSubmission(title, royaltyLevel, _getUserOpSigner());
         } else {
-            reviewer = msg.sender;
-            _requireReviewable(reviewer, title, royaltyLevel);
+            _requireReviewable(title, royaltyLevel, msg.sender);
+            _reviewSubmission(title, royaltyLevel, msg.sender);
         }
-
-        MainStorage storage $ = _getMainStorage();
-        $.hasReviewed[title][reviewer] = true;
-        $.submissions[title].reviewCount++;
-        $.submissions[title].totalRoyaltyLevel += royaltyLevel;
-        emit SubmissionReviewed(title, reviewer, royaltyLevel, title);
     }
 
-    function _requireReviewable(address reviewer, string memory title, uint16 royaltyLevel) internal view {
+    function _requireReviewable(string memory title, uint16 royaltyLevel, address reviewer) internal view {
         require(isReviewer(reviewer), Unauthorized(reviewer));
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         require(
@@ -294,27 +289,36 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(!hasReviewed(title, reviewer), AlreadyReviewed());
     }
 
+    function _reviewSubmission(string memory title, uint16 royaltyLevel, address reviewer) internal {
+        MainStorage storage $ = _getMainStorage();
+        $.hasReviewed[title][reviewer] = true;
+        $.submissions[title].reviewCount++;
+        $.submissions[title].totalRoyaltyLevel += royaltyLevel;
+        emit SubmissionReviewed(title, reviewer, royaltyLevel, title);
+    }
+
     // ================================ Recipient ================================
 
     function claimRoyalty(string memory title) public nonReentrant {
-        address recipient;
         if (msg.sender == entryPoint()) {
-            recipient = _getUserOpSigner();
+            _claimRoyalty(title, _getUserOpSigner());
         } else {
-            recipient = msg.sender;
-            _requireClaimable(recipient, title);
+            _requireClaimable(title, msg.sender);
+            _claimRoyalty(title, msg.sender);
         }
+    }
 
+    function _requireClaimable(string memory title, address recipient) internal view {
+        require(isRecipient(title, recipient), Unauthorized(recipient));
+        require(isSubmissionClaimable(title), SubmissionNotClaimable());
+    }
+
+    function _claimRoyalty(string memory title, address recipient) internal {
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
         uint256 amount = getRoyalty(title);
         IERC20(token()).safeTransfer(recipient, amount);
         emit RoyaltyClaimed(recipient, amount, title);
-    }
-
-    function _requireClaimable(address recipient, string memory title) internal view {
-        require(isRecipient(title, recipient), Unauthorized(recipient));
-        require(isSubmissionClaimable(title), SubmissionNotClaimable());
     }
 
     // ================================ ERC-4337 ================================
@@ -368,7 +372,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             // ========================================= Reviewer =========================================
 
             (string memory title, uint16 royaltyLevel) = abi.decode(userOp.callData[4:], (string, uint16));
-            _requireReviewable(appendedSigner, title, royaltyLevel);
+            _requireReviewable(title, royaltyLevel, appendedSigner);
 
             assembly {
                 tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
@@ -381,7 +385,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         } else if (selector == this.claimRoyalty.selector) {
             // ========================================= Recipient =========================================
 
-            _requireClaimable(appendedSigner, abi.decode(userOp.callData[4:], (string)));
+            (string memory title) = abi.decode(userOp.callData[4:], (string));
+            _requireClaimable(title, appendedSigner);
 
             assembly {
                 tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
@@ -396,7 +401,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         revert UnsupportSelector(selector);
     }
 
-    function _getUserOpSigner() internal view onlyEntryPoint returns (address) {
+    function _getUserOpSigner() internal view returns (address) {
         address signer;
         assembly {
             signer := tload(TRANSIENT_SIGNER_SLOT)
