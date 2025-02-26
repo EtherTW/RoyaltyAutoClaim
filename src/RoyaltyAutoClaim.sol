@@ -325,7 +325,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     /// @dev userOp.signature[0:65]: actual signature
     /// @dev userOp.signature[65:85]: appended signer address
-    /// @dev Forbid to use paymaster
+    /// @notice The reason for needing appendedSigner instead of directly using signer is because eth_estimateUserOperationGas uses a dummy signature
     function validateUserOp(PackedUserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
         external
         onlyEntryPoint

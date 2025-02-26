@@ -24,8 +24,8 @@ forge clean
 
 ## Frontend
 
+- Remember to set up .env in frontend
 - If the contract has been updated, remember to run `forge build` before `pnpm generate-types`
-- Remember to set up .env
 - We use Pimlico bundler in local devnet but use Alchemy bundler on Sepolia and Mainnet. Check out frontend/src/config.ts BUNDLER_URL.
 - For icon, use [lucide-vue-next](https://lucide.dev/icons)
 - For Component, use [shadcn-vue](https://www.shadcn-vue.com/docs/components/accordion.html)
