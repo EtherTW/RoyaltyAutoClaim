@@ -366,12 +366,7 @@ const displayTokenAmount = computed(() => {
 						</Label>
 						<div class="flex gap-2">
 							<Input id="amount" v-model="withdrawAmount" placeholder="wei" />
-							<Button
-								variant="outline"
-								class="whitespace-nowrap"
-								:disabled="isMaxBtnDisabled"
-								@click="onClickMax"
-							>
+							<Button variant="outline" class="h-10" :disabled="isMaxBtnDisabled" @click="onClickMax">
 								Max
 							</Button>
 						</div>
