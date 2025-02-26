@@ -32,7 +32,7 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 
 				<div class="flex gap-0.5 items-center">
 					<!-- Copy Button -->
-					<CopyButton :address="address" />
+					<CopyButton size="md" :address="address" />
 
 					<!-- Disconnect Button -->
 					<div class="address-button" @click="onClickDisconnect">
