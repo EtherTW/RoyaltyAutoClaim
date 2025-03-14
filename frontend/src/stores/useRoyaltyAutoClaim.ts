@@ -47,7 +47,13 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 		try {
 			isLoadingBasicSubmissions.value = true
 
-			const basicSubmissions = await fetchExistingSubmissions(royaltyAutoClaim.value)
+			// eth_getLogs has block limit in batch request using Alchemy Node,
+			// and ethers.js might use batch request for multiple requests near the same time,
+			// so we need to change provider here
+			const blockchainStore = useBlockchainStore()
+			const royaltyAutoClaimNoBatch = royaltyAutoClaim.value.connect(blockchainStore.clientNoBatch)
+
+			const basicSubmissions = await fetchExistingSubmissions(royaltyAutoClaimNoBatch)
 
 			submissions.value = basicSubmissions.map(submission => ({
 				title: submission.title,
