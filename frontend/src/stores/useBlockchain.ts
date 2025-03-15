@@ -16,6 +16,13 @@ export const useBlockchainStore = defineStore('useBlockchainStore', () => {
 
 	const client = computed(() => new JsonRpcProvider(rpcUrl.value))
 
+	const clientNoBatch = computed(
+		() =>
+			new JsonRpcProvider(rpcUrl.value, undefined, {
+				batchMaxCount: 1,
+			}),
+	)
+
 	const bundlerUrl = computed(() => BUNDLER_URL[chainId.value])
 
 	const bundler = computed(() => {
@@ -30,6 +37,7 @@ export const useBlockchainStore = defineStore('useBlockchainStore', () => {
 		rpcUrl,
 		explorerUrl,
 		client,
+		clientNoBatch,
 		bundlerUrl,
 		bundler,
 		setChainId,

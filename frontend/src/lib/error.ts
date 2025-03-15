@@ -85,32 +85,10 @@ export function formatErrMsg(error: Error): string {
 		}
 	}
 
-	if (error instanceof AppError) {
-		return getDetailedErrorMessage(error)
-	}
-
 	return `${error.name}: ${error.message}`
 }
 
-function getDetailedErrorMessage(err: Error): string {
-	let messages: string[] = []
-
-	while (err instanceof Error) {
-		messages.push(`${err.name}: ${err.message}`)
-		err = err.cause as Error
-	}
-
-	return messages.join(' → ')
-}
-
 // ================================ Error classes =================================
-
-export class AppError extends Error {
-	constructor(message: string, options?: ErrorOptions) {
-		super(message, options)
-		this.name = 'AppError'
-	}
-}
 
 export class EthersError extends Error {
 	code: ErrorCode = 'UNKNOWN_ERROR'

@@ -1,9 +1,8 @@
-import { ERROR_NOTIFICATION_DURATION, ROYALTY_AUTO_CLAIM_PROXY_ADDRESS } from '@/config'
+import { ROYALTY_AUTO_CLAIM_PROXY_ADDRESS } from '@/config'
 import { fetchExistingSubmissions } from '@/lib/RoyaltyAutoClaim'
 import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
-import { formatErrMsg, normalizeError } from '@/lib/error'
+import { normalizeError } from '@/lib/error'
 import { RoyaltyAutoClaim__factory } from '@/typechain-types'
-import { notify } from '@kyvg/vue3-notification'
 import { JsonRpcSigner } from 'ethers'
 import { defineStore } from 'pinia'
 import { useBlockchainStore } from './useBlockchain'
@@ -48,7 +47,13 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 		try {
 			isLoadingBasicSubmissions.value = true
 
-			const basicSubmissions = await fetchExistingSubmissions(royaltyAutoClaim.value)
+			// eth_getLogs has block limit in batch request using Alchemy Node,
+			// and ethers.js might use batch request for multiple requests near the same time,
+			// so we need to change provider here
+			const blockchainStore = useBlockchainStore()
+			const royaltyAutoClaimNoBatch = royaltyAutoClaim.value.connect(blockchainStore.clientNoBatch)
+
+			const basicSubmissions = await fetchExistingSubmissions(royaltyAutoClaimNoBatch)
 
 			submissions.value = basicSubmissions.map(submission => ({
 				title: submission.title,
@@ -70,14 +75,8 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 				}),
 			)
 			isLoadingSubmissionData.value = false
-		} catch (error: unknown) {
-			const err = normalizeError(error)
-			notify({
-				title: 'Error fetching submissions',
-				text: formatErrMsg(err),
-				type: 'error',
-				duration: ERROR_NOTIFICATION_DURATION,
-			})
+		} catch (err: unknown) {
+			throw new Error('Failed to fetch submissions', { cause: normalizeError(err) })
 		} finally {
 			isLoadingBasicSubmissions.value = false
 			isLoadingSubmissionData.value = false

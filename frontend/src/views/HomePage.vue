@@ -11,8 +11,8 @@ const isButtonDisabled = computed(
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
-onMounted(() => {
-	royaltyAutoClaimStore.fetchSubmissions()
+onMounted(async () => {
+	await royaltyAutoClaimStore.fetchSubmissions()
 })
 
 // ===================================== submit review & claim royalty =====================================
