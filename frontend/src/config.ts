@@ -32,7 +32,7 @@ export const RPC_URL: { [key: string]: string } = {
 }
 
 export const EXPLORER_URL: { [key: string]: string } = {
-	[CHAIN_ID.LOCAL]: '',
+	[CHAIN_ID.LOCAL]: 'http://localhost:3000',
 	[CHAIN_ID.SEPOLIA]: 'https://sepolia.etherscan.io',
 	[CHAIN_ID.MAINNET]: 'https://etherscan.io',
 }

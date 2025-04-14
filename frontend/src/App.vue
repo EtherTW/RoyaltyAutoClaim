@@ -80,7 +80,7 @@ const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 						<X />
 					</Button>
 				</div>
-				<div class="notification-content">{{ item.text }}</div>
+				<div class="notification-content" v-html="item.text"></div>
 			</div>
 		</template>
 	</Notifications>

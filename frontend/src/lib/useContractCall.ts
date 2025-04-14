@@ -2,6 +2,8 @@ import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { notify } from '@kyvg/vue3-notification'
 import { formatErrMsg, normalizeError, UserRejectedActionError } from './error'
+import { isSameAddress } from 'sendop'
+import { useBlockchainStore } from '@/stores/useBlockchain'
 
 export function useContractCall<T extends any[] = []>(options: {
 	getCalldata: (...args: T) => string
@@ -18,6 +20,8 @@ export function useContractCall<T extends any[] = []>(options: {
 		if (!royaltyAutoClaimStore.royaltyAutoClaim4337) {
 			throw new Error('useContractCall: No royaltyAutoClaim4337')
 		}
+
+		const senderAddress = royaltyAutoClaimStore.royaltyAutoClaim4337.getSender()
 
 		try {
 			isLoading.value = true
@@ -46,10 +50,17 @@ export function useContractCall<T extends any[] = []>(options: {
 
 			notify.close(waitingToast)
 
+			const txLink = receipt.logs.filter(log => isSameAddress(log.address, senderAddress))[0]?.transactionHash
+				? `${useBlockchainStore().explorerUrl}/tx/${
+						receipt.logs.filter(log => isSameAddress(log.address, senderAddress))[0].transactionHash
+				  }`
+				: '#'
+
 			notify({
 				title: options.successTitle,
-				text: `op hash: ${op.hash}`,
+				text: `TxLink: <a class="text-blue-900 hover:underline" href="${txLink}" target="_blank">${txLink}</a>`,
 				type: 'success',
+				duration: -1,
 			})
 
 			if (options.onAfterCall) {
