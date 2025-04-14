@@ -20,6 +20,7 @@ declare module 'vue' {
     FooterMeta: typeof import('./src/components/FooterMeta.vue')['default']
     Input: typeof import('./src/components/ui/input/Input.vue')['default']
     Label: typeof import('./src/components/ui/label/Label.vue')['default']
+    NetworkSelector: typeof import('./src/components/NetworkSelector.vue')['default']
     Notifications: typeof import('@kyvg/vue3-notification')['Notifications']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
