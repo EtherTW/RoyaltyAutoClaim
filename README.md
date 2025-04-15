@@ -29,7 +29,7 @@ forge clean
 - We use Pimlico bundler in local devnet but use Alchemy bundler on Sepolia and Mainnet. Check out frontend/src/config.ts BUNDLER_URL.
 - For icon, use [lucide-vue-next](https://lucide.dev/icons)
 - For Component, use [shadcn-vue](https://www.shadcn-vue.com/docs/components/accordion.html)
-
+- For Notification Component, see [docs](https://kyvg.github.io/vue3-notification/api/)
 
 ```
 cd frontend

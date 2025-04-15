@@ -1,4 +1,3 @@
-import { ROYALTY_AUTO_CLAIM_PROXY_ADDRESS } from '@/config'
 import { fetchExistingSubmissions } from '@/lib/RoyaltyAutoClaim'
 import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
 import { normalizeError } from '@/lib/error'
@@ -20,7 +19,7 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 	const blockchainStore = useBlockchainStore()
 
 	const royaltyAutoClaim = computed(() => {
-		return RoyaltyAutoClaim__factory.connect(ROYALTY_AUTO_CLAIM_PROXY_ADDRESS, blockchainStore.client)
+		return RoyaltyAutoClaim__factory.connect(blockchainStore.royaltyAutoClaimProxyAddress, blockchainStore.client)
 	})
 
 	const royaltyAutoClaim4337 = computed(() => {
@@ -28,7 +27,7 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 
 		if (eoaStore.signer) {
 			return new RoyaltyAutoClaim4337({
-				sender: ROYALTY_AUTO_CLAIM_PROXY_ADDRESS,
+				sender: blockchainStore.royaltyAutoClaimProxyAddress,
 				client: blockchainStore.client,
 				bundler: blockchainStore.bundler,
 				signer: eoaStore.signer as JsonRpcSigner,

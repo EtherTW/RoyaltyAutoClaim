@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import pkg from '../../package.json'
-import { ROYALTY_AUTO_CLAIM_PROXY_ADDRESS } from '@/config'
 import { shortenAddress } from '@vue-dapp/core'
 
 const blockchainStore = useBlockchainStore()
@@ -10,7 +9,7 @@ const contractLink = computed(() => {
 	if (!blockchainStore.explorerUrl) {
 		return ''
 	}
-	return `${blockchainStore.explorerUrl}/address/${ROYALTY_AUTO_CLAIM_PROXY_ADDRESS}#readProxyContract`
+	return `${blockchainStore.explorerUrl}/address/${blockchainStore.royaltyAutoClaimProxyAddress}#readProxyContract`
 })
 </script>
 
@@ -24,9 +23,9 @@ const contractLink = computed(() => {
 				:href="contractLink ? contractLink : undefined"
 				target="_blank"
 			>
-				{{ shortenAddress(ROYALTY_AUTO_CLAIM_PROXY_ADDRESS) }}
+				{{ shortenAddress(blockchainStore.royaltyAutoClaimProxyAddress) }}
 			</a>
-			<CopyButton size="xs" :address="ROYALTY_AUTO_CLAIM_PROXY_ADDRESS" :is-round="false" />
+			<CopyButton size="xs" :address="blockchainStore.royaltyAutoClaimProxyAddress" :is-round="false" />
 		</div>
 
 		<div class="flex items-center gap-x-2">

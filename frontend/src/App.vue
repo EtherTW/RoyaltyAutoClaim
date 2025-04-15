@@ -7,6 +7,7 @@ import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { Loader2, Settings, X } from 'lucide-vue-next'
 import { useEOAStore } from './stores/useEOA'
 import { useRoyaltyAutoClaimStore } from './stores/useRoyaltyAutoClaim'
+import { useBlockchainStore } from './stores/useBlockchain'
 
 const { addConnectors, watchWalletChanged, watchDisconnect } = useVueDapp()
 
@@ -22,6 +23,15 @@ watchDisconnect(() => {
 	eoaStore.resetWallet()
 })
 
+const blockchainStore = useBlockchainStore()
+
+watch(
+	() => blockchainStore.chainId,
+	() => {
+		location.reload()
+	},
+)
+
 const breakpoints = useBreakpoints(breakpointsTailwind)
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 </script>
@@ -35,13 +45,14 @@ const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 				<div class="flex items-center gap-6">
 					<router-link to="/" class="flex items-center gap-2">
 						<h1 class="font-semibold text-lg" :class="{ 'text-md': breakpoints.isSmaller('sm') }">
-							RoyaltyAutoClaim
+							{{ breakpoints.isSmaller('sm') ? 'RAC' : 'RoyaltyAutoClaim' }}
 						</h1>
 						<Loader2 v-if="royaltyAutoClaimStore.isLoading" :size="16" class="animate-spin" />
 					</router-link>
 				</div>
 
 				<div class="flex items-center sm:gap-4" :class="{ 'gap-3': breakpoints.isSmaller('sm') }">
+					<NetworkSelector />
 					<ConnectButton />
 
 					<RouterLink
@@ -80,7 +91,7 @@ const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 						<X />
 					</Button>
 				</div>
-				<div class="notification-content">{{ item.text }}</div>
+				<div class="notification-content" v-html="item.text"></div>
 			</div>
 		</template>
 	</Notifications>

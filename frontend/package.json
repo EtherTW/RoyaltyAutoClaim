@@ -1,7 +1,7 @@
 {
 	"name": "frontend",
 	"private": true,
-	"version": "0.1.1",
+	"version": "0.2.1",
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
@@ -21,6 +21,7 @@
 		"ethers": "^6.13.5",
 		"lucide-vue-next": "^0.473.0",
 		"pinia": "^2.3.0",
+		"pinia-plugin-persistedstate": "^4.2.0",
 		"radix-vue": "^1.9.12",
 		"sendop": "0.2.2",
 		"tailwind-merge": "^2.6.0",
