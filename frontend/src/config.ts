@@ -7,6 +7,14 @@ export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA = import.meta.env
 export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET = import.meta.env
 	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET as string | undefined
 
+if (!IS_DEV) {
+	if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA && !ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET) {
+		throw new Error(
+			'ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA or ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET is not set in .env',
+		)
+	}
+}
+
 export const ALCHEMY_API_KEY = import.meta.env.VITE_ALCHEMY_API_KEY
 if (!ALCHEMY_API_KEY) {
 	throw new Error('ALCHEMY_API_KEY is not set in .env')
