@@ -58,7 +58,7 @@ export function useContractCall<T extends any[] = []>(options: {
 
 			notify({
 				title: options.successTitle,
-				text: `TxLink: <a class="text-blue-900 hover:underline" href="${txLink}" target="_blank">${txLink}</a>`,
+				text: `<a class="text-blue-700 hover:underline" href="${txLink}" target="_blank">View on Explorer</a>`,
 				type: 'success',
 				duration: -1,
 			})
