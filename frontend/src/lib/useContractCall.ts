@@ -26,7 +26,7 @@ export function useContractCall<T extends any[] = []>(options: {
 		const blockchainStore = useBlockchainStore()
 
 		if (walletChainId.value !== Number(blockchainStore.chainId)) {
-			connector.value?.switchChain?.(Number(blockchainStore.chainId))
+			await connector.value?.switchChain?.(Number(blockchainStore.chainId))
 		}
 
 		const senderAddress = royaltyAutoClaimStore.royaltyAutoClaim4337.getSender()
