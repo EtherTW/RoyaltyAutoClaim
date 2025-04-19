@@ -4,6 +4,7 @@ import { notify } from '@kyvg/vue3-notification'
 import { formatErrMsg, normalizeError, UserRejectedActionError } from './error'
 import { isSameAddress } from 'sendop'
 import { useBlockchainStore } from '@/stores/useBlockchain'
+import { useVueDapp } from '@vue-dapp/core'
 
 export function useContractCall<T extends any[] = []>(options: {
 	getCalldata: (...args: T) => string
@@ -19,6 +20,13 @@ export function useContractCall<T extends any[] = []>(options: {
 	async function send(...args: T) {
 		if (!royaltyAutoClaimStore.royaltyAutoClaim4337) {
 			throw new Error('useContractCall: No royaltyAutoClaim4337')
+		}
+
+		const { chainId: walletChainId, connector } = useVueDapp()
+		const blockchainStore = useBlockchainStore()
+
+		if (walletChainId.value !== Number(blockchainStore.chainId)) {
+			connector.value?.switchChain?.(Number(blockchainStore.chainId))
 		}
 
 		const senderAddress = royaltyAutoClaimStore.royaltyAutoClaim4337.getSender()
