@@ -71,7 +71,7 @@ const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
 		<FooterMeta />
 	</div>
-	<VueDappModal autoConnect autoConnectBrowserWalletIfSolo />
+	<VueDappModal />
 
 	<Notifications
 		class="break-words"
