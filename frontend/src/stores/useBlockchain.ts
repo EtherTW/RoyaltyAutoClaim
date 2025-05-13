@@ -1,4 +1,4 @@
-import { JsonRpcProvider } from 'ethers'
+import { JsonRpcProvider, Network } from 'ethers'
 import { defineStore } from 'pinia'
 import { AlchemyBundler, PimlicoBundler } from 'sendop'
 import {
@@ -10,6 +10,7 @@ import {
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_LOCAL,
+	TENDERLY_RPC_URL,
 } from '@/config'
 
 export const useBlockchainStore = defineStore(
@@ -57,12 +58,28 @@ export const useBlockchainStore = defineStore(
 
 		const explorerUrl = computed(() => `${EXPLORER_URL[chainId.value]}`)
 
-		const client = computed(() => new JsonRpcProvider(rpcUrl.value))
+		const client = computed(
+			() =>
+				new JsonRpcProvider(rpcUrl.value, undefined, {
+					staticNetwork: true,
+				}),
+		)
 
 		const clientNoBatch = computed(
 			() =>
 				new JsonRpcProvider(rpcUrl.value, undefined, {
 					batchMaxCount: 1,
+					staticNetwork: true,
+				}),
+		)
+
+		// only used for fetching events by eth_getLogs
+		const tenderlyClient = computed(
+			() =>
+				new JsonRpcProvider(TENDERLY_RPC_URL[chainId.value], undefined, {
+					// do not request chain ID on requests to validate the underlying chain has not changed
+					// @docs: https://docs.ethers.org/v6/api/providers/jsonrpc/#JsonRpcApiProviderOptions
+					staticNetwork: true,
 				}),
 		)
 
@@ -85,6 +102,7 @@ export const useBlockchainStore = defineStore(
 			clientNoBatch,
 			bundlerUrl,
 			bundler,
+			tenderlyClient,
 			setChainId,
 		}
 	},

@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker'
 import { getAddress, JsonRpcProvider, Wallet } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ACCOUNT_0_PRIVATE_KEY } from '../../test/test-utils'
-import { fetchExistingSubmissions } from './RoyaltyAutoClaim'
+import { fetchExistingSubmissions } from './fetchExistingSubmissions'
 import { waitForTransaction } from './ethers'
 
 const client = new JsonRpcProvider(RPC_URL[CHAIN_ID.LOCAL])

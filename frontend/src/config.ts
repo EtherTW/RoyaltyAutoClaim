@@ -32,6 +32,12 @@ export const RPC_URL: { [key: string]: string } = {
 	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 }
 
+export const TENDERLY_RPC_URL: { [key: string]: string } = {
+	[CHAIN_ID.LOCAL]: `http://localhost:8545`,
+	[CHAIN_ID.SEPOLIA]: `https://sepolia.gateway.tenderly.co/5j2Bli4kdZh94hJp4Mg7x1`,
+	[CHAIN_ID.MAINNET]: `https://mainnet.gateway.tenderly.co/7SOJjmp7ir0NXhDU1IL29v`,
+}
+
 export const EXPLORER_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: 'http://localhost:3000',
 	[CHAIN_ID.SEPOLIA]: 'https://sepolia.etherscan.io',
