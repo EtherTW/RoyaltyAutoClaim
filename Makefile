@@ -16,6 +16,9 @@ up:
 dev:
 	cd frontend && pnpm dev --host
 
+deploy-mainnet:
+	forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url $$mainnet --broadcast --verify
+
 deploy-sepolia:
 	forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url $$sepolia --broadcast --verify
 

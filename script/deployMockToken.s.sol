@@ -5,15 +5,15 @@ import {Script, console} from "forge-std/Script.sol";
 import {MockToken} from "../src/MockToken.sol";
 
 /*
-    forge script script/deployMockToken.s.sol --rpc-url $sepolia --broadcast --verify
+    forge script script/deployMockToken.s.sol --rpc-url $NETWORK --broadcast --verify
 */
 
 contract DeployMockTokenScript is Script {
     function run() public {
-        uint256 privateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.addr(privateKey);
+        address deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
+        console.log("Deployer", deployer);
 
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast(deployer);
 
         MockToken mockToken = new MockToken(deployer, 10000 ether);
 
