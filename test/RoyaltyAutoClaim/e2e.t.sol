@@ -12,19 +12,17 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         // Get storage slots 0-3 and verify they are empty
         for (uint256 i = 0; i < 4; i++) {
             bytes32 slot = vm.load(address(royaltyAutoClaim), bytes32(i));
-            assertEq(slot, bytes32(0), "Storage slot should be empty");
+            assertEq(slot, bytes32(0), "Flat storage slots should be empty");
         }
 
         // Perform some state changes
-        address[] memory reviewers = new address[](1);
-        reviewers[0] = initialReviewers[0];
         vm.prank(owner);
         royaltyAutoClaim.transferOwnership(vm.randomAddress());
 
         // Verify slots are still empty after state changes
         for (uint256 i = 0; i < 4; i++) {
             bytes32 slot = vm.load(address(royaltyAutoClaim), bytes32(i));
-            assertEq(slot, bytes32(0), "Storage slot should remain empty after state changes");
+            assertEq(slot, bytes32(0), "Flat storage slots should remain empty after state changes");
         }
     }
 
