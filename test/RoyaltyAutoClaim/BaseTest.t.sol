@@ -94,5 +94,20 @@ abstract contract BaseTest is AATest {
         token.transfer(address(proxy), 100 ether);
 
         royaltyAutoClaim = RoyaltyAutoClaim(payable(address(proxy)));
+
+        vm.label(ENTRY_POINT, "entryPoint");
+        vm.label(fake, "fake");
+        vm.label(owner, "owner");
+        vm.label(admin, "admin");
+        vm.label(newOwner, "newOwner");
+        vm.label(newAdmin, "newAdmin");
+        vm.label(reviewer1, "reviewer1");
+        vm.label(reviewer2, "reviewer2");
+        vm.label(recipient, "recipient");
+        vm.label(address(token), "token");
+        vm.label(address(newToken), "newToken");
+        vm.label(address(impl), "impl");
+        vm.label(address(royaltyAutoClaim), "royaltyAutoClaim");
+        vm.label(address(harness), "harness");
     }
 }

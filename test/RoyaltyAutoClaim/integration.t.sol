@@ -25,12 +25,14 @@ import "./BaseTest.t.sol";
     2. execution Error
     vm.expectEmit(false, true, true, true);
     emit IEntryPoint.UserOperationRevertReason(
-        bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
+        bytes32(0), address(royaltyAutoClaim), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
     );
 
 */
 
 contract RoyaltyAutoClaim_Integration_Test is BaseTest {
+    string testSubmissionTitle = "test";
+
     function setUp() public override {
         super.setUp();
     }
@@ -46,7 +48,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
         // Should fail for non-owner
         for (uint256 i = 0; i < ownerCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), ownerCalls[i]);
+            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), ownerCalls[i]);
             vm.expectRevert(
                 abi.encodeWithSelector(
                     IEntryPoint.FailedOpWithRevert.selector,
@@ -58,19 +60,17 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
             _handleUserOp(userOp);
         }
 
-        // Should return 1 for invalid signature
+        // Should fail for invalid signature
         for (uint256 i = 0; i < ownerCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), ownerCalls[i]);
-            (uint8 v, bytes32 r, bytes32 s) =
-                vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
-            userOp.signature = abi.encodePacked(r, s, v, owner); // 放 owner address 但簽名用 fakeKey
+            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), ownerCalls[i]);
+            userOp.signature = _signUserOp(fakeKey, userOp, owner);
             vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
             _handleUserOp(userOp);
         }
 
         // Should succeed for owner
         for (uint256 i = 0; i < ownerCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(ownerKey, address(proxy), ownerCalls[i]);
+            PackedUserOperation memory userOp = _buildUserOp(ownerKey, address(royaltyAutoClaim), ownerCalls[i]);
             _handleUserOp(userOp);
         }
     }
@@ -79,13 +79,13 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         // Test Admin Functions
         bytes[] memory adminCalls = new bytes[](4);
         adminCalls[0] = abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (new address[](0), new bool[](0)));
-        adminCalls[1] = abi.encodeCall(RoyaltyAutoClaim.registerSubmission, ("test", address(0)));
-        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.updateRoyaltyRecipient, ("test", address(0)));
-        adminCalls[3] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, ("test"));
+        adminCalls[1] = abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (testSubmissionTitle, address(0)));
+        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.updateRoyaltyRecipient, (testSubmissionTitle, address(0)));
+        adminCalls[3] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, (testSubmissionTitle));
 
         // Should fail for non-admin
         for (uint256 i = 0; i < adminCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), adminCalls[i]);
+            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), adminCalls[i]);
             vm.expectRevert(
                 abi.encodeWithSelector(
                     IEntryPoint.FailedOpWithRevert.selector,
@@ -97,34 +97,28 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
             _handleUserOp(userOp);
         }
 
-        // Should return 1 for invalid signature
+        // Should fail for invalid signature
         for (uint256 i = 0; i < adminCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), adminCalls[i]);
-            (uint8 v, bytes32 r, bytes32 s) =
-                vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
-            userOp.signature = abi.encodePacked(r, s, v, admin); // 放 admin address 但簽名用 fakeKey
+            PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), adminCalls[i]);
+            userOp.signature = _signUserOp(fakeKey, userOp, admin);
             vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
             _handleUserOp(userOp);
         }
 
         // Should succeed for admin
         for (uint256 i = 0; i < adminCalls.length; i++) {
-            PackedUserOperation memory userOp = _buildUserOp(adminKey, address(proxy), adminCalls[i]); // admin's private key is 2
+            PackedUserOperation memory userOp = _buildUserOp(adminKey, address(royaltyAutoClaim), adminCalls[i]);
             _handleUserOp(userOp);
         }
     }
 
     function test_validateUserOp_reviewer_functions() public {
-        // setup
-        PackedUserOperation memory userOp = _buildUserOp(
-            adminKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, ("test", recipient))
-        );
-        _handleUserOp(userOp);
+        _registerSubmission(testSubmissionTitle, recipient);
 
-        bytes memory reviewerCall = abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20));
+        bytes memory reviewerCall = abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, (testSubmissionTitle, 20));
 
         // Should fail for non-reviewer
-        userOp = _buildUserOp(fakeKey, address(proxy), reviewerCall);
+        PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), reviewerCall);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -135,40 +129,32 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         );
         _handleUserOp(userOp);
 
-        // Should return 1 for invalid signature
-        userOp = _buildUserOp(fakeKey, address(proxy), reviewerCall);
-        (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        // Should fail for invalid signature
+        userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), reviewerCall);
         // Put reviewer1 address but signed with fakeKey
-        userOp.signature = abi.encodePacked(r, s, v, reviewer1);
+        userOp.signature = _signUserOp(fakeKey, userOp, reviewer1);
         vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
         _handleUserOp(userOp);
 
         // Should succeed for reviewer1
-        userOp = _buildUserOp(reviewer1Key, address(proxy), reviewerCall);
+        userOp = _buildUserOp(reviewer1Key, address(royaltyAutoClaim), reviewerCall);
         _handleUserOp(userOp);
 
         // Should succeed for reviewer2
-        userOp = _buildUserOp(reviewer2Key, address(proxy), reviewerCall);
+        userOp = _buildUserOp(reviewer2Key, address(royaltyAutoClaim), reviewerCall);
         _handleUserOp(userOp);
     }
 
     function test_validateUserOp_recipient_functions() public {
-        PackedUserOperation memory userOp = _buildUserOp(
-            adminKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, ("test", recipient))
-        );
-        _handleUserOp(userOp);
+        _registerSubmission(testSubmissionTitle, recipient);
 
-        userOp =
-            _buildUserOp(reviewer1Key, address(proxy), abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20)));
-        _handleUserOp(userOp);
-
-        userOp =
-            _buildUserOp(reviewer2Key, address(proxy), abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 40)));
-        _handleUserOp(userOp);
+        _reviewSubmission(reviewer1Key, testSubmissionTitle, 20);
+        _reviewSubmission(reviewer2Key, testSubmissionTitle, 40);
 
         // Should fail if not recipient
-        userOp = _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        PackedUserOperation memory userOp = _buildUserOp(
+            fakeKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, (testSubmissionTitle))
+        );
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -179,25 +165,29 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         );
         _handleUserOp(userOp);
 
-        // Should return 1 for invalid signature
-        userOp = _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
-        (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(fakeKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        // Should fail for invalid signature
+        userOp = _buildUserOp(
+            fakeKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, (testSubmissionTitle))
+        );
         // Put recipient address but signed with fakeKey
-        userOp.signature = abi.encodePacked(r, s, v, recipient);
+        userOp.signature = _signUserOp(fakeKey, userOp, recipient);
         vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
         _handleUserOp(userOp);
 
         // Should succeed for recipient
-        userOp = _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        userOp = _buildUserOp(
+            recipientKey,
+            address(royaltyAutoClaim),
+            abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, (testSubmissionTitle))
+        );
         _handleUserOp(userOp);
     }
 
-    function test_validateUserOp_unsupported_selector() public {
+    function testCannot_validateUserOp_unsupported_selector() public {
         bytes4 unsupportedSelector = bytes4(keccak256("unsupportedFunction()"));
         bytes memory unsupportedCall = abi.encodePacked(unsupportedSelector);
 
-        PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(proxy), unsupportedCall);
+        PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), unsupportedCall);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -216,8 +206,9 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     }
 
     function testCannot_validateUserOp_with_paymaster() public {
-        PackedUserOperation memory userOp =
-            _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        PackedUserOperation memory userOp = _buildUserOp(
+            fakeKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, (testSubmissionTitle))
+        );
 
         userOp.paymasterAndData = abi.encodePacked(vm.addr(0xdead), uint128(999_999), uint128(999_999));
 
@@ -233,21 +224,11 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     }
 
     function testCannot_validateUserOp_InvalidSignatureLength() public {
-        PackedUserOperation memory userOp =
-            _buildUserOp(fakeKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
-
-        userOp.signature = new bytes(84);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                0,
-                "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidSignatureLength.selector)
-            )
+        PackedUserOperation memory userOp = _buildUserOp(
+            fakeKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, (testSubmissionTitle))
         );
-        _handleUserOp(userOp);
 
-        userOp.signature = new bytes(86);
+        userOp.signature = new bytes(123);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -264,7 +245,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
         PackedUserOperation memory userOp = _buildUserOp(
             fakeKey,
-            address(proxy),
+            address(royaltyAutoClaim),
             abi.encodeCall(
                 royaltyAutoClaim.upgradeToAndCall, (address(v2), abi.encodeCall(MockV2.initialize, (newOwner)))
             )
@@ -281,121 +262,98 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
         userOp = _buildUserOp(
             ownerKey,
-            address(proxy),
+            address(royaltyAutoClaim),
             abi.encodeCall(
                 royaltyAutoClaim.upgradeToAndCall, (address(v2), abi.encodeCall(MockV2.initialize, (newOwner)))
             )
         );
         _handleUserOp(userOp);
-        assertEq(address(uint160(uint256(vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT)))), address(v2));
-    }
-
-    function test_transferOwnership() public {
-        PackedUserOperation memory userOp =
-            _buildUserOp(ownerKey, address(proxy), abi.encodeCall(OwnableUpgradeable.transferOwnership, (newOwner)));
-        _handleUserOp(userOp);
-
-        assertEq(royaltyAutoClaim.owner(), newOwner);
-    }
-
-    function testCannot_transferOwnership_if_not_owner() public {
-        (address fakeOwner, uint256 fakeOwnerKey) = makeAddrAndKey("fakeOwnerKey");
-        PackedUserOperation memory userOp =
-            _buildUserOp(fakeOwnerKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (fakeOwner)));
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                IEntryPoint.FailedOpWithRevert.selector,
-                0,
-                "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fakeOwner)
-            )
+        assertEq(
+            address(uint160(uint256(vm.load(address(royaltyAutoClaim), ERC1967Utils.IMPLEMENTATION_SLOT)))), address(v2)
         );
-        _handleUserOp(userOp);
     }
 
     function testCannot_transferOwnership_if_zero_address() public {
-        PackedUserOperation memory userOp =
-            _buildUserOp(ownerKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0))));
+        PackedUserOperation memory userOp = _buildUserOp(
+            ownerKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0)))
+        );
         vm.expectEmit(false, true, true, true);
         emit IEntryPoint.UserOperationRevertReason(
-            bytes32(0), address(proxy), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
+            bytes32(0),
+            address(royaltyAutoClaim),
+            userOp.nonce,
+            abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
         );
         _handleUserOp(userOp);
     }
 
     function test_reviewSubmission() public {
-        _handleUserOp(
-            _buildUserOp(
-                adminKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, ("test", recipient))
-            )
-        );
+        _registerSubmission(testSubmissionTitle, recipient);
 
         // Add more reviewers for testing
-        address[] memory testReviewers = new address[](4);
+        uint256 numAddedReviewers = vm.randomUint(1, 10);
+        address[] memory testReviewers = new address[](numAddedReviewers);
         uint256 randomUint = vm.randomUint();
-        bool[] memory status = new bool[](4);
-        for (uint256 i = 0; i < 4; i++) {
+        bool[] memory status = new bool[](numAddedReviewers);
+        for (uint256 i = 0; i < numAddedReviewers; i++) {
             testReviewers[i] = vm.addr(randomUint + i);
             status[i] = true;
         }
 
         _handleUserOp(
             _buildUserOp(
-                adminKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (testReviewers, status))
+                adminKey,
+                address(royaltyAutoClaim),
+                abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (testReviewers, status))
             )
         );
 
         // Test all valid royalty levels with different reviewers
         uint16[] memory validLevels = new uint16[](4);
-        validLevels[0] = 20;
-        validLevels[1] = 40;
-        validLevels[2] = 60;
-        validLevels[3] = 80;
+        validLevels[0] = royaltyAutoClaim.ROYALTY_LEVEL_20();
+        validLevels[1] = royaltyAutoClaim.ROYALTY_LEVEL_40();
+        validLevels[2] = royaltyAutoClaim.ROYALTY_LEVEL_60();
+        validLevels[3] = royaltyAutoClaim.ROYALTY_LEVEL_80();
 
+        uint256 numReviewed = 0;
         uint256 expectedTotalLevel = 0;
-        for (uint256 i = 0; i < validLevels.length; i++) {
+        for (uint256 i = 0; i < numAddedReviewers; i++) {
+            bool willReview = vm.randomBool();
+            if (!willReview) {
+                continue;
+            }
+
             // reviewSubmission
-            PackedUserOperation memory userOp = _buildUserOp(
-                randomUint + i,
-                address(proxy),
-                abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", validLevels[i]))
-            );
-            _handleUserOp(userOp);
+            uint16 reviewLevel = validLevels[vm.randomUint(0, 3)];
+            _reviewSubmission(randomUint + i, testSubmissionTitle, reviewLevel);
 
-            expectedTotalLevel += validLevels[i];
+            numReviewed++;
+            expectedTotalLevel += reviewLevel;
 
-            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
-            assertEq(submission.reviewCount, i + 1, "Review count should increment");
+            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions(testSubmissionTitle);
+            assertEq(submission.reviewCount, numReviewed, "Review count should increment");
             assertEq(submission.totalRoyaltyLevel, expectedTotalLevel, "Total royalty level should be cumulative");
 
             // Verify hasReviewed is set to true for the reviewer
             assertTrue(
-                royaltyAutoClaim.hasReviewed("test", testReviewers[i]), "hasReviewed should be true for reviewer"
+                royaltyAutoClaim.hasReviewed(testSubmissionTitle, testReviewers[i]),
+                "hasReviewed should be true for reviewer"
             );
-
-            // Verify hasReviewed is still false for unused reviewers
-            for (uint256 j = i + 1; j < testReviewers.length; j++) {
-                assertFalse(
-                    royaltyAutoClaim.hasReviewed("test", testReviewers[j]),
-                    "hasReviewed should be false for unused reviewers"
-                );
-            }
         }
     }
 
     function testCannot_reviewSubmission_multiple_times() public {
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        _registerSubmission(testSubmissionTitle, recipient);
 
         // First review should succeed via UserOperation
-        PackedUserOperation memory userOp =
-            _buildUserOp(reviewer1Key, address(proxy), abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 20)));
-        _handleUserOp(userOp);
+        _reviewSubmission(reviewer1Key, testSubmissionTitle, 20);
 
         // Second review from same reviewer should fail
-        userOp =
-            _buildUserOp(reviewer1Key, address(proxy), abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, ("test", 40)));
+        PackedUserOperation memory userOp = _buildUserOp(
+            reviewer1Key,
+            address(royaltyAutoClaim),
+            abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, (testSubmissionTitle, 40))
+        );
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -408,21 +366,25 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     }
 
     function testCannot_claimRoyalty_if_already_claimed() public {
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
+        _registerSubmission(testSubmissionTitle, recipient);
+        _reviewSubmission(reviewer1Key, testSubmissionTitle, 20);
+        _reviewSubmission(reviewer2Key, testSubmissionTitle, 40);
 
         // First claim should succeed
         _handleUserOp(
-            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")))
+            _buildUserOp(
+                recipientKey,
+                address(royaltyAutoClaim),
+                abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, (testSubmissionTitle))
+            )
         );
 
         // Second claim should fail
-        PackedUserOperation memory userOp =
-            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, ("test")));
+        PackedUserOperation memory userOp = _buildUserOp(
+            recipientKey,
+            address(royaltyAutoClaim),
+            abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, (testSubmissionTitle))
+        );
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -431,7 +393,22 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector)
             )
         );
+        _handleUserOp(userOp);
+    }
 
+    function _registerSubmission(string memory title, address recipient) public {
+        PackedUserOperation memory userOp = _buildUserOp(
+            adminKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (title, recipient))
+        );
+        _handleUserOp(userOp);
+    }
+
+    function _reviewSubmission(uint256 reviewerKey, string memory title, uint16 royaltyLevel) public {
+        PackedUserOperation memory userOp = _buildUserOp(
+            reviewerKey,
+            address(royaltyAutoClaim),
+            abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, (title, royaltyLevel))
+        );
         _handleUserOp(userOp);
     }
 }

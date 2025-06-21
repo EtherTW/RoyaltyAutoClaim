@@ -20,19 +20,25 @@ abstract contract AATest is Test {
         entryPoint = IEntryPoint(0x0000000071727De22E5E9d8BAf0edAc6f37da032);
     }
 
-    function _buildUserOp(uint256 privateKey, address sender, bytes memory callData)
+    function _signUserOp(uint256 privateKey, PackedUserOperation memory userOp, address claimedSigner)
         internal
         view
+        returns (bytes memory)
+    {
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        return abi.encodePacked(r, s, v, claimedSigner);
+    }
+
+    function _buildUserOp(uint256 privateKey, address sender, bytes memory callData)
+        internal
         returns (PackedUserOperation memory)
     {
         PackedUserOperation memory userOp = _createUserOp();
         userOp.sender = sender;
         userOp.nonce = entryPoint.getNonce(sender, 0);
         userOp.callData = callData;
-        (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
-        address signer = vm.addr(privateKey);
-        userOp.signature = abi.encodePacked(r, s, v, signer);
+        userOp.signature = _signUserOp(privateKey, userOp, vm.addr(privateKey));
         return userOp;
     }
 
