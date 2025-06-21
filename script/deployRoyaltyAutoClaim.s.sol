@@ -6,25 +6,22 @@ import {RoyaltyAutoClaim} from "../src/RoyaltyAutoClaim.sol";
 import {RoyaltyAutoClaimProxy} from "../src/RoyaltyAutoClaimProxy.sol";
 
 /*
-    forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url $sepolia --broadcast --verify
+    forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url $NETWORK --broadcast --verify
 */
 
 contract DeployRoyaltyAutoClaimScript is Script {
     function run() public {
-        uint256 privateKey = vm.envUint("PRIVATE_KEY");
+        address deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
+        console.log("Deployer", deployer);
 
-        address owner = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // anvil account 0
-        address admin = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // anvil account 0
-        address token = 0x78807f434dE64b9f6CeC488ab633150f13c285d9; // mock token
+        address owner = 0xeDc1c67E682DD9beF39b233D0a4b909E35156909;
+        address admin = 0xeDc1c67E682DD9beF39b233D0a4b909E35156909;
+        address token = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI
 
-        address[] memory reviewers = new address[](5);
-        reviewers[0] = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266; // anvil account 0
-        reviewers[1] = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; // anvil account 1
-        reviewers[2] = 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC; // anvil account 2
-        reviewers[3] = 0x90F79bf6EB2c4f870365E785982E1f101E93b906; // anvil account 3
-        reviewers[4] = 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65; // anvil account 4
+        address[] memory reviewers = new address[](1);
+        reviewers[0] = 0xeDc1c67E682DD9beF39b233D0a4b909E35156909;
 
-        vm.startBroadcast(privateKey);
+        vm.startBroadcast(deployer);
 
         RoyaltyAutoClaim royaltyAutoClaim = new RoyaltyAutoClaim();
         RoyaltyAutoClaimProxy proxy = new RoyaltyAutoClaimProxy(

@@ -22,6 +22,15 @@ forge inspect ./src/RoyaltyAutoClaim.sol:RoyaltyAutoClaim storage
 forge clean
 ```
 
+### Contract Deployment
+
+```
+forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url RPC_URL --broadcast --verify
+```
+
+- Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
+- Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
+
 ## Frontend
 
 - Remember to set up .env in frontend
