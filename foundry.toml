@@ -5,4 +5,9 @@ libs = ["lib"]
 optimizer = true
 optimizer-runs = 200
 
+
+fs_permissions = [
+    { access = "read", path = "./proof.json" },
+]
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

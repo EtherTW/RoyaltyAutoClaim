@@ -31,10 +31,19 @@ forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url RPC_URL --broadcast -
 - Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
 - Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
 
+### Feat: Email Registration
+
+- Blueprint RoyaltyAutoClaim: https://registry.zk.email/a8a89855-6453-43e2-ae0a-867c34e0e32b/versions
+- `circuits/` directory is from `Download Files > circuit.zip`
+- Execute `deployEmailVerifier.s.sol` to deploy verifier on base sepolia
+- Execute `make gen-proof` to generate proof.json
+- Execute `forge test test/EmailVerifier.t.sol --rpc-url https://sepolia.base.org -vvvv` to test the verifier on base sepolia
+
+
 ## Frontend
 
 - Remember to set up .env in frontend
-- If the contract has been updated, remember to run `forge build` before `pnpm generate-types`
+- If the contract has been updated, remember to run `forge build` before `bun run generate-types`
 - We use Pimlico bundler in local devnet but use Alchemy bundler on Sepolia and Mainnet. Check out frontend/src/config.ts BUNDLER_URL.
 - For icon, use [lucide-vue-next](https://lucide.dev/icons)
 - For Component, use [shadcn-vue](https://www.shadcn-vue.com/docs/components/accordion.html)
@@ -42,15 +51,15 @@ forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url RPC_URL --broadcast -
 
 ```
 cd frontend
-pnpm install
-pnpm generate-types
+bun run install
+bun run generate-types
 
 docker compose up -d
-pnpm deploy-contracts:local
+bun run deploy-contracts:local
 
-pnpm dev
-pnpm test test/e2e-local.test.ts
+bun run dev
+bun run test test/e2e-local.test.ts
 
-pnpm test <path>
-pnpm vitest -t <test_name>
+bun run test <path>
+bun run vitest -t <test_name>
 ```

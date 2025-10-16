@@ -1,0 +1,103 @@
+Delivered-To: chnejohnson@gmail.com
+Received: by 2002:a05:7022:4197:b0:9a:f615:444c with SMTP id i23csp6776005dli;
+        Fri, 17 Oct 2025 08:23:17 -0700 (PDT)
+X-Received: by 2002:a05:6512:3e16:b0:591:c8de:467b with SMTP id 2adb3069b0e04-591d855daa3mr1600335e87.40.1760714597585;
+        Fri, 17 Oct 2025 08:23:17 -0700 (PDT)
+ARC-Seal: i=1; a=rsa-sha256; t=1760714597; cv=none;
+        d=google.com; s=arc-20240605;
+        b=N/D5dwrJ7s0bZqdJUIbNygFAoSvEHVQSjjLPlPv5vSFqz4OqnMXLaNw18wpKVLIAVx
+         bEn4pLMXA+7KYUHU+E515Exw8fdQ368AfG9wXRFfxjvnrc1wB+KIBvrpEqxR3bKHMWsg
+         d9MKT6Vt7Iz+9y14jpjW96KxiYxakki5jdSIjx9ESGUz55sCeciSAnxseS1QpAmr8G7J
+         id8HEb0dkUvL4exxqdE3KvtyejRFsQXzlupyt98RzS9xzRrP1WOBerzMedThoBJrTpnH
+         XUvIOIAS5kUzEsddQZ0s6LH5ZWCpX+fkl8HP8P1cxHv1OSoHTIdAIx5NpPGkyZWNayGe
+         /ZEw==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=7caJJLFwqVl/mxXvuzV9HmB2U3+JfbSuEz+dnfJsoCE=;
+        fh=T7nKoZxbjFeqY0YU6esvoK9zrDLdOlSPtvjkKN1NpMs=;
+        b=JEsbWPdi+C8D1IS+JJ/mckMDjEUcUMAVJcJSOGZuBRWJF+WuH/DJVjGdZD1eQ7ONUV
+         iG03SJXDOEXKwwwOuZXgxtiAwRIdxUNL3HiGN4R3yOnNu5uZQiS7IuH+MOYCwFJCkhoB
+         6MhCOc9QvXxdDQ6hwOMA/O2Fzz1xP8g4s9L1foryiMRpo4Vwfq4h50p1l6hYk3W3+TL6
+         xc6VhGYoZobB5+x29K3ZUbvl6R/tB9lxoMxXkTrI2ZayBEPSu9IQlFTQt0rlEVVg8Quo
+         a3aKGPci7h6+Y4mynN0KsBzoDWy5cyHgwJsPySLsbcPZC+fCWPrQemMqY1wZcqYbM/fn
+         OzKg==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b="IlXk/OoR";
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <johnson86tw@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 38308e7fff4ca-377a91b54ffsor220281fa.1.2025.10.17.08.23.17
+        for <chnejohnson@gmail.com>
+        (Google Transport Security);
+        Fri, 17 Oct 2025 08:23:17 -0700 (PDT)
+Received-SPF: pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b="IlXk/OoR";
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1760714597; x=1761319397; dara=google.com;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=7caJJLFwqVl/mxXvuzV9HmB2U3+JfbSuEz+dnfJsoCE=;
+        b=IlXk/OoRihizPLQn2EqUX9DmpI46owVvuBkHYt2/sWNDh799rxuPKjUBMmk2bM5u/r
+         AhgkJ+QsbynJ03wAhJr/UBzYKvP6lrUotR3YAj+12ud+uljlaR8KRlrohX8eOnpO6bzk
+         RGms5w1ekzr0sPSlVdtD2qMKwf0Bu0l+YDNIyVHiuLT2LhRG6iWTwx9Cltq2+sr5bUzH
+         6Bo5QZb9heVmNY7tIqKDiox+bwFC0XWyB3tec8zikHeiGSqoTe/TJLoWWVVVh2+ZLv43
+         h0PeVddbd4pjwD8r4/KSVWgkcHSjJOQZxEFlAD68qXVhZfYoBx9NyemRM1f+dEtrXI8Y
+         0/bA==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1760714597; x=1761319397;
+        h=to:subject:message-id:date:from:mime-version:x-gm-message-state
+         :from:to:cc:subject:date:message-id:reply-to;
+        bh=7caJJLFwqVl/mxXvuzV9HmB2U3+JfbSuEz+dnfJsoCE=;
+        b=WwSt8/9MK/4YWrSV6V+VTT59s24hYXwHXf7dnX+peG2xbaPHf2Tyz+xs0qelzky7DB
+         OrPREDdMq9C0BjiaqlQoVcPU1WZh7Ju65Lp1w1bGqujfBW1PYYX7061Tz4/NmbZdvzXh
+         J4S3HhCa3V3bpl5UwZPcLrVGnHjlGDzR4nQ/5FmL6Tr9HQ+ukQ5zvZj7leQgF9ArGUuk
+         vqfz728DhQkkqQg6Ypa2gEx9fp6kXDpyz27O836IvBksfrFgKbeK7nN75JSe1qG1RWyR
+         l7VLG7H0yIpicKSY44L3P3euzkV+MACfb+ezbjFyk4TvU0b75KtWrVvODNpi2RWkIkV7
+         Mgug==
+X-Gm-Message-State: AOJu0Yw1ie3Wsv8OsDsLWWPCHHGvfFsmQ6391p24//Xetc6OXVsez/kj
+	bS5FWGpi7Gv8ANHUXOF3QdIUaH5FP+C1KibYyxJn7/7+zgD/SVhKrp7ZT8OLCdHBVbKOYjGVJb3
+	FdTMdvFNcBSK4C+Pz8Nhsxt8tDmRXOAjIzTmm
+X-Gm-Gg: ASbGncvRQa579o7OKc2QPPfr6bwU6PiV5N17Dz2zO2YbNIYdCBqNm+cOy/xQkvDil3L
+	lBp+Ynq2MeXhVjogFB+n0slXLMC24X3wtSwZBDjuAA3eNJtdJCsgvNIAYcZfONxdh7E/i+Uz+Yl
+	kyOW3BJf8aZ3N6wjbooG3omsBjQmY8MtznTgWF6nBtx5ube/p+go68gn/P1qtQ89fb36DfImE71
+	5w1NvvXkxllJvAckCsoVGJNSl8MkGA0i49J7rQgSe+DniAnb1XNHke5bu0MfXlMIqmzIB85LmlE
+	ZMAKWYgAcVPqT9jrWWfeIIEG2mE=
+X-Google-Smtp-Source: AGHT+IEd/LpErn4IurAnIh4BxiUtASqjoSN5O/0bA54A6U90jwjUwIsrc3UReiBFbXaEWI5xAB5tMnWM+6Z0Q5aojkw=
+X-Received: by 2002:a05:6512:3d94:b0:57d:1082:e103 with SMTP id
+ 2adb3069b0e04-591d84f9869mr1702320e87.16.1760714596588; Fri, 17 Oct 2025
+ 08:23:16 -0700 (PDT)
+MIME-Version: 1.0
+From: Johnson <johnson86tw@gmail.com>
+Date: Fri, 17 Oct 2025 23:23:05 +0800
+X-Gm-Features: AS18NWClK32zaYaWLjQ7vepAKtHLr2himuQJEmX0GcvBwI8Zr2vQZYnDCHI_tzY
+Message-ID: <CAAcMZv-A7QNQNyKyG9CSXf3RH6KFDP04rq62Axg0_YaREQmH+Q@mail.gmail.com>
+Subject: =?UTF-8?B?56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOiDpmrHnp4HmsaA=?=
+	=?UTF-8?B?55qE6Kit6KiIIGJ5IGNjIGxpYW5n?=
+To: chnejohnson@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000149f5606415c508b"
+
+--000000000000149f5606415c508b
+Content-Type: text/plain; charset="UTF-8"
+
+ID: 0xe62e4f74f79eb4f6df45e327a174d995efc52fd300c2d6c2593da87a7874bf7c
+New Recipient: 0x9e8f8C3Ad87dBE7ACFFC5f5800e7433c8dF409F2
+Memo: Lorem Ipsum is simply dummy text of the printing and typesetting
+industry.
+
+--000000000000149f5606415c508b
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">ID: 0xe62e4f74f79eb4f6df45e327a174d995efc52fd300c2d6c2593d=
+a87a7874bf7c =C2=A0<br>New Recipient:=C2=A00x9e8f8C3Ad87dBE7ACFFC5f5800e743=
+3c8dF409F2 =C2=A0<br>Memo:=C2=A0Lorem Ipsum is simply dummy text of the pri=
+nting and typesetting industry.</div>
+
+--000000000000149f5606415c508b--

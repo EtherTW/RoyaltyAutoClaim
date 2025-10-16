@@ -16,3 +16,5 @@ docs/
 report
 lcov.info
 broadcast
+
+node_modules

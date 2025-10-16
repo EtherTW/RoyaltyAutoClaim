@@ -12,7 +12,7 @@ const account0 = new Wallet(ACCOUNT_0_PRIVATE_KEY, client)
 
 describe('RoyaltyAutoClaim.ts with mock contract', () => {
 	/*
-		pnpm vitest run -t "should include re-registered submissions after revocation"
+		bun run vitest run -t "should include re-registered submissions after revocation"
 	*/
 	it('should include re-registered submissions after revocation', async () => {
 		const title = faker.lorem.word()
@@ -109,7 +109,7 @@ describe('RoyaltyAutoClaim.ts on local network', () => {
 	})
 
 	/*
-		pnpm vitest run -t "cannot show revoked submission"
+		bun run vitest run -t "cannot show revoked submission"
 	*/
 	it('cannot show revoked submission', async () => {
 		const title = faker.lorem.word()
@@ -122,7 +122,7 @@ describe('RoyaltyAutoClaim.ts on local network', () => {
 	})
 
 	/*
-		pnpm vitest run -t "should include re-registered submissions after revocation"
+		bun run vitest run -t "should include re-registered submissions after revocation"
 	*/
 	it('should include re-registered submissions after revocation', async () => {
 		const title = faker.lorem.word()

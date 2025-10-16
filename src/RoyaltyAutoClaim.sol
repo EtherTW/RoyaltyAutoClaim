@@ -11,6 +11,8 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {StringUtils} from "@zk-email/contracts/utils/StringUtils.sol";
+import {IRegistrationVerifier} from "./RegistrationVerifier.sol";
 
 interface IRoyaltyAutoClaim {
     // Owner functions
@@ -22,9 +24,25 @@ interface IRoyaltyAutoClaim {
 
     // Admin functions
     function updateReviewers(address[] memory _reviewers, bool[] memory _status) external;
-    function registerSubmission(string memory title, address royaltyRecipient) external;
-    function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) external;
     function revokeSubmission(string memory title) external;
+
+    // Registration & Recipient Update functions
+    function registerSubmission(
+        string memory title,
+        address royaltyRecipient,
+        uint256[2] calldata _pA,
+        uint256[2][2] calldata _pB,
+        uint256[2] calldata _pC,
+        uint256[12] calldata _pubSignals
+    ) external;
+    function updateRoyaltyRecipient(
+        string memory title,
+        address newRoyaltyRecipient,
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256[12] memory signals
+    ) external;
 
     // Reviewer functions
     function reviewSubmission(string memory title, uint16 royaltyLevel) external;
@@ -80,6 +98,7 @@ interface IRoyaltyAutoClaim {
         address admin;
         address token;
         mapping(address => bool) reviewers;
+        IRegistrationVerifier verifier;
     }
 
     struct Submission {
@@ -106,6 +125,7 @@ interface IRoyaltyAutoClaim {
 contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradeable, IAccount, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeTransferLib for address;
+    using StringUtils for *;
 
     uint8 public constant ROYALTY_LEVEL_20 = 20;
     uint8 public constant ROYALTY_LEVEL_40 = 40;
@@ -132,10 +152,13 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     receive() external payable {}
 
-    function initialize(address _owner, address _admin, address _token, address[] memory _reviewers)
-        public
-        initializer
-    {
+    function initialize(
+        address _owner,
+        address _admin,
+        address _token,
+        address[] memory _reviewers,
+        IRegistrationVerifier _verifier
+    ) public initializer {
         require(_owner != address(0), ZeroAddress());
         require(_admin != address(0), ZeroAddress());
         require(_token != address(0), ZeroAddress());
@@ -147,6 +170,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         for (uint256 i = 0; i < _reviewers.length; i++) {
             $.configs.reviewers[_reviewers[i]] = true;
         }
+        $.configs.verifier = _verifier;
     }
 
     // ================================ Modifier ================================
@@ -243,28 +267,90 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         }
     }
 
-    function registerSubmission(string memory title, address royaltyRecipient) public onlyAdminOrEntryPoint {
-        require(bytes(title).length > 0, EmptyTitle());
-        require(royaltyRecipient != address(0), ZeroAddress());
-        require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
+    function revokeSubmission(string memory title) public onlyAdminOrEntryPoint {
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
+        delete _getMainStorage().submissions[title];
+        emit SubmissionRevoked(title, title);
+    }
+
+    // ================================ Registration & Recipient Update ================================
+
+    function registerSubmission(
+        string memory title,
+        address royaltyRecipient,
+        uint256[2] calldata a,
+        uint256[2][2] calldata b,
+        uint256[2] calldata c,
+        uint256[12] calldata signals
+    ) public {
+        if (msg.sender == entryPoint()) {
+            _registerSubmission(title, royaltyRecipient);
+        } else {
+            this.verifyRegistration(title, royaltyRecipient, a, b, c, signals);
+            _registerSubmission(title, royaltyRecipient);
+        }
+    }
+
+    function _registerSubmission(string memory title, address royaltyRecipient) internal {
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].royaltyRecipient = royaltyRecipient;
         $.submissions[title].status = SubmissionStatus.Registered;
         emit SubmissionRegistered(title, royaltyRecipient, title);
     }
 
-    function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) public onlyAdminOrEntryPoint {
-        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
-        require(newRoyaltyRecipient != submissions(title).royaltyRecipient, SameAddress());
+    function verifyRegistration(
+        string memory title,
+        address royaltyRecipient,
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256[12] memory signals
+    ) external view {
+        require(bytes(title).length > 0, EmptyTitle());
+        require(royaltyRecipient != address(0), ZeroAddress());
+        require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
+
+        MainStorage storage $ = _getMainStorage();
+        $.configs.verifier
+            .verify(title, royaltyRecipient, IRegistrationVerifier.Intention.REGISTRATION, a, b, c, signals);
+    }
+
+    function updateRoyaltyRecipient(
+        string memory title,
+        address newRoyaltyRecipient,
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256[12] memory signals
+    ) public {
+        if (msg.sender == entryPoint()) {
+            _updateRoyaltyRecipient(title, newRoyaltyRecipient);
+        } else {
+            this.verifyRecipientUpdate(title, newRoyaltyRecipient, a, b, c, signals);
+            _updateRoyaltyRecipient(title, newRoyaltyRecipient);
+        }
+    }
+
+    function _updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) internal {
         address oldRecipient = _getMainStorage().submissions[title].royaltyRecipient;
         _getMainStorage().submissions[title].royaltyRecipient = newRoyaltyRecipient;
         emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient, title);
     }
 
-    function revokeSubmission(string memory title) public onlyAdminOrEntryPoint {
+    function verifyRecipientUpdate(
+        string memory title,
+        address newRoyaltyRecipient,
+        uint256[2] memory a,
+        uint256[2][2] memory b,
+        uint256[2] memory c,
+        uint256[12] memory signals
+    ) external view {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
-        delete _getMainStorage().submissions[title];
-        emit SubmissionRevoked(title, title);
+        require(newRoyaltyRecipient != submissions(title).royaltyRecipient, SameAddress());
+
+        MainStorage storage $ = _getMainStorage();
+        $.configs.verifier
+            .verify(title, newRoyaltyRecipient, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, a, b, c, signals);
     }
 
     // ================================ Reviewer ================================
@@ -336,11 +422,48 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             revert ForbiddenPaymaster();
         }
 
+        bytes4 selector = bytes4(userOp.callData[0:4]);
+
+        // ========================================= ZK Proof =========================================
+
+        if (selector == this.registerSubmission.selector) {
+            (
+                string memory title,
+                address royaltyRecipient,
+                uint256[2] memory a,
+                uint256[2][2] memory b,
+                uint256[2] memory c,
+                uint256[12] memory signals
+            ) = abi.decode(userOp.callData[4:], (string, address, uint256[2], uint256[2][2], uint256[2], uint256[12]));
+
+            try this.verifyRegistration(title, royaltyRecipient, a, b, c, signals) {
+                return 0;
+            } catch {
+                return SIG_VALIDATION_FAILED;
+            }
+        } else if (selector == this.updateRoyaltyRecipient.selector) {
+            (
+                string memory title,
+                address newRoyaltyRecipient,
+                uint256[2] memory a,
+                uint256[2][2] memory b,
+                uint256[2] memory c,
+                uint256[12] memory signals
+            ) = abi.decode(userOp.callData[4:], (string, address, uint256[2], uint256[2][2], uint256[2], uint256[12]));
+
+            try this.verifyRecipientUpdate(title, newRoyaltyRecipient, a, b, c, signals) {
+                return 0;
+            } catch {
+                return SIG_VALIDATION_FAILED;
+            }
+        }
+
+        // ========================================= UserOp Signature Needed =========================================
+
         if (userOp.signature.length != 85) {
             revert InvalidSignatureLength();
         }
 
-        bytes4 selector = bytes4(userOp.callData[0:4]);
         bytes memory actualSignature = bytes(userOp.signature[:65]);
         address appendedSigner = address(bytes20(userOp.signature[65:]));
         address signer = ECDSA.recover(ECDSA.toEthSignedMessageHash(userOpHash), actualSignature);
@@ -358,8 +481,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             }
             return 0;
         } else if (
-            selector == this.updateReviewers.selector || selector == this.registerSubmission.selector
-                || selector == this.updateRoyaltyRecipient.selector || selector == this.revokeSubmission.selector
+            selector == this.updateReviewers.selector || selector == this.updateRoyaltyRecipient.selector
+                || selector == this.revokeSubmission.selector
         ) {
             // ========================================= Admin =========================================
 
