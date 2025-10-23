@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.28;
+pragma solidity 0.8.30;
 
-import "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
-import "@zk-email/contracts/utils/StringUtils.sol";
-import "../circuits/verifier.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
+import {StringUtils} from "@zk-email/contracts/utils/StringUtils.sol";
+import {Verifier} from "../circuits/verifier.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 interface IRegistrationVerifier {
     enum Intention {
@@ -26,9 +26,9 @@ interface IRegistrationVerifier {
 contract RegistrationVerifier is IRegistrationVerifier, Ownable {
     using StringUtils for *;
 
-    string public constant domain = "gmail.com";
-    string public constant registrationPrefix = "56K66KqN5bey5pS25Yiw5oqV56i/"; // 確認已收到投稿
-    string public constant recipientUpdatePrefix = "56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2A"; // 確認此投稿更改稿費收取地址
+    string public constant DOMAIN = "gmail.com";
+    string public constant REGISTRATION_PREFIX = "56K66KqN5bey5pS25Yiw5oqV56i/"; // 確認已收到投稿
+    string public constant RECIPIENT_UPDATE_PREFIX = "56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2A"; // 確認此投稿更改稿費收取地址
 
     IDKIMRegistry public dkimRegistry;
     Verifier public verifier;
@@ -51,7 +51,7 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
     ) external view {
         // verify RSA
         bytes32 ph = bytes32(signals[0]);
-        require(dkimRegistry.isDKIMPublicKeyHashValid(domain, ph), "RSA public key incorrect");
+        require(dkimRegistry.isDKIMPublicKeyHashValid(DOMAIN, ph), "RSA public key incorrect");
 
         // verify proof
         require(verifier.verifyProof(a, b, c, signals), "Invalid proof");
@@ -64,9 +64,9 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
 
         // verify subject prefix
         if (intention == Intention.REGISTRATION) {
-            require(subjectPrefix.stringEq(registrationPrefix), "Subject prefix mismatch for registration");
+            require(subjectPrefix.stringEq(REGISTRATION_PREFIX), "Subject prefix mismatch for registration");
         } else if (intention == Intention.RECIPIENT_UPDATE) {
-            require(subjectPrefix.stringEq(recipientUpdatePrefix), "Subject prefix mismatch for recipient update");
+            require(subjectPrefix.stringEq(RECIPIENT_UPDATE_PREFIX), "Subject prefix mismatch for recipient update");
         } else {
             revert("Invalid intention");
         }
