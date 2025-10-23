@@ -6,6 +6,10 @@ import "../../src/RoyaltyAutoClaimProxy.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import "../utils/AATest.t.sol";
 import {MockToken} from "../../src/MockToken.sol";
+import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
+import {Verifier} from "../../circuits/verifier.sol";
+import {RegistrationVerifier} from "../../src/RegistrationVerifier.sol";
+import {MockDKIMRegistry} from "../utils/MockDKIMRegistry.sol";
 
 /// @dev for testing internal functions
 contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
@@ -43,6 +47,9 @@ abstract contract BaseTest is AATest {
 
     address[] initialReviewers = new address[](2);
 
+    IDKIMRegistry public mockDKIMRegistry;
+    Verifier public verifier;
+    RegistrationVerifier public registrationVerifier;
     RoyaltyAutoClaim impl;
     RoyaltyAutoClaimProxy proxy;
     RoyaltyAutoClaim royaltyAutoClaim;
@@ -80,9 +87,16 @@ abstract contract BaseTest is AATest {
 
         harness = new RoyaltyAutoClaimHarness();
 
+        mockDKIMRegistry = new MockDKIMRegistry();
+        verifier = new Verifier();
+        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, verifier, "johnson86tw");
+
         impl = new RoyaltyAutoClaim();
         proxy = new RoyaltyAutoClaimProxy(
-            address(impl), abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(token), initialReviewers))
+            address(impl),
+            abi.encodeCall(
+                RoyaltyAutoClaim.initialize, (owner, admin, address(token), initialReviewers, registrationVerifier)
+            )
         );
 
         bytes32 v = vm.load(address(proxy), ERC1967Utils.IMPLEMENTATION_SLOT);

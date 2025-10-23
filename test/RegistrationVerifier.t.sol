@@ -2,21 +2,17 @@
 pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
-import "@zk-email/contracts/utils/StringUtils.sol";
-import "../src/RegistrationVerifier.sol";
-import "../circuits/verifier.sol";
+import {StringUtils} from "@zk-email/contracts/utils/StringUtils.sol";
+import {IRegistrationVerifier, RegistrationVerifier} from "../src/RegistrationVerifier.sol";
+import {MockDKIMRegistry} from "./utils/MockDKIMRegistry.sol";
+import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
+import {Verifier} from "../circuits/verifier.sol";
 
 /*
 
-forge test test/RegistrationVerifier.t.sol -vvvv --skip test/RoyaltyAutoClaim/* scripts
+forge test test/RegistrationVerifier.t.sol -vvvv --skip test/RoyaltyAutoClaim/*
 
 */
-
-contract MockDKIMRegistry is IDKIMRegistry {
-    function isDKIMPublicKeyHashValid(string memory, bytes32) external pure returns (bool) {
-        return true;
-    }
-}
 
 contract RegistrationVerifierTest is Test {
     using StringUtils for *;
@@ -34,7 +30,7 @@ contract RegistrationVerifierTest is Test {
     }
 
     /**
-     * forge test --mc RegistrationVerifierTest --mt test_verify -vvvv --skip test/RoyaltyAutoClaim/* scripts
+     * forge test --mc RegistrationVerifierTest --mt test_verify -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_verify() public view {
         (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
@@ -47,7 +43,7 @@ contract RegistrationVerifierTest is Test {
     }
 
     /**
-     * forge test --mc RegistrationVerifierTest --mt test_verifyProof -vvvv --skip test/RoyaltyAutoClaim/* scripts
+     * forge test --mc RegistrationVerifierTest --mt test_verifyProof -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_verifyProof() public view {
         (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
@@ -56,7 +52,7 @@ contract RegistrationVerifierTest is Test {
     }
 
     /**
-     * forge test --mc RegistrationVerifierTest --mt test_parseSignals -vvvv --skip test/RoyaltyAutoClaim/* scripts
+     * forge test --mc RegistrationVerifierTest --mt test_parseSignals -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_parseSignals() public view {
         (,,, uint256[12] memory signals) = parseJsonProof();

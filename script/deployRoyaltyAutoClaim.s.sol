@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import {Script, console} from "forge-std/Script.sol";
 import {RoyaltyAutoClaim} from "../src/RoyaltyAutoClaim.sol";
 import {RoyaltyAutoClaimProxy} from "../src/RoyaltyAutoClaimProxy.sol";
+import {IRegistrationVerifier} from "../src/RegistrationVerifier.sol";
 
 /*
     forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url $NETWORK --broadcast --verify
@@ -21,11 +22,14 @@ contract DeployRoyaltyAutoClaimScript is Script {
         address[] memory reviewers = new address[](1);
         reviewers[0] = 0xeDc1c67E682DD9beF39b233D0a4b909E35156909;
 
+        IRegistrationVerifier verifier = IRegistrationVerifier(0xA33C6B2a730a1a70539AFC58aE6d7A6e154dC161); // on base sepolia
+
         vm.startBroadcast(deployer);
 
         RoyaltyAutoClaim royaltyAutoClaim = new RoyaltyAutoClaim();
         RoyaltyAutoClaimProxy proxy = new RoyaltyAutoClaimProxy(
-            address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, token, reviewers))
+            address(royaltyAutoClaim),
+            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, token, reviewers, verifier))
         );
 
         console.log("RoyaltyAutoClaim implementation at:", address(royaltyAutoClaim));
