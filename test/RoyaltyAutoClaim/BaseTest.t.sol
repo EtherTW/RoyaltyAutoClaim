@@ -6,10 +6,8 @@ import "../../src/RoyaltyAutoClaimProxy.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import "../utils/AATest.t.sol";
 import {MockToken} from "../../src/MockToken.sol";
-import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
-import {Verifier} from "../../circuits/verifier.sol";
-import {RegistrationVerifier} from "../../src/RegistrationVerifier.sol";
-import {MockDKIMRegistry} from "../utils/MockDKIMRegistry.sol";
+import {ZKUtils} from "../utils/ZKUtils.sol";
+import {MockRegistrationVerifier} from "../utils/MockRegistrationVerifier.sol";
 
 /// @dev for testing internal functions
 contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
@@ -28,6 +26,8 @@ contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
 }
 
 abstract contract BaseTest is AATest {
+    using ZKUtils for *;
+
     address fake;
     uint256 fakeKey;
     address owner;
@@ -47,9 +47,7 @@ abstract contract BaseTest is AATest {
 
     address[] initialReviewers = new address[](2);
 
-    IDKIMRegistry public mockDKIMRegistry;
-    Verifier public verifier;
-    RegistrationVerifier public registrationVerifier;
+    IRegistrationVerifier public mockRegistrationVerifier;
     RoyaltyAutoClaim impl;
     RoyaltyAutoClaimProxy proxy;
     RoyaltyAutoClaim royaltyAutoClaim;
@@ -87,15 +85,13 @@ abstract contract BaseTest is AATest {
 
         harness = new RoyaltyAutoClaimHarness();
 
-        mockDKIMRegistry = new MockDKIMRegistry();
-        verifier = new Verifier();
-        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, verifier, "johnson86tw");
+        mockRegistrationVerifier = new MockRegistrationVerifier();
 
         impl = new RoyaltyAutoClaim();
         proxy = new RoyaltyAutoClaimProxy(
             address(impl),
             abi.encodeCall(
-                RoyaltyAutoClaim.initialize, (owner, admin, address(token), initialReviewers, registrationVerifier)
+                RoyaltyAutoClaim.initialize, (owner, admin, address(token), initialReviewers, mockRegistrationVerifier)
             )
         );
 
@@ -123,5 +119,17 @@ abstract contract BaseTest is AATest {
         vm.label(address(impl), "impl");
         vm.label(address(royaltyAutoClaim), "royaltyAutoClaim");
         vm.label(address(harness), "harness");
+    }
+
+    function _registerSubmission(string memory _title, address _recipient) internal {
+        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
+            ZKUtils.parseJsonProof();
+        royaltyAutoClaim.registerSubmission(_title, _recipient, a, b, c, signals);
+    }
+
+    function _updateRoyaltyRecipient(string memory _title, address _newRoyaltyRecipient) internal {
+        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
+            ZKUtils.parseJsonProof();
+        royaltyAutoClaim.updateRoyaltyRecipient(_title, _newRoyaltyRecipient, a, b, c, signals);
     }
 }

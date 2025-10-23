@@ -7,6 +7,7 @@ import {IRegistrationVerifier, RegistrationVerifier} from "../src/RegistrationVe
 import {MockDKIMRegistry} from "./utils/MockDKIMRegistry.sol";
 import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
 import {Verifier} from "../circuits/verifier.sol";
+import {ZKUtils} from "./utils/ZKUtils.sol";
 
 /*
 
@@ -16,6 +17,7 @@ forge test test/RegistrationVerifier.t.sol -vvvv --skip test/RoyaltyAutoClaim/*
 
 contract RegistrationVerifierTest is Test {
     using StringUtils for *;
+    using ZKUtils for *;
 
     IDKIMRegistry public dkimRegistry;
     IDKIMRegistry public mockDKIMRegistry;
@@ -34,7 +36,7 @@ contract RegistrationVerifierTest is Test {
      */
     function test_verify() public view {
         (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
-            parseJsonProof();
+            ZKUtils.parseJsonProof();
 
         string memory title = unicode"隱私池的設計 by cc liang";
         address recipient = 0xd78B5013757Ea4A7841811eF770711e6248dC282;
@@ -47,7 +49,7 @@ contract RegistrationVerifierTest is Test {
      */
     function test_verifyProof() public view {
         (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
-            parseJsonProof();
+            ZKUtils.parseJsonProof();
         verifier.verifyProof(a, b, c, signals);
     }
 
@@ -55,7 +57,7 @@ contract RegistrationVerifierTest is Test {
      * forge test --mc RegistrationVerifierTest --mt test_parseSignals -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_parseSignals() public view {
-        (,,, uint256[12] memory signals) = parseJsonProof();
+        (,,, uint256[12] memory signals) = ZKUtils.parseJsonProof();
 
         (
             bytes32 pubkeyHash,
@@ -72,32 +74,5 @@ contract RegistrationVerifierTest is Test {
         console.log("subjectPrefix:", subjectPrefix);
         console.log("id:", id);
         console.log("recipient:", recipient);
-    }
-
-    function parseJsonProof()
-        internal
-        view
-        returns (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals)
-    {
-        string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/proof.json");
-        string memory json = vm.readFile(path);
-
-        // Parse each array element
-        uint256[] memory aArray = vm.parseJsonUintArray(json, ".[0]");
-        a = [aArray[0], aArray[1]];
-
-        // For nested b array, parse each sub-array
-        uint256[] memory b0Array = vm.parseJsonUintArray(json, ".[1][0]");
-        uint256[] memory b1Array = vm.parseJsonUintArray(json, ".[1][1]");
-        b = [[b0Array[0], b0Array[1]], [b1Array[0], b1Array[1]]];
-
-        uint256[] memory cArray = vm.parseJsonUintArray(json, ".[2]");
-        c = [cArray[0], cArray[1]];
-
-        uint256[] memory signalsArray = vm.parseJsonUintArray(json, ".[3]");
-        for (uint256 i = 0; i < signalsArray.length; i++) {
-            signals[i] = signalsArray[i];
-        }
     }
 }
