@@ -1,0 +1,20 @@
+{
+  "lib/account-abstraction": {
+    "tag": {
+      "name": "v0.8.0",
+      "rev": "4cbc06072cdc19fd60f285c5997f4f7f57a588de"
+    }
+  },
+  "lib/forge-std": {
+    "rev": "b93cf4bc34ff214c099dc970b153f85ade8c9f66"
+  },
+  "lib/openzeppelin-contracts-upgradeable": {
+    "rev": "fa525310e45f91eb20a6d3baa2644be8e0adba31"
+  },
+  "lib/solady": {
+    "rev": "cc133a9d0b1660a27afc1a3b25cf8209e7b8d9e9"
+  },
+  "lib/zk-email-verify": {
+    "rev": "b193cf0c760456b837b2bbcf7b2c72d5bb3f43c3"
+  }
+}

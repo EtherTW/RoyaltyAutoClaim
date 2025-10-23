@@ -56,7 +56,6 @@ abstract contract BaseTest is AATest {
     IERC20 newToken;
     RoyaltyAutoClaimHarness harness;
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-    address constant ENTRY_POINT = 0x0000000071727De22E5E9d8BAf0edAc6f37da032;
 
     function setUp() public virtual override {
         super.setUp();

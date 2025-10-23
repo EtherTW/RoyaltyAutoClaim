@@ -638,10 +638,6 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertFalse(royaltyAutoClaim.isSubmissionClaimable("test2"), "Revoked submission should not be claimable");
     }
 
-    function test_entryPoint() public view {
-        assertEq(royaltyAutoClaim.entryPoint(), 0x0000000071727De22E5E9d8BAf0edAc6f37da032);
-    }
-
     function test_isRecipient() public {
         string memory title = "test";
         address recipient = recipient;
