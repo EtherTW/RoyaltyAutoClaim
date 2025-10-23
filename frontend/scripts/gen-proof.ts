@@ -3,7 +3,12 @@ import fs from 'fs/promises'
 import path from 'path'
 
 const SLUG = 'johnson86tw/RoyaltyAutoClaim@v26'
-const EML = path.join(__dirname, '..', '..', 'emails', 'registration.eml')
+const emailFile = process.argv[2];
+if (!emailFile) {
+  console.error('Please provide an email file name in emails folder as an argument (e.g. registration).');
+  process.exit(1);
+}
+const EML = path.join(__dirname, '..', '..', 'emails', `${emailFile}.eml`);
 
 console.log('Generating proof for:', SLUG)
 console.log('Email file:', EML)
