@@ -55,6 +55,7 @@ interface IRoyaltyAutoClaim {
     event RoyaltyTokenChanged(address indexed oldToken, address indexed newToken);
     event EmergencyWithdraw(address indexed token, uint256 amount);
     event ReviewerStatusUpdated(address indexed reviewer, bool status);
+    event RegistrationVerifierUpdated(address indexed registrationVerifier);
 
     event SubmissionRegistered(string indexed titleHash, address indexed royaltyRecipient, string title);
     event SubmissionRoyaltyRecipientUpdated(
@@ -98,7 +99,7 @@ interface IRoyaltyAutoClaim {
         address admin;
         address token;
         mapping(address => bool) reviewers;
-        IRegistrationVerifier verifier;
+        IRegistrationVerifier registrationVerifier;
     }
 
     struct Submission {
@@ -162,6 +163,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(_owner != address(0), ZeroAddress());
         require(_admin != address(0), ZeroAddress());
         require(_token != address(0), ZeroAddress());
+        require(address(_verifier) != address(0), ZeroAddress());
 
         __Ownable_init(_owner);
         MainStorage storage $ = _getMainStorage();
@@ -170,7 +172,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         for (uint256 i = 0; i < _reviewers.length; i++) {
             $.configs.reviewers[_reviewers[i]] = true;
         }
-        $.configs.verifier = _verifier;
+        $.configs.registrationVerifier = _verifier;
     }
 
     // ================================ Modifier ================================
@@ -273,6 +275,12 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         emit SubmissionRevoked(title, title);
     }
 
+    function updateRegistrationVerifier(IRegistrationVerifier _verifier) public onlyAdminOrEntryPoint {
+        require(address(_verifier) != address(0), ZeroAddress());
+        _getMainStorage().configs.registrationVerifier = _verifier;
+        emit RegistrationVerifierUpdated(address(_verifier));
+    }
+
     // ================================ Registration & Recipient Update ================================
 
     function registerSubmission(
@@ -311,7 +319,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
 
         MainStorage storage $ = _getMainStorage();
-        $.configs.verifier
+        $.configs.registrationVerifier
             .verify(title, royaltyRecipient, IRegistrationVerifier.Intention.REGISTRATION, a, b, c, signals);
     }
 
@@ -349,7 +357,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(newRoyaltyRecipient != submissions(title).royaltyRecipient, SameAddress());
 
         MainStorage storage $ = _getMainStorage();
-        $.configs.verifier
+        $.configs.registrationVerifier
             .verify(title, newRoyaltyRecipient, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, a, b, c, signals);
     }
 
@@ -424,7 +432,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
         bytes4 selector = bytes4(userOp.callData[0:4]);
 
-        // ========================================= ZK Proof =========================================
+        // ========================================= Registration Proof =========================================
 
         if (selector == this.registerSubmission.selector) {
             (
@@ -469,31 +477,29 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         address signer = ECDSA.recover(ECDSA.toEthSignedMessageHash(userOpHash), actualSignature);
 
         if (
+            // ========================================= Owner =========================================
             selector == this.upgradeToAndCall.selector || selector == this.changeAdmin.selector
                 || selector == this.changeRoyaltyToken.selector || selector == this.transferOwnership.selector
                 || selector == this.emergencyWithdraw.selector
         ) {
-            // ========================================= Owner =========================================
-
             require(appendedSigner == owner(), Unauthorized(appendedSigner));
             if (signer != appendedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
         } else if (
-            selector == this.updateReviewers.selector || selector == this.updateRoyaltyRecipient.selector
-                || selector == this.revokeSubmission.selector
-        ) {
             // ========================================= Admin =========================================
-
+            selector == this.updateReviewers.selector || selector == this.revokeSubmission.selector
+                || selector == this.updateRegistrationVerifier.selector
+        ) {
             require(appendedSigner == admin(), Unauthorized(appendedSigner));
             if (signer != appendedSigner) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
-        } else if (selector == this.reviewSubmission.selector) {
-            // ========================================= Reviewer =========================================
-
+        } else if ( // ========================================= Reviewer =========================================
+            selector == this.reviewSubmission.selector
+        ) {
             (string memory title, uint16 royaltyLevel) = abi.decode(userOp.callData[4:], (string, uint16));
             _requireReviewable(title, royaltyLevel, appendedSigner);
 
@@ -505,9 +511,9 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
-        } else if (selector == this.claimRoyalty.selector) {
-            // ========================================= Recipient =========================================
-
+        } else if ( // ========================================= Recipient =========================================
+            selector == this.claimRoyalty.selector
+        ) {
             (string memory title) = abi.decode(userOp.callData[4:], (string));
             _requireClaimable(title, appendedSigner);
 
@@ -549,6 +555,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function submissions(string memory title) public view returns (Submission memory) {
         return _getMainStorage().submissions[title];
+    }
+
+    function registrationVerifier() public view returns (address) {
+        return address(_getMainStorage().configs.registrationVerifier);
     }
 
     function isReviewer(address reviewer) public view returns (bool) {
