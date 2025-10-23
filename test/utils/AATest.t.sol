@@ -32,6 +32,7 @@ abstract contract AATest is Test {
 
     function _buildUserOp(uint256 privateKey, address sender, bytes memory callData)
         internal
+        view
         returns (PackedUserOperation memory)
     {
         PackedUserOperation memory userOp = _createUserOp();
@@ -39,6 +40,18 @@ abstract contract AATest is Test {
         userOp.nonce = entryPoint.getNonce(sender, 0);
         userOp.callData = callData;
         userOp.signature = _signUserOp(privateKey, userOp, vm.addr(privateKey));
+        return userOp;
+    }
+
+    function _buildUserOpWithoutSignature(address sender, bytes memory callData)
+        internal
+        view
+        returns (PackedUserOperation memory)
+    {
+        PackedUserOperation memory userOp = _createUserOp();
+        userOp.sender = sender;
+        userOp.nonce = entryPoint.getNonce(sender, 0);
+        userOp.callData = callData;
         return userOp;
     }
 

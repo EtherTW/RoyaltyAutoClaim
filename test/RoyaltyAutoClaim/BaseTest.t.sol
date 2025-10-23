@@ -127,6 +127,16 @@ abstract contract BaseTest is AATest {
         royaltyAutoClaim.registerSubmission(_title, _recipient, a, b, c, signals);
     }
 
+    function _registerSubmission4337(string memory _title, address _recipient) public {
+        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
+            ZKUtils.parseJsonProof();
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
+            address(royaltyAutoClaim),
+            abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (_title, _recipient, a, b, c, signals))
+        );
+        _handleUserOp(userOp);
+    }
+
     function _updateRoyaltyRecipient(string memory _title, address _newRoyaltyRecipient) internal {
         (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
             ZKUtils.parseJsonProof();

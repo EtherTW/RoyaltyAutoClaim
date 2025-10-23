@@ -28,7 +28,7 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
 
     function test_simple_flow() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        _registerSubmission("test", recipient);
 
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
         assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should be recipient");
@@ -65,11 +65,7 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
     }
 
     function test_simple_flow_4337() public {
-        // Register submission via admin
-        PackedUserOperation memory userOp = _buildUserOp(
-            adminKey, address(proxy), abi.encodeCall(royaltyAutoClaim.registerSubmission, ("test", recipient))
-        );
-        _handleUserOp(userOp);
+        _registerSubmission4337("test", recipient);
 
         // Verify submission state
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
@@ -83,7 +79,8 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         );
 
         // Try to claim before reviews - should fail
-        userOp = _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")));
+        PackedUserOperation memory userOp =
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")));
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,

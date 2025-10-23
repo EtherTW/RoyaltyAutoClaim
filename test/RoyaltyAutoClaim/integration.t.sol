@@ -6,27 +6,30 @@ import "./BaseTest.t.sol";
 
 /*
 
-    Expected Error of _handleUserOp
+forge test test/RoyaltyAutoClaim/integration.t.sol -vvvv --skip test/RoyaltyAutoClaim/e2e.t.sol
 
-    1. validateUserOp Error
-    (ex.1) AA24 signature error
-    vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
 
-    (ex.2) AA23 reverted
-    vm.expectRevert(
-        abi.encodeWithSelector(
-            IEntryPoint.FailedOpWithRevert.selector,
-            0,
-            "AA23 reverted",
-            abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fakeOwner)
-        )
-    );
+Expected Error of _handleUserOp
 
-    2. execution Error
-    vm.expectEmit(false, true, true, true);
-    emit IEntryPoint.UserOperationRevertReason(
-        bytes32(0), address(royaltyAutoClaim), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
-    );
+1. validateUserOp Error
+(ex.1) AA24 signature error
+vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+
+(ex.2) AA23 reverted
+vm.expectRevert(
+    abi.encodeWithSelector(
+        IEntryPoint.FailedOpWithRevert.selector,
+        0,
+        "AA23 reverted",
+        abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fakeOwner)
+    )
+);
+
+2. execution Error
+vm.expectEmit(false, true, true, true);
+emit IEntryPoint.UserOperationRevertReason(
+    bytes32(0), address(royaltyAutoClaim), userOp.nonce, abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector)
+);
 
 */
 
@@ -77,11 +80,9 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
     function test_validateUserOp_admin_functions() public {
         // Test Admin Functions
-        bytes[] memory adminCalls = new bytes[](4);
+        bytes[] memory adminCalls = new bytes[](2);
         adminCalls[0] = abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (new address[](0), new bool[](0)));
-        adminCalls[1] = abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (testSubmissionTitle, address(0)));
-        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.updateRoyaltyRecipient, (testSubmissionTitle, address(0)));
-        adminCalls[3] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, (testSubmissionTitle));
+        adminCalls[1] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, (testSubmissionTitle));
 
         // Should fail for non-admin
         for (uint256 i = 0; i < adminCalls.length; i++) {
@@ -287,6 +288,10 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         _handleUserOp(userOp);
     }
 
+    // TODO
+    // test_registerSubmission
+    // test_updateRoyaltyRecipient
+
     function test_reviewSubmission() public {
         _registerSubmission(testSubmissionTitle, recipient);
 
@@ -392,13 +397,6 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
                 "AA23 reverted",
                 abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector)
             )
-        );
-        _handleUserOp(userOp);
-    }
-
-    function _registerSubmission(string memory title, address recipient) public {
-        PackedUserOperation memory userOp = _buildUserOp(
-            adminKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (title, recipient))
         );
         _handleUserOp(userOp);
     }
