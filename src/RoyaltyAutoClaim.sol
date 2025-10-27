@@ -30,18 +30,12 @@ interface IRoyaltyAutoClaim {
     function registerSubmission(
         string memory title,
         address royaltyRecipient,
-        uint256[2] calldata _pA,
-        uint256[2][2] calldata _pB,
-        uint256[2] calldata _pC,
-        uint256[12] calldata _pubSignals
+        IRegistrationVerifier.ZKEmailProof calldata proof
     ) external;
     function updateRoyaltyRecipient(
         string memory title,
         address newRoyaltyRecipient,
-        uint256[2] memory a,
-        uint256[2][2] memory b,
-        uint256[2] memory c,
-        uint256[12] memory signals
+        IRegistrationVerifier.ZKEmailProof calldata proof
     ) external;
 
     // Reviewer functions
@@ -79,7 +73,7 @@ interface IRoyaltyAutoClaim {
     error ZeroAddress();
     error Unauthorized(address caller);
     error InvalidArrayLength();
-    error EmptyTitle();
+    error EmptyString();
     error InvalidRoyaltyLevel(uint16 royaltyLevel);
     error SubmissionNotClaimable();
     error RenounceOwnershipDisabled();
@@ -286,15 +280,12 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     function registerSubmission(
         string memory title,
         address royaltyRecipient,
-        uint256[2] calldata a,
-        uint256[2][2] calldata b,
-        uint256[2] calldata c,
-        uint256[12] calldata signals
+        IRegistrationVerifier.ZKEmailProof calldata proof
     ) public {
         if (msg.sender == entryPoint()) {
             _registerSubmission(title, royaltyRecipient);
         } else {
-            this.verifyRegistration(title, royaltyRecipient, a, b, c, signals);
+            this.verifyRegistration(title, royaltyRecipient, proof);
             _registerSubmission(title, royaltyRecipient);
         }
     }
@@ -309,32 +300,26 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     function verifyRegistration(
         string memory title,
         address royaltyRecipient,
-        uint256[2] memory a,
-        uint256[2][2] memory b,
-        uint256[2] memory c,
-        uint256[12] memory signals
+        IRegistrationVerifier.ZKEmailProof calldata proof
     ) external view {
-        require(bytes(title).length > 0, EmptyTitle());
+        require(bytes(title).length > 0, EmptyString());
         require(royaltyRecipient != address(0), ZeroAddress());
         require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
 
         MainStorage storage $ = _getMainStorage();
         $.configs.registrationVerifier
-            .verify(title, royaltyRecipient, IRegistrationVerifier.Intention.REGISTRATION, a, b, c, signals);
+            .verify(title, royaltyRecipient, IRegistrationVerifier.Intention.REGISTRATION, proof);
     }
 
     function updateRoyaltyRecipient(
         string memory title,
         address newRoyaltyRecipient,
-        uint256[2] memory a,
-        uint256[2][2] memory b,
-        uint256[2] memory c,
-        uint256[12] memory signals
+        IRegistrationVerifier.ZKEmailProof calldata proof
     ) public {
         if (msg.sender == entryPoint()) {
             _updateRoyaltyRecipient(title, newRoyaltyRecipient);
         } else {
-            this.verifyRecipientUpdate(title, newRoyaltyRecipient, a, b, c, signals);
+            this.verifyRecipientUpdate(title, newRoyaltyRecipient, proof);
             _updateRoyaltyRecipient(title, newRoyaltyRecipient);
         }
     }
@@ -348,17 +333,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     function verifyRecipientUpdate(
         string memory title,
         address newRoyaltyRecipient,
-        uint256[2] memory a,
-        uint256[2][2] memory b,
-        uint256[2] memory c,
-        uint256[12] memory signals
+        IRegistrationVerifier.ZKEmailProof calldata proof
     ) external view {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         require(newRoyaltyRecipient != submissions(title).royaltyRecipient, SameAddress());
 
         MainStorage storage $ = _getMainStorage();
         $.configs.registrationVerifier
-            .verify(title, newRoyaltyRecipient, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, a, b, c, signals);
+            .verify(title, newRoyaltyRecipient, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, proof);
     }
 
     // ================================ Reviewer ================================
@@ -435,31 +417,21 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         // ========================================= Registration Proof =========================================
 
         if (selector == this.registerSubmission.selector) {
-            (
-                string memory title,
-                address royaltyRecipient,
-                uint256[2] memory a,
-                uint256[2][2] memory b,
-                uint256[2] memory c,
-                uint256[12] memory signals
-            ) = abi.decode(userOp.callData[4:], (string, address, uint256[2], uint256[2][2], uint256[2], uint256[12]));
+            MainStorage storage $ = _getMainStorage();
+            (string memory title, address recipient, IRegistrationVerifier.ZKEmailProof memory proof) =
+                $.configs.registrationVerifier.decodeRegistrationData(userOp.callData[4:]);
 
-            try this.verifyRegistration(title, royaltyRecipient, a, b, c, signals) {
+            try this.verifyRegistration(title, recipient, proof) {
                 return 0;
             } catch {
                 return SIG_VALIDATION_FAILED;
             }
         } else if (selector == this.updateRoyaltyRecipient.selector) {
-            (
-                string memory title,
-                address newRoyaltyRecipient,
-                uint256[2] memory a,
-                uint256[2][2] memory b,
-                uint256[2] memory c,
-                uint256[12] memory signals
-            ) = abi.decode(userOp.callData[4:], (string, address, uint256[2], uint256[2][2], uint256[2], uint256[12]));
+            MainStorage storage $ = _getMainStorage();
+            (string memory title, address recipient, IRegistrationVerifier.ZKEmailProof memory proof) =
+                $.configs.registrationVerifier.decodeRegistrationData(userOp.callData[4:]);
 
-            try this.verifyRecipientUpdate(title, newRoyaltyRecipient, a, b, c, signals) {
+            try this.verifyRecipientUpdate(title, recipient, proof) {
                 return 0;
             } catch {
                 return SIG_VALIDATION_FAILED;

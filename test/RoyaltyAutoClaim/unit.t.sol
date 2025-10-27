@@ -116,7 +116,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function testCannot_registerSubmission_with_empty_title() public {
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmptyTitle.selector));
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmptyString.selector));
         _registerSubmission("", vm.randomAddress());
     }
 

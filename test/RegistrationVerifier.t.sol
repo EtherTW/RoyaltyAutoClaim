@@ -22,42 +22,39 @@ contract RegistrationVerifierTest is Test {
     IDKIMRegistry public dkimRegistry;
     IDKIMRegistry public mockDKIMRegistry;
     Verifier public verifier;
-    RegistrationVerifier public rVerifier;
+    RegistrationVerifier public registrationVerifier;
 
     function setUp() public {
         dkimRegistry = IDKIMRegistry(0x3D3935B3C030893f118a84C92C66dF1B9E4169d6);
         mockDKIMRegistry = new MockDKIMRegistry();
         verifier = new Verifier();
-        rVerifier = new RegistrationVerifier(mockDKIMRegistry, verifier, "johnson86tw");
+        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, verifier, "johnson86tw");
     }
 
     /**
      * forge test --mc RegistrationVerifierTest --mt test_verify -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_verify() public view {
-        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
-            ZKUtils.parseJsonProof();
-
+        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
         string memory title = unicode"隱私池的設計 by cc liang";
         address recipient = 0xd78B5013757Ea4A7841811eF770711e6248dC282;
 
-        rVerifier.verify(title, recipient, IRegistrationVerifier.Intention.REGISTRATION, a, b, c, signals);
+        registrationVerifier.verify(title, recipient, IRegistrationVerifier.Intention.REGISTRATION, proof);
     }
 
     /**
      * forge test --mc RegistrationVerifierTest --mt test_verifyProof -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_verifyProof() public view {
-        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
-            ZKUtils.parseJsonProof();
-        verifier.verifyProof(a, b, c, signals);
+        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
+        verifier.verifyProof(proof.a, proof.b, proof.c, proof.signals);
     }
 
     /**
      * forge test --mc RegistrationVerifierTest --mt test_parseSignals -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_parseSignals() public view {
-        (,,, uint256[12] memory signals) = ZKUtils.parseJsonProof();
+        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
 
         (
             bytes32 pubkeyHash,
@@ -66,7 +63,7 @@ contract RegistrationVerifierTest is Test {
             string memory subjectPrefix,
             string memory id,
             string memory recipient
-        ) = rVerifier.parseSignals(signals);
+        ) = registrationVerifier.parseSignals(proof.signals);
 
         console.logBytes32(pubkeyHash);
         console.logBytes32(headerHash);

@@ -121,24 +121,20 @@ abstract contract BaseTest is AATest {
     }
 
     function _registerSubmission(string memory _title, address _recipient) internal {
-        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
-            ZKUtils.parseJsonProof();
-        royaltyAutoClaim.registerSubmission(_title, _recipient, a, b, c, signals);
+        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
+        royaltyAutoClaim.registerSubmission(_title, _recipient, proof);
     }
 
     function _registerSubmission4337(string memory _title, address _recipient) public {
-        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
-            ZKUtils.parseJsonProof();
+        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
         PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
-            address(royaltyAutoClaim),
-            abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (_title, _recipient, a, b, c, signals))
+            address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (_title, _recipient, proof))
         );
         _handleUserOp(userOp);
     }
 
     function _updateRoyaltyRecipient(string memory _title, address _newRoyaltyRecipient) internal {
-        (uint256[2] memory a, uint256[2][2] memory b, uint256[2] memory c, uint256[12] memory signals) =
-            ZKUtils.parseJsonProof();
-        royaltyAutoClaim.updateRoyaltyRecipient(_title, _newRoyaltyRecipient, a, b, c, signals);
+        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
+        royaltyAutoClaim.updateRoyaltyRecipient(_title, _newRoyaltyRecipient, proof);
     }
 }
