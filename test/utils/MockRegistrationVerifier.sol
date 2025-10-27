@@ -14,9 +14,15 @@ contract MockRegistrationVerifier is RegistrationVerifier {
         )
     {}
 
-    function verify(string memory title, address recipient, Intention intention, ZKEmailProof calldata proof)
-        external
-        view
-        override
-    {}
+    function verify(
+        string memory title,
+        address recipient,
+        bytes32 headerHash,
+        Intention intention,
+        ZkEmailProof calldata proof
+    ) external view override {}
+
+    function verifyUserOpHash(bytes32, ZkEmailProof calldata) external pure override returns (bool) {
+        return true;
+    }
 }

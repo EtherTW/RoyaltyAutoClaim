@@ -11,6 +11,7 @@ interface IRegistrationVerifier {
     error EmptyString();
     error InvalidRSAPublicKey(bytes32 publicKeyHash);
     error InvalidProof();
+    error EmailHeaderHashMismatch(bytes32 expected, bytes32 actual);
     error EmailSenderMismatch(string expected, string actual);
     error SubjectPrefixMismatch(string expected, string actual);
     error InvalidIntention(Intention intention);
@@ -22,18 +23,24 @@ interface IRegistrationVerifier {
         RECIPIENT_UPDATE
     }
 
-    struct ZKEmailProof {
+    struct ZkEmailProof {
         uint256[2] a;
         uint256[2][2] b;
         uint256[2] c;
-        uint256[12] signals;
+        uint256[15] signals;
     }
 
-    function verify(string memory title, address recipient, Intention intention, ZKEmailProof calldata proof)
-        external
-        view;
+    function verify(
+        string memory title,
+        address recipient,
+        bytes32 headerHash,
+        Intention intention,
+        ZkEmailProof calldata proof
+    ) external view;
 
-    function parseSignals(uint256[12] calldata signals)
+    function verifyUserOpHash(bytes32 userOpHash, ZkEmailProof calldata proof) external view returns (bool);
+
+    function parseSignals(uint256[15] calldata signals)
         external
         pure
         returns (
@@ -42,13 +49,9 @@ interface IRegistrationVerifier {
             string memory _emailSender,
             string memory _subjectPrefix,
             string memory _id,
-            string memory _recipient
+            string memory _recipient,
+            string memory _userOpHash
         );
-
-    function decodeRegistrationData(bytes calldata data)
-        external
-        pure
-        returns (string memory title, address recipient, ZKEmailProof memory proof);
 }
 
 contract RegistrationVerifier is IRegistrationVerifier, Ownable {
@@ -72,11 +75,13 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         emailSender = _emailSender;
     }
 
-    function verify(string memory title, address recipient, Intention intention, ZKEmailProof calldata proof)
-        external
-        view
-        virtual
-    {
+    function verify(
+        string memory title,
+        address recipient,
+        bytes32 headerHash,
+        Intention intention,
+        ZkEmailProof calldata proof
+    ) external view virtual {
         // verify RSA
         bytes32 ph = bytes32(proof.signals[0]);
         if (!dkimRegistry.isDKIMPublicKeyHashValid(DOMAIN, ph)) {
@@ -89,12 +94,18 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         }
 
         (
-            ,,
+            ,
+            bytes32 _headerHash,
             string memory _emailSender,
             string memory _subjectPrefix,
             string memory _idStr,
-            string memory _recipientStr
+            string memory _recipientStr,
         ) = this.parseSignals(proof.signals);
+
+        // verify header hash
+        if (headerHash != _headerHash) {
+            revert EmailHeaderHashMismatch(headerHash, _headerHash);
+        }
 
         // verify email sender
         if (!emailSender.stringEq(_emailSender)) {
@@ -126,7 +137,15 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         }
     }
 
-    function parseSignals(uint256[12] calldata signals)
+    function verifyUserOpHash(bytes32 userOpHash, ZkEmailProof calldata proof) external view virtual returns (bool) {
+        (,,,,,, string memory _userOpHashStr) = this.parseSignals(proof.signals);
+        if (!userOpHash.toString().stringEq(_userOpHashStr.lower())) {
+            return false;
+        }
+        return true;
+    }
+
+    function parseSignals(uint256[15] calldata signals)
         external
         pure
         returns (
@@ -135,7 +154,8 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
             string memory _emailSender,
             string memory _subjectPrefix,
             string memory _id,
-            string memory _recipient
+            string memory _recipient,
+            string memory _userOpHash
         )
     {
         _pubkeyHash = bytes32(signals[0]);
@@ -163,14 +183,13 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         recipientList[0] = signals[9];
         recipientList[1] = signals[10];
         _recipient = recipientList.convertPackedBytesToString();
-    }
 
-    function decodeRegistrationData(bytes calldata data)
-        external
-        pure
-        returns (string memory title, address recipient, ZKEmailProof memory proof)
-    {
-        (title, recipient, proof) = abi.decode(data, (string, address, ZKEmailProof));
-        proof = ZKEmailProof(proof.a, proof.b, proof.c, proof.signals);
+        // Note that signals[11] is zkemail default public output: proverETHAddress; See circuits/circuit.circom
+
+        uint256[] memory userOpHashList = new uint256[](3);
+        userOpHashList[0] = signals[12];
+        userOpHashList[1] = signals[13];
+        userOpHashList[2] = signals[14];
+        _userOpHash = userOpHashList.convertPackedBytesToString();
     }
 }

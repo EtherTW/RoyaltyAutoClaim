@@ -35,18 +35,19 @@ contract RegistrationVerifierTest is Test {
      * forge test --mc RegistrationVerifierTest --mt test_verify -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_verify() public view {
-        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
+        IRegistrationVerifier.ZkEmailProof memory proof = ZKUtils.parseJsonProof();
         string memory title = unicode"隱私池的設計 by cc liang";
         address recipient = 0xd78B5013757Ea4A7841811eF770711e6248dC282;
+        bytes32 headerHash = 0x86cbd6a1dcf53636ccfe282575446622847dba5be5bd08cc1d00b5e5f53243d5;
 
-        registrationVerifier.verify(title, recipient, IRegistrationVerifier.Intention.REGISTRATION, proof);
+        registrationVerifier.verify(title, recipient, headerHash, IRegistrationVerifier.Intention.REGISTRATION, proof);
     }
 
     /**
      * forge test --mc RegistrationVerifierTest --mt test_verifyProof -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_verifyProof() public view {
-        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
+        IRegistrationVerifier.ZkEmailProof memory proof = ZKUtils.parseJsonProof();
         verifier.verifyProof(proof.a, proof.b, proof.c, proof.signals);
     }
 
@@ -54,7 +55,7 @@ contract RegistrationVerifierTest is Test {
      * forge test --mc RegistrationVerifierTest --mt test_parseSignals -vvvv --skip test/RoyaltyAutoClaim/*
      */
     function test_parseSignals() public view {
-        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
+        IRegistrationVerifier.ZkEmailProof memory proof = ZKUtils.parseJsonProof();
 
         (
             bytes32 pubkeyHash,
@@ -62,7 +63,7 @@ contract RegistrationVerifierTest is Test {
             string memory emailSender,
             string memory subjectPrefix,
             string memory id,
-            string memory recipient
+            string memory recipient,
         ) = registrationVerifier.parseSignals(proof.signals);
 
         console.logBytes32(pubkeyHash);

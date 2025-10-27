@@ -18,11 +18,12 @@ contract Contract is Ownable {
     uint16 public constant subject_prefix_len = 2;
     uint16 public constant body_id_len = 3;
     uint16 public constant body_recipient_len = 2;
+    uint16 public constant userOpHash_len = 3;
     constructor (IDKIMRegistry r, Verifier v) Ownable(msg.sender) {
         dkimRegistry = r;
         verifier = v;
     }
-    function verify(uint[2] calldata a, uint[2][2] calldata b, uint[2] calldata c, uint[12] calldata signals) external view {
+    function verify(uint[2] calldata a, uint[2][2] calldata b, uint[2] calldata c, uint[15] calldata signals) external view {
         // verify RSA
         bytes32 ph = bytes32(signals[0]);
         require(dkimRegistry.isDKIMPublicKeyHashValid(domain, ph), "RSA public key incorrect");

@@ -13,6 +13,8 @@ template RoyaltyAutoClaim(maxHeaderLength, maxBodyLength, n, k, packSize) {
     signal input signature[k]; // RSA signature. Split up into k parts of n bits each.
     signal input proverETHAddress;
     
+    signal input userOpHash[3];
+    
     // DKIM Verification
     component EV = EmailVerifier(maxHeaderLength, maxBodyLength, n, k, 0, 0, 0, 1);
     EV.emailHeader <== emailHeader;
@@ -48,7 +50,7 @@ template RoyaltyAutoClaim(maxHeaderLength, maxBodyLength, n, k, packSize) {
     var email_senderMaxLength = 20;
     signal input email_senderRegexIdx;
     
-    signal email_senderRegexOut, email_senderRegexReveal[1088];
+    signal email_senderRegexOut, email_senderRegexReveal[1280];
     (email_senderRegexOut, email_senderRegexReveal) <== email_senderRegex(maxHeaderLength)(emailHeader);
     email_senderRegexOut === 1;
     
@@ -68,7 +70,7 @@ template RoyaltyAutoClaim(maxHeaderLength, maxBodyLength, n, k, packSize) {
     var subject_prefixMaxLength = 52;
     signal input subject_prefixRegexIdx;
     
-    signal subject_prefixRegexOut, subject_prefixRegexReveal[1088];
+    signal subject_prefixRegexOut, subject_prefixRegexReveal[1280];
     (subject_prefixRegexOut, subject_prefixRegexReveal) <== subject_prefixRegex(maxHeaderLength)(emailHeader);
     subject_prefixRegexOut === 1;
     
@@ -88,7 +90,7 @@ template RoyaltyAutoClaim(maxHeaderLength, maxBodyLength, n, k, packSize) {
     var body_idMaxLength = 66;
     signal input body_idRegexIdx;
     
-    signal body_idRegexOut, body_idRegexReveal[1024];
+    signal body_idRegexOut, body_idRegexReveal[2048];
     (body_idRegexOut, body_idRegexReveal) <== body_idRegex(maxBodyLength)(decodedEmailBodyIn);
     body_idRegexOut === 1;
     
@@ -108,7 +110,7 @@ template RoyaltyAutoClaim(maxHeaderLength, maxBodyLength, n, k, packSize) {
     var body_recipientMaxLength = 42;
     signal input body_recipientRegexIdx;
     
-    signal body_recipientRegexOut, body_recipientRegexReveal[1024];
+    signal body_recipientRegexOut, body_recipientRegexReveal[2048];
     (body_recipientRegexOut, body_recipientRegexReveal) <== body_recipientRegex(maxBodyLength)(decodedEmailBodyIn);
     body_recipientRegexOut === 1;
     
@@ -124,4 +126,4 @@ template RoyaltyAutoClaim(maxHeaderLength, maxBodyLength, n, k, packSize) {
     
     
 }
-component main { public [proverETHAddress] } = RoyaltyAutoClaim(1088, 1024, 121, 17, 7);
+component main { public [proverETHAddress, userOpHash] } = RoyaltyAutoClaim(1280, 2048, 121, 17, 7);

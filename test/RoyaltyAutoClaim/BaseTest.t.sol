@@ -121,32 +121,58 @@ abstract contract BaseTest is AATest {
     }
 
     function _registerSubmission(string memory _title, address _recipient) internal {
-        IRegistrationVerifier.ZKEmailProof memory proof = _createRandomizedProof();
-        royaltyAutoClaim.registerSubmission(_title, _recipient, proof);
+        (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash) = _createRandomizedProof();
+        royaltyAutoClaim.registerSubmission(_title, _recipient, headerHash, proof);
     }
 
     function _registerSubmission4337(string memory _title, address _recipient) public {
-        IRegistrationVerifier.ZKEmailProof memory proof = _createRandomizedProof();
+        (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash) = _createRandomizedProof();
 
         PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
-            address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (_title, _recipient, proof))
+            address(royaltyAutoClaim),
+            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission, (_title, _recipient, headerHash))
         );
+
+        userOp.signature = abi.encode(proof);
+
         _handleUserOp(userOp);
     }
 
-    function _updateRoyaltyRecipient(string memory _title, address _newRoyaltyRecipient) internal {
-        IRegistrationVerifier.ZKEmailProof memory proof = _createRandomizedProof();
-        royaltyAutoClaim.updateRoyaltyRecipient(_title, _newRoyaltyRecipient, proof);
+    function _updateRoyaltyRecipient(string memory _title, address _recipient) internal {
+        (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash) = _createRandomizedProof();
+        royaltyAutoClaim.updateRoyaltyRecipient(_title, _recipient, headerHash, proof);
     }
 
-    /// @dev Creates a ZKEmailProof with randomized email header hash for testing
-    function _createRandomizedProof() internal returns (IRegistrationVerifier.ZKEmailProof memory) {
-        IRegistrationVerifier.ZKEmailProof memory proof = ZKUtils.parseJsonProof();
+    function _updateRoyaltyRecipient4337(string memory _title, address _recipient) public {
+        (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash) = _createRandomizedProof();
 
-        // Modify proof with random email header hash for testing
-        proof.signals[1] = vm.randomUint(); // headerHashHi
-        proof.signals[2] = vm.randomUint(); // headerHashLo
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
+            address(royaltyAutoClaim),
+            abi.encodeCall(IRoyaltyAutoClaim.updateRoyaltyRecipient, (_title, _recipient, headerHash))
+        );
 
-        return proof;
+        userOp.signature = abi.encode(proof);
+
+        _handleUserOp(userOp);
+    }
+
+    /// @dev Creates a ZkEmailProof with randomized email header hash for testing
+    function _createRandomizedProof()
+        internal
+        returns (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash)
+    {
+        proof = ZKUtils.parseJsonProof();
+        headerHash = bytes32(vm.randomUint());
+
+        // Modify headerHash for testing
+        (uint256 headerHashHi, uint256 headerHashLo) = splitFromBytes32(headerHash);
+        proof.signals[1] = headerHashHi;
+        proof.signals[2] = headerHashLo;
+    }
+
+    function splitFromBytes32(bytes32 _headerHash) internal pure returns (uint256 headerHashHi, uint256 headerHashLo) {
+        headerHashHi = uint256(_headerHash) >> 128;
+        headerHashLo = uint256(_headerHash) & ((1 << 128) - 1);
+        return (headerHashHi, headerHashLo);
     }
 }

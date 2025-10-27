@@ -7,7 +7,7 @@ import {IRegistrationVerifier} from "../../src/RegistrationVerifier.sol";
 library ZKUtils {
     Vm internal constant vm = Vm(address(uint160(uint256(keccak256("hevm cheat code")))));
 
-    function parseJsonProof() internal view returns (IRegistrationVerifier.ZKEmailProof memory proof) {
+    function parseJsonProof() internal view returns (IRegistrationVerifier.ZkEmailProof memory proof) {
         string memory root = vm.projectRoot();
         string memory path = string.concat(root, "/proof.json");
         string memory json = vm.readFile(path);
