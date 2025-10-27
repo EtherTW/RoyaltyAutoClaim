@@ -78,6 +78,7 @@ interface IRoyaltyAutoClaim {
     error SubmissionNotClaimable();
     error RenounceOwnershipDisabled();
     error AlreadyRegistered();
+    error EmailProofUsed();
     error SubmissionStatusNotRegistered();
     error NotFromEntryPoint();
     error ForbiddenPaymaster();
@@ -114,6 +115,7 @@ interface IRoyaltyAutoClaim {
         Configs configs;
         mapping(string => Submission) submissions;
         mapping(string => mapping(address => bool)) hasReviewed;
+        mapping(bytes32 => bool) emailNullifier;
     }
 }
 
@@ -283,21 +285,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         IRegistrationVerifier.ZKEmailProof calldata proof
     ) public {
         if (msg.sender == entryPoint()) {
-            _registerSubmission(title, royaltyRecipient);
+            _registerSubmission(title, royaltyRecipient, proof);
         } else {
-            this.verifyRegistration(title, royaltyRecipient, proof);
-            _registerSubmission(title, royaltyRecipient);
+            this.verifySubmissionRegistration(title, royaltyRecipient, proof);
+            _registerSubmission(title, royaltyRecipient, proof);
         }
     }
 
-    function _registerSubmission(string memory title, address royaltyRecipient) internal {
-        MainStorage storage $ = _getMainStorage();
-        $.submissions[title].royaltyRecipient = royaltyRecipient;
-        $.submissions[title].status = SubmissionStatus.Registered;
-        emit SubmissionRegistered(title, royaltyRecipient, title);
-    }
-
-    function verifyRegistration(
+    function verifySubmissionRegistration(
         string memory title,
         address royaltyRecipient,
         IRegistrationVerifier.ZKEmailProof calldata proof
@@ -307,8 +302,29 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
 
         MainStorage storage $ = _getMainStorage();
+
+        // verify email nullifier
+        (, bytes32 _headerHash,,,,) = $.configs.registrationVerifier.parseSignals(proof.signals);
+        require(!isEmailProofUsed(_headerHash), EmailProofUsed());
+
         $.configs.registrationVerifier
             .verify(title, royaltyRecipient, IRegistrationVerifier.Intention.REGISTRATION, proof);
+    }
+
+    function _registerSubmission(
+        string memory title,
+        address royaltyRecipient,
+        IRegistrationVerifier.ZKEmailProof calldata proof
+    ) internal {
+        MainStorage storage $ = _getMainStorage();
+        $.submissions[title].royaltyRecipient = royaltyRecipient;
+        $.submissions[title].status = SubmissionStatus.Registered;
+
+        // set email nullifier
+        (, bytes32 _headerHash,,,,) = $.configs.registrationVerifier.parseSignals(proof.signals);
+        $.emailNullifier[_headerHash] = true;
+
+        emit SubmissionRegistered(title, royaltyRecipient, title);
     }
 
     function updateRoyaltyRecipient(
@@ -317,17 +333,11 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         IRegistrationVerifier.ZKEmailProof calldata proof
     ) public {
         if (msg.sender == entryPoint()) {
-            _updateRoyaltyRecipient(title, newRoyaltyRecipient);
+            _updateRoyaltyRecipient(title, newRoyaltyRecipient, proof);
         } else {
             this.verifyRecipientUpdate(title, newRoyaltyRecipient, proof);
-            _updateRoyaltyRecipient(title, newRoyaltyRecipient);
+            _updateRoyaltyRecipient(title, newRoyaltyRecipient, proof);
         }
-    }
-
-    function _updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) internal {
-        address oldRecipient = _getMainStorage().submissions[title].royaltyRecipient;
-        _getMainStorage().submissions[title].royaltyRecipient = newRoyaltyRecipient;
-        emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient, title);
     }
 
     function verifyRecipientUpdate(
@@ -339,8 +349,29 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(newRoyaltyRecipient != submissions(title).royaltyRecipient, SameAddress());
 
         MainStorage storage $ = _getMainStorage();
+
+        // verify email nullifier
+        (, bytes32 _headerHash,,,,) = $.configs.registrationVerifier.parseSignals(proof.signals);
+        require(!isEmailProofUsed(_headerHash), EmailProofUsed());
+
         $.configs.registrationVerifier
             .verify(title, newRoyaltyRecipient, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, proof);
+    }
+
+    function _updateRoyaltyRecipient(
+        string memory title,
+        address newRoyaltyRecipient,
+        IRegistrationVerifier.ZKEmailProof calldata proof
+    ) internal {
+        MainStorage storage $ = _getMainStorage();
+        address oldRecipient = $.submissions[title].royaltyRecipient;
+        $.submissions[title].royaltyRecipient = newRoyaltyRecipient;
+
+        // set email nullifier
+        (, bytes32 _headerHash,,,,) = $.configs.registrationVerifier.parseSignals(proof.signals);
+        $.emailNullifier[_headerHash] = true;
+
+        emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient, title);
     }
 
     // ================================ Reviewer ================================
@@ -421,7 +452,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             (string memory title, address recipient, IRegistrationVerifier.ZKEmailProof memory proof) =
                 $.configs.registrationVerifier.decodeRegistrationData(userOp.callData[4:]);
 
-            try this.verifyRegistration(title, recipient, proof) {
+            try this.verifySubmissionRegistration(title, recipient, proof) {
                 return 0;
             } catch {
                 return SIG_VALIDATION_FAILED;
@@ -539,6 +570,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function isRecipient(string memory title, address recipient) public view returns (bool) {
         return _getMainStorage().submissions[title].royaltyRecipient == recipient;
+    }
+
+    function isEmailProofUsed(bytes32 headerHash) public view returns (bool) {
+        return _getMainStorage().emailNullifier[headerHash];
     }
 
     function hasReviewed(string memory title, address reviewer) public view returns (bool) {

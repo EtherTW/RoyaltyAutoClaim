@@ -33,6 +33,18 @@ interface IRegistrationVerifier {
         external
         view;
 
+    function parseSignals(uint256[12] calldata signals)
+        external
+        pure
+        returns (
+            bytes32 _pubkeyHash,
+            bytes32 _headerHash,
+            string memory _emailSender,
+            string memory _subjectPrefix,
+            string memory _id,
+            string memory _recipient
+        );
+
     function decodeRegistrationData(bytes calldata data)
         external
         pure
@@ -82,7 +94,7 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
             string memory _subjectPrefix,
             string memory _idStr,
             string memory _recipientStr
-        ) = parseSignals(proof.signals);
+        ) = this.parseSignals(proof.signals);
 
         // verify email sender
         if (!emailSender.stringEq(_emailSender)) {
@@ -114,17 +126,8 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         }
     }
 
-    function decodeRegistrationData(bytes calldata data)
-        external
-        pure
-        returns (string memory title, address recipient, ZKEmailProof memory proof)
-    {
-        (title, recipient, proof) = abi.decode(data, (string, address, ZKEmailProof));
-        proof = ZKEmailProof(proof.a, proof.b, proof.c, proof.signals);
-    }
-
     function parseSignals(uint256[12] calldata signals)
-        public
+        external
         pure
         returns (
             bytes32 _pubkeyHash,
@@ -160,5 +163,14 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         recipientList[0] = signals[9];
         recipientList[1] = signals[10];
         _recipient = recipientList.convertPackedBytesToString();
+    }
+
+    function decodeRegistrationData(bytes calldata data)
+        external
+        pure
+        returns (string memory title, address recipient, ZKEmailProof memory proof)
+    {
+        (title, recipient, proof) = abi.decode(data, (string, address, ZKEmailProof));
+        proof = ZKEmailProof(proof.a, proof.b, proof.c, proof.signals);
     }
 }
