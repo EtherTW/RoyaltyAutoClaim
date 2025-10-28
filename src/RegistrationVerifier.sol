@@ -9,10 +9,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 interface IRegistrationVerifier {
     error ZeroAddress();
     error EmptyString();
+    error InvalidEmailSender(bytes32 emailSender);
     error InvalidRSAPublicKey(bytes32 publicKeyHash);
     error InvalidProof();
     error EmailHeaderHashMismatch(bytes32 expected, bytes32 actual);
-    error EmailSenderMismatch(string expected, string actual);
+    error EmailSenderMismatch(bytes32 expected, string actual);
     error SubjectPrefixMismatch(string expected, string actual);
     error InvalidIntention(Intention intention);
     error TitleIdMismatch(bytes32 expected, string actual);
@@ -60,19 +61,19 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
     string public constant DOMAIN = "gmail.com";
     string public constant REGISTRATION_PREFIX = "56K66KqN5bey5pS25Yiw5oqV56i/"; // base64 version of 確認已收到投稿
     string public constant RECIPIENT_UPDATE_PREFIX = "56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2A"; // base64 version of 確認此投稿更改稿費收取地址
+    bytes32 public immutable EMAIL_SENDER;
 
     IDKIMRegistry public dkimRegistry;
     Verifier public verifier;
-    string public emailSender = "";
 
-    constructor(IDKIMRegistry _dkimRegistry, Verifier _verifier, string memory _emailSender) Ownable(msg.sender) {
+    constructor(IDKIMRegistry _dkimRegistry, Verifier _verifier, bytes32 _emailSender) Ownable(msg.sender) {
         require(address(_dkimRegistry) != address(0), ZeroAddress());
         require(address(_verifier) != address(0), ZeroAddress());
-        require(bytes(_emailSender).length > 0, EmptyString());
+        require(_emailSender != bytes32(0), InvalidEmailSender(_emailSender));
 
         dkimRegistry = _dkimRegistry;
         verifier = _verifier;
-        emailSender = _emailSender;
+        EMAIL_SENDER = _emailSender;
     }
 
     function verify(
@@ -108,8 +109,8 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         }
 
         // verify email sender
-        if (!emailSender.stringEq(_emailSender)) {
-            revert EmailSenderMismatch(emailSender, _emailSender);
+        if (EMAIL_SENDER != keccak256(bytes(_emailSender))) {
+            revert EmailSenderMismatch(EMAIL_SENDER, _emailSender);
         }
 
         // verify subject prefix

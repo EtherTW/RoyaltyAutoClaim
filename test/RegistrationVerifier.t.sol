@@ -19,16 +19,14 @@ contract RegistrationVerifierTest is Test {
     using StringUtils for *;
     using ZKUtils for *;
 
-    IDKIMRegistry public dkimRegistry;
     IDKIMRegistry public mockDKIMRegistry;
     Verifier public verifier;
     RegistrationVerifier public registrationVerifier;
 
     function setUp() public {
-        dkimRegistry = IDKIMRegistry(0x3D3935B3C030893f118a84C92C66dF1B9E4169d6);
         mockDKIMRegistry = new MockDKIMRegistry();
         verifier = new Verifier();
-        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, verifier, "johnson86tw");
+        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, verifier, keccak256("johnson86tw"));
     }
 
     /**
