@@ -1,0 +1,13 @@
+{
+	"RoyaltyAutoClaim": {
+		"owner": "0x0F0356aE7f7e1c0e812f5fB672B9D5557aB0Bf86",
+		"admin": "0x0F0356aE7f7e1c0e812f5fB672B9D5557aB0Bf86",
+		"token": "0x718cEb04a9E8b3430E832cc2c8222F384bc6fd72",
+		"reviewers": ["0x0F0356aE7f7e1c0e812f5fB672B9D5557aB0Bf86", "0xd78B5013757Ea4A7841811eF770711e6248dC282"],
+		"verifier": "0x765ef36E7e9F433cFf61C7b107cD582Cdb22Ed5a"
+	},
+	"RegistrationVerifier": {
+		"dkimRegistry": "0x3D3935B3C030893f118a84C92C66dF1B9E4169d6",
+		"emailSender": "johnson86tw"
+	}
+}

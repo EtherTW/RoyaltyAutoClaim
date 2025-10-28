@@ -19,12 +19,18 @@ contract DeployRegistrationVerifierScript is Script {
         address deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
         console.log("Deployer", deployer);
 
-        address dkimRegistryAddr = 0x3D3935B3C030893f118a84C92C66dF1B9E4169d6;
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(root, "/deploy.json");
+        string memory json = vm.readFile(path);
+
+        address dkimRegistryAddr = vm.parseJsonAddress(json, ".RegistrationVerifier.dkimRegistry");
+        string memory emailSender = vm.parseJsonString(json, ".RegistrationVerifier.emailSender");
 
         vm.startBroadcast(deployer);
 
         IDKIMRegistry dkimRegistry = IDKIMRegistry(dkimRegistryAddr);
-        RegistrationVerifier registrationVerifier = new RegistrationVerifier(dkimRegistry, "johnson86tw");
+        RegistrationVerifier registrationVerifier =
+            new RegistrationVerifier(dkimRegistry, keccak256(bytes(emailSender)));
 
         vm.stopBroadcast();
 

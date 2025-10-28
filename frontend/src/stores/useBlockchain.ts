@@ -11,12 +11,15 @@ import {
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_LOCAL,
 	TENDERLY_RPC_URL,
+	DEFAULT_CHAIN_ID,
+	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA,
+	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE,
 } from '@/config'
 
 export const useBlockchainStore = defineStore(
 	'useBlockchainStore',
 	() => {
-		const chainId = ref<CHAIN_ID>(CHAIN_ID.SEPOLIA)
+		const chainId = ref<CHAIN_ID>(DEFAULT_CHAIN_ID)
 
 		function setChainId(id: CHAIN_ID) {
 			chainId.value = id
@@ -51,6 +54,18 @@ export const useBlockchainStore = defineStore(
 						return ''
 					}
 					return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET
+				case CHAIN_ID.BASE_SEPOLIA:
+					if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA) {
+						console.warn('royaltyAutoClaimProxyAddress: base sepolia address is not set')
+						return ''
+					}
+					return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA
+				case CHAIN_ID.BASE:
+					if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE) {
+						console.warn('royaltyAutoClaimProxyAddress: base address is not set')
+						return ''
+					}
+					return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE
 				default:
 					console.warn(`royaltyAutoClaimProxyAddress: Unsupported chain id: ${chainId.value}`)
 					return ''

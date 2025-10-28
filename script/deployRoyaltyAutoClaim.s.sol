@@ -7,7 +7,9 @@ import {RoyaltyAutoClaimProxy} from "../src/RoyaltyAutoClaimProxy.sol";
 import {IRegistrationVerifier} from "../src/RegistrationVerifier.sol";
 
 /*
-    forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url $NETWORK --broadcast --verify
+
+forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url https://sepolia.base.org --broadcast --verify
+
 */
 
 contract DeployRoyaltyAutoClaimScript is Script {
@@ -15,17 +17,16 @@ contract DeployRoyaltyAutoClaimScript is Script {
         address deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
         console.log("Deployer", deployer);
 
-        address owner = 0xeDc1c67E682DD9beF39b233D0a4b909E35156909;
-        address admin = 0xeDc1c67E682DD9beF39b233D0a4b909E35156909;
-        address token = 0x6B175474E89094C44Da98b954EedeAC495271d0F; // DAI
-
-        address[] memory reviewers = new address[](1);
-        reviewers[0] = 0xeDc1c67E682DD9beF39b233D0a4b909E35156909;
-
-        IRegistrationVerifier verifier = IRegistrationVerifier(0xA33C6B2a730a1a70539AFC58aE6d7A6e154dC161); // on base sepolia
+        string memory json = vm.readFile(string.concat(vm.projectRoot(), "/deploy.json"));
+        address owner = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.owner");
+        address admin = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.admin");
+        address token = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.token");
+        address[] memory reviewers = vm.parseJsonAddressArray(json, ".RoyaltyAutoClaim.reviewers");
+        address verifierAddr = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.verifier");
 
         vm.startBroadcast(deployer);
 
+        IRegistrationVerifier verifier = IRegistrationVerifier(verifierAddr);
         RoyaltyAutoClaim royaltyAutoClaim = new RoyaltyAutoClaim();
         RoyaltyAutoClaimProxy proxy = new RoyaltyAutoClaimProxy(
             address(royaltyAutoClaim),

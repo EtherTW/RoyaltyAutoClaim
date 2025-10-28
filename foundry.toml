@@ -4,7 +4,10 @@ out = "out"
 libs = ["lib"]
 optimizer = true
 optimizer-runs = 200
-fs_permissions = [{ access = "read", path = "./proof.json" }]
+fs_permissions = [
+    { access = "read", path = "./proof.json" },
+    { access = "read", path = "./deploy.json" },
+]
 
 [lint]
 ignore = ["test/**/*", "script/**/*"]

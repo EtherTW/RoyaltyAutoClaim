@@ -1,19 +1,16 @@
 // built-in constants: https://vite.dev/guide/env-and-mode#built-in-constants
 export const IS_DEV = !import.meta.env.PROD
 
+// Main Contract Address
 export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_LOCAL = '0xa818cA7A4869c7C7101d0Ea5E4c455Ef00e698d5'
 export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA = import.meta.env
-	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA as string | undefined
+	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA as string
 export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET = import.meta.env
-	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET as string | undefined
-
-if (!IS_DEV) {
-	if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA && !ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET) {
-		throw new Error(
-			'ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA or ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET is not set in .env',
-		)
-	}
-}
+	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET as string
+export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA = import.meta.env
+	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA as string
+export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE = import.meta.env
+	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE as string
 
 export const ALCHEMY_API_KEY = import.meta.env.VITE_ALCHEMY_API_KEY
 if (!ALCHEMY_API_KEY) {
@@ -27,6 +24,7 @@ export enum CHAIN_ID {
 	BASE_SEPOLIA = '84532',
 	BASE = '8453',
 }
+export const DEFAULT_CHAIN_ID = IS_DEV ? CHAIN_ID.BASE_SEPOLIA : CHAIN_ID.MAINNET
 
 export const RPC_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: `http://localhost:8545`,
