@@ -51,6 +51,8 @@ forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url RPC_URL --broadcast -
 -   For Component, use [shadcn-vue](https://www.shadcn-vue.com/docs/components/accordion.html)
 -   For Notification Component, see [docs](https://kyvg.github.io/vue3-notification/api/)
 
+### v1
+
 ```
 cd frontend
 bun run install
@@ -61,7 +63,16 @@ bun run deploy-contracts:local
 
 bun run dev
 bun run test test/e2e-local.test.ts
+bun run test test/e2e-sepolia.test.ts
 
 bun run test <path>
 bun run vitest -t <test_name>
+```
+
+### v2
+
+```
+bun run check
+bun run gen-types-v2
+bun run test test/e2e-base-sepolia.test.ts
 ```

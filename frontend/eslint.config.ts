@@ -51,6 +51,7 @@ export default defineConfigWithVueTs(
 			'test/**',
 			'scripts/**',
 			'tailwind.config.js',
+			'src/typechain-v2/**',
 
 			// shadcn-vue
 			'src/lib/utils.ts',

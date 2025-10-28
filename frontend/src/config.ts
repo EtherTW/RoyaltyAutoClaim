@@ -30,8 +30,8 @@ export const RPC_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: `http://localhost:8545`,
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-	[CHAIN_ID.BASE_SEPOLIA]: 'https://sepolia.base.org',
-	[CHAIN_ID.BASE]: 'https://mainnet.base.org',
+	[CHAIN_ID.BASE_SEPOLIA]: `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
+	[CHAIN_ID.BASE]: `https://base-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 }
 
 export const TENDERLY_RPC_URL: { [key: string]: string } = {
