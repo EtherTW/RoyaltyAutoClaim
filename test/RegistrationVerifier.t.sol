@@ -6,7 +6,6 @@ import {StringUtils} from "@zk-email/contracts/utils/StringUtils.sol";
 import {IRegistrationVerifier, RegistrationVerifier} from "../src/RegistrationVerifier.sol";
 import {MockDKIMRegistry} from "./utils/MockDKIMRegistry.sol";
 import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
-import {Verifier} from "../circuits/verifier.sol";
 import {ZKUtils} from "./utils/ZKUtils.sol";
 
 /*
@@ -20,13 +19,11 @@ contract RegistrationVerifierTest is Test {
     using ZKUtils for *;
 
     IDKIMRegistry public mockDKIMRegistry;
-    Verifier public verifier;
     RegistrationVerifier public registrationVerifier;
 
     function setUp() public {
         mockDKIMRegistry = new MockDKIMRegistry();
-        verifier = new Verifier();
-        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, verifier, keccak256("johnson86tw"));
+        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, keccak256("johnson86tw"));
     }
 
     /**
@@ -46,7 +43,7 @@ contract RegistrationVerifierTest is Test {
      */
     function test_verifyProof() public view {
         IRegistrationVerifier.ZkEmailProof memory proof = ZKUtils.parseJsonProof();
-        verifier.verifyProof(proof.a, proof.b, proof.c, proof.signals);
+        registrationVerifier.verifyProof(proof.a, proof.b, proof.c, proof.signals);
     }
 
     /**

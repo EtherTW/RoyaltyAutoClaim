@@ -3,20 +3,20 @@ pragma solidity 0.8.30;
 
 import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
 import {StringUtils} from "@zk-email/contracts/utils/StringUtils.sol";
-import {Verifier} from "../circuits/verifier.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Verifier} from "../circuits/verifier.sol";
 
 interface IRegistrationVerifier {
     error ZeroAddress();
     error EmptyString();
     error InvalidEmailSender(bytes32 emailSender);
-    error InvalidRSAPublicKey(bytes32 publicKeyHash);
+    error InvalidDKIMPublicKey(bytes32 publicKeyHash);
     error InvalidProof();
     error EmailHeaderHashMismatch(bytes32 expected, bytes32 actual);
     error EmailSenderMismatch(bytes32 expected, string actual);
     error SubjectPrefixMismatch(string expected, string actual);
     error InvalidIntention(Intention intention);
-    error TitleIdMismatch(bytes32 expected, string actual);
+    error TitleHashMismatch(bytes32 expected, string actual);
     error RecipientAddressMismatch(address expected, string actual);
 
     enum Intention {
@@ -40,22 +40,9 @@ interface IRegistrationVerifier {
     ) external view;
 
     function verifyUserOpHash(bytes32 userOpHash, ZkEmailProof calldata proof) external view returns (bool);
-
-    function parseSignals(uint256[15] calldata signals)
-        external
-        pure
-        returns (
-            bytes32 _pubkeyHash,
-            bytes32 _headerHash,
-            string memory _emailSender,
-            string memory _subjectPrefix,
-            string memory _id,
-            string memory _recipient,
-            string memory _userOpHash
-        );
 }
 
-contract RegistrationVerifier is IRegistrationVerifier, Ownable {
+contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
     using StringUtils for *;
 
     string public constant DOMAIN = "gmail.com";
@@ -64,15 +51,12 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
     bytes32 public immutable EMAIL_SENDER;
 
     IDKIMRegistry public dkimRegistry;
-    Verifier public verifier;
 
-    constructor(IDKIMRegistry _dkimRegistry, Verifier _verifier, bytes32 _emailSender) Ownable(msg.sender) {
+    constructor(IDKIMRegistry _dkimRegistry, bytes32 _emailSender) Ownable(msg.sender) {
         require(address(_dkimRegistry) != address(0), ZeroAddress());
-        require(address(_verifier) != address(0), ZeroAddress());
         require(_emailSender != bytes32(0), InvalidEmailSender(_emailSender));
 
         dkimRegistry = _dkimRegistry;
-        verifier = _verifier;
         EMAIL_SENDER = _emailSender;
     }
 
@@ -83,25 +67,24 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         Intention intention,
         ZkEmailProof calldata proof
     ) external view virtual {
-        // verify RSA
-        bytes32 ph = bytes32(proof.signals[0]);
-        if (!dkimRegistry.isDKIMPublicKeyHashValid(DOMAIN, ph)) {
-            revert InvalidRSAPublicKey(ph);
-        }
-
-        // verify proof
-        if (!verifier.verifyProof(proof.a, proof.b, proof.c, proof.signals)) {
-            revert InvalidProof();
-        }
-
         (
-            ,
+            bytes32 _pubkeyHash,
             bytes32 _headerHash,
             string memory _emailSender,
             string memory _subjectPrefix,
             string memory _idStr,
             string memory _recipientStr,
-        ) = this.parseSignals(proof.signals);
+        ) = parseSignals(proof.signals);
+
+        // verify DKIM public key
+        if (!dkimRegistry.isDKIMPublicKeyHashValid(DOMAIN, _pubkeyHash)) {
+            revert InvalidDKIMPublicKey(_pubkeyHash);
+        }
+
+        // verify proof
+        if (!verifyProof(proof.a, proof.b, proof.c, proof.signals)) {
+            revert InvalidProof();
+        }
 
         // verify header hash
         if (headerHash != _headerHash) {
@@ -129,7 +112,7 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
         // verify title hash
         bytes32 titleHash = keccak256(abi.encodePacked(title));
         if (!titleHash.toString().stringEq(_idStr.lower())) {
-            revert TitleIdMismatch(titleHash, _idStr);
+            revert TitleHashMismatch(titleHash, _idStr);
         }
 
         // verify recipient
@@ -139,7 +122,7 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
     }
 
     function verifyUserOpHash(bytes32 userOpHash, ZkEmailProof calldata proof) external view virtual returns (bool) {
-        (,,,,,, string memory _userOpHashStr) = this.parseSignals(proof.signals);
+        (,,,,,, string memory _userOpHashStr) = parseSignals(proof.signals);
         if (!userOpHash.toString().stringEq(_userOpHashStr.lower())) {
             return false;
         }
@@ -147,7 +130,7 @@ contract RegistrationVerifier is IRegistrationVerifier, Ownable {
     }
 
     function parseSignals(uint256[15] calldata signals)
-        external
+        public
         pure
         returns (
             bytes32 _pubkeyHash,

@@ -5,7 +5,6 @@ import {Script, console} from "forge-std/Script.sol";
 import "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
 import "@zk-email/contracts/DKIMRegistry.sol";
 import {RegistrationVerifier} from "../src/RegistrationVerifier.sol";
-import {Verifier} from "../circuits/verifier.sol";
 
 /*
 
@@ -25,13 +24,11 @@ contract DeployRegistrationVerifierScript is Script {
         vm.startBroadcast(deployer);
 
         IDKIMRegistry dkimRegistry = IDKIMRegistry(dkimRegistryAddr);
-        Verifier verifier = new Verifier();
-        RegistrationVerifier registrationVerifier = new RegistrationVerifier(dkimRegistry, verifier, "johnson86tw");
+        RegistrationVerifier registrationVerifier = new RegistrationVerifier(dkimRegistry, "johnson86tw");
 
         vm.stopBroadcast();
 
         console.log("Deployed DKIMRegistry at", address(dkimRegistry));
-        console.log("Deployed Verifier at", address(verifier));
         console.log("Deployed RegistrationVerifier at", address(registrationVerifier));
     }
 }
