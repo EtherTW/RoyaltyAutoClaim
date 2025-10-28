@@ -5,7 +5,8 @@ import { getAddress, JsonRpcProvider, Wallet } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ACCOUNT_0_PRIVATE_KEY } from '../../test/test-utils'
 import { fetchExistingSubmissions } from './fetchExistingSubmissions'
-import { waitForTransaction } from './ethers'
+import type { ContractTransactionResponse } from 'ethers'
+import { Interface } from 'ethers'
 
 const client = new JsonRpcProvider(RPC_URL[CHAIN_ID.LOCAL])
 const account0 = new Wallet(ACCOUNT_0_PRIVATE_KEY, client)
@@ -60,7 +61,7 @@ describe('RoyaltyAutoClaim.ts with mock contract', () => {
 })
 
 describe('RoyaltyAutoClaim.ts on local network', () => {
-	let tokenAddress = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+	const tokenAddress = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 	let proxyAddress: string
 	let royaltyAutoClaim: RoyaltyAutoClaim
 
@@ -135,3 +136,50 @@ describe('RoyaltyAutoClaim.ts on local network', () => {
 		expect(submissions).toEqual([{ title, recipient: getAddress(newRecipient) }])
 	})
 })
+
+async function waitForTransaction(promise: Promise<ContractTransactionResponse>) {
+	try {
+		const tx = await promise
+		return await tx.wait()
+	} catch (error: any) {
+		if (error.transaction?.data) {
+			const functionName = findSelector(error.transaction.data)
+			const errorMessage = `${functionName || 'unknown function'}`
+
+			if (error.data) {
+				const errorName = findSelector(error.data, 'error')
+				throw new Error(`${errorMessage} ${errorName || 'Unknown'} (${error.data})`)
+			}
+			throw new Error(errorMessage + ' ' + error.message)
+		} else {
+			throw error
+		}
+	}
+}
+
+function findSelector(data: string, type?: 'function' | 'error'): string | undefined {
+	// Get the selector (first 4 bytes after '0x')
+	const selector = data.startsWith('0x') ? data.slice(0, 10) : '0x' + data.slice(0, 8)
+
+	const iface = new Interface(RoyaltyAutoClaim__factory.abi)
+
+	// Get all fragments from the interface
+	const fragments = iface.fragments.filter(f => !type || f.type === type)
+
+	// Find matching fragment
+	const matchingFragment = fragments.find(fragment => {
+		let fragmentSelector: string | undefined
+		try {
+			if (fragment.type === 'function') {
+				fragmentSelector = iface.getFunction(fragment.format('sighash'))?.selector
+			} else if (fragment.type === 'error') {
+				fragmentSelector = iface.getError(fragment.format('sighash'))?.selector
+			}
+		} catch {
+			return false
+		}
+		return fragmentSelector === selector
+	})
+
+	return matchingFragment?.format('sighash') + ` (${selector})`
+}

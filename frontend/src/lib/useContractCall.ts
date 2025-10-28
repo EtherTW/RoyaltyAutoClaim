@@ -6,7 +6,7 @@ import { isSameAddress } from 'sendop'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useVueDapp } from '@vue-dapp/core'
 
-export function useContractCall<T extends any[] = []>(options: {
+export function useContractCall<T extends unknown[] = []>(options: {
 	getCalldata: (...args: T) => string
 	successTitle: string
 	waitingTitle: string

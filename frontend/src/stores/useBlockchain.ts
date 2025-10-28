@@ -1,4 +1,4 @@
-import { JsonRpcProvider, Network } from 'ethers'
+import { JsonRpcProvider } from 'ethers'
 import { defineStore } from 'pinia'
 import { AlchemyBundler, PimlicoBundler } from 'sendop'
 import {

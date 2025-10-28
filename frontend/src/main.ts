@@ -33,7 +33,7 @@ app.config.errorHandler = (error: unknown, _vm, _info) => {
 }
 
 function getDetailedErrorMessage(err: Error): string {
-	let messages: string[] = []
+	const messages: string[] = []
 
 	while (err instanceof Error) {
 		messages.push(`${err.name}: ${err.message}`)
