@@ -7,6 +7,8 @@ const CHAIN_NAME: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: 'Local',
 	[CHAIN_ID.SEPOLIA]: 'Sepolia',
 	[CHAIN_ID.MAINNET]: 'Mainnet',
+	[CHAIN_ID.BASE_SEPOLIA]: 'Base Sepolia',
+	[CHAIN_ID.BASE]: 'Base',
 } as const
 </script>
 

@@ -41,16 +41,19 @@ export const useBlockchainStore = defineStore(
 					return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_LOCAL
 				case CHAIN_ID.SEPOLIA:
 					if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA) {
-						throw new Error('royaltyAutoClaimProxyAddress: sepolia address is not set')
+						console.warn('royaltyAutoClaimProxyAddress: sepolia address is not set')
+						return ''
 					}
 					return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA
 				case CHAIN_ID.MAINNET:
 					if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET) {
-						throw new Error('royaltyAutoClaimProxyAddress: mainnet address is not set')
+						console.warn('royaltyAutoClaimProxyAddress: mainnet address is not set')
+						return ''
 					}
 					return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET
 				default:
-					throw new Error(`royaltyAutoClaimProxyAddress: Unsupported chain id: ${chainId.value}`)
+					console.warn(`royaltyAutoClaimProxyAddress: Unsupported chain id: ${chainId.value}`)
+					return ''
 			}
 		})
 

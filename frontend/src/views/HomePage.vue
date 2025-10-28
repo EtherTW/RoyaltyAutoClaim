@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useContractCall } from '@/lib/useContractCall'
+import { useBlockchainStore } from '@/stores/useBlockchain'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 
 const isButtonDisabled = computed(
@@ -10,8 +11,12 @@ const isButtonDisabled = computed(
 )
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
+const blockchainStore = useBlockchainStore()
 
 onMounted(async () => {
+	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
+		throw new Error('RoyaltyAutoClaim address not set')
+	}
 	await royaltyAutoClaimStore.fetchSubmissions()
 })
 
