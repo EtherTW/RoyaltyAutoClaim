@@ -28,7 +28,7 @@ interface IRoyaltyAutoClaim {
 
     // Registration & Recipient Update functions
     function registerSubmission(string memory title, address royaltyRecipient, bytes32 emailHeaderHash) external;
-    function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient, bytes32 emailHeaderHash) external;
+    function updateRoyaltyRecipient(string memory title, address newRecipient, bytes32 emailHeaderHash) external;
 
     // Reviewer functions
     function reviewSubmission(string memory title, uint16 royaltyLevel) external;
@@ -158,6 +158,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         $.configs.admin = _admin;
         $.configs.token = _token;
         for (uint256 i = 0; i < _reviewers.length; i++) {
+            require(_reviewers[i] != address(0), ZeroAddress());
             $.configs.reviewers[_reviewers[i]] = true;
         }
         $.configs.registrationVerifier = _verifier;
@@ -297,19 +298,13 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(bytes(title).length > 0, EmptyString());
         require(royaltyRecipient != address(0), ZeroAddress());
         require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
-
-        MainStorage storage $ = _getMainStorage();
-
-        // verify email nullifier
         require(!isEmailProofUsed(emailHeaderHash), EmailProofUsed());
-
-        $.configs.registrationVerifier
+        _getMainStorage().configs.registrationVerifier
             .verify(title, royaltyRecipient, emailHeaderHash, IRegistrationVerifier.Intention.REGISTRATION, proof);
     }
 
     function _registerSubmission(string memory title, address royaltyRecipient, bytes32 emailHeaderHash) internal {
         MainStorage storage $ = _getMainStorage();
-        // set email nullifier
         $.emailNullifierHashes[emailHeaderHash] = true;
         $.submissions[title].royaltyRecipient = royaltyRecipient;
         $.submissions[title].status = SubmissionStatus.Registered;
@@ -318,50 +313,40 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function updateRoyaltyRecipient(
         string memory title,
-        address newRoyaltyRecipient,
+        address newRecipient,
         bytes32 emailHeaderHash,
         IRegistrationVerifier.ZkEmailProof calldata proof
     ) public {
-        this.verifyRecipientUpdate(title, newRoyaltyRecipient, emailHeaderHash, proof);
-        _updateRoyaltyRecipient(title, newRoyaltyRecipient, emailHeaderHash);
+        this.verifyRecipientUpdate(title, newRecipient, emailHeaderHash, proof);
+        _updateRoyaltyRecipient(title, newRecipient, emailHeaderHash);
     }
 
-    function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient, bytes32 emailHeaderHash)
+    function updateRoyaltyRecipient(string memory title, address newRecipient, bytes32 emailHeaderHash)
         public
         onlyEntryPoint
     {
-        _updateRoyaltyRecipient(title, newRoyaltyRecipient, emailHeaderHash);
+        _updateRoyaltyRecipient(title, newRecipient, emailHeaderHash);
     }
 
     function verifyRecipientUpdate(
         string memory title,
-        address newRoyaltyRecipient,
+        address newRecipient,
         bytes32 emailHeaderHash,
         IRegistrationVerifier.ZkEmailProof calldata proof
     ) external view {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
-        require(newRoyaltyRecipient != submissions(title).royaltyRecipient, SameAddress());
-
-        MainStorage storage $ = _getMainStorage();
-
-        // verify email nullifier
+        require(newRecipient != submissions(title).royaltyRecipient, SameAddress());
         require(!isEmailProofUsed(emailHeaderHash), EmailProofUsed());
-
-        $.configs.registrationVerifier
-            .verify(
-                title, newRoyaltyRecipient, emailHeaderHash, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, proof
-            );
+        _getMainStorage().configs.registrationVerifier
+            .verify(title, newRecipient, emailHeaderHash, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, proof);
     }
 
-    function _updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient, bytes32 emailHeaderHash)
-        internal
-    {
+    function _updateRoyaltyRecipient(string memory title, address newRecipient, bytes32 emailHeaderHash) internal {
         MainStorage storage $ = _getMainStorage();
-        // set email nullifier
         $.emailNullifierHashes[emailHeaderHash] = true;
         address oldRecipient = $.submissions[title].royaltyRecipient;
-        $.submissions[title].royaltyRecipient = newRoyaltyRecipient;
-        emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRoyaltyRecipient, title);
+        $.submissions[title].royaltyRecipient = newRecipient;
+        emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRecipient, title);
     }
 
     // ================================ Reviewer ================================
@@ -432,7 +417,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
         bytes4 selector = bytes4(userOp.callData[0:4]);
 
-        // ========================================= Registration Proof =========================================
+        /// ========================= Registration & Recipient Update =========================
         /// @dev userOp.signature equals to the encoded proof
 
         if (selector == IRoyaltyAutoClaim.registerSubmission.selector) {
@@ -469,6 +454,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             }
         }
 
+        /// ========================= Other functions =========================
         /// @dev userOp.signature[0:65]: actual signature
         /// @dev userOp.signature[65:85]: appended signer address
         /// @notice The reason for needing appendedSigner instead of directly using signer is because eth_estimateUserOperationGas uses a dummy signature

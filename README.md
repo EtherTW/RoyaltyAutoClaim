@@ -38,6 +38,9 @@ forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url RPC_URL --broadcast -
 -   zkemail blueprint: https://registry.zk.email/a8a89855-6453-43e2-ae0a-867c34e0e32b/versions
 -   `circuits/circuit.zip` is from the blueprint `Download Icon > circuit.zip`
 -   Execute `make proof registration` to generate the proof.json for a file named `registration` in the emails folder.
+-   UserOverrideableDKIMRegistry
+    -   [contract](https://vscode.blockscan.com/8453/0x0537487ff990df53b29bd3e4b4a4c5c80c17f958)
+    -   [address on base](https://basescan.org/address/0x3D3935B3C030893f118a84C92C66dF1B9E4169d6#readProxyContract)
 
 ## Frontend
 

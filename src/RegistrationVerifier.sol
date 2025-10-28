@@ -52,6 +52,9 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
 
     IDKIMRegistry public dkimRegistry;
 
+    /// @dev The reason this contract needs to have an owner is that
+    /// UserOverrideableDKIMRegistry.isDKIMPublicKeyHashValid calls owner() on msg.sender.
+    /// See https://vscode.blockscan.com/8453/0x0537487ff990df53b29bd3e4b4a4c5c80c17f958
     constructor(IDKIMRegistry _dkimRegistry, bytes32 _emailSender) Ownable(msg.sender) {
         require(address(_dkimRegistry) != address(0), ZeroAddress());
         require(_emailSender != bytes32(0), InvalidEmailSender(_emailSender));
