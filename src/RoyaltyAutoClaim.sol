@@ -11,27 +11,26 @@ import {ECDSA} from "solady/utils/ECDSA.sol";
 import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {StringUtils} from "@zk-email/contracts/utils/StringUtils.sol";
 import {IRegistrationVerifier} from "./RegistrationVerifier.sol";
 
 interface IRoyaltyAutoClaim {
-    // Owner functions
+    // Owner
     // function upgradeToAndCall(address newImplementation, bytes memory data) external payable;
     function transferOwnership(address newOwner) external;
     function changeAdmin(address _admin) external;
     function changeRoyaltyToken(address _token) external;
     function emergencyWithdraw(address _token, uint256 _amount) external;
 
-    // Admin functions
+    // Admin
     function updateReviewers(address[] memory _reviewers, bool[] memory _status) external;
     function revokeSubmission(string memory title) external;
     function updateRegistrationVerifier(IRegistrationVerifier _verifier) external;
 
-    // Registration & Recipient Update functions
+    // Registration & Recipient Update
     function registerSubmission(string memory title, address royaltyRecipient, bytes32 emailHeaderHash) external;
     function updateRoyaltyRecipient(string memory title, address newRecipient, bytes32 emailHeaderHash) external;
 
-    // Reviewer functions
+    // Reviewer
     function reviewSubmission(string memory title, uint16 royaltyLevel) external;
 
     // Claim (Recipient or Admin)
@@ -52,7 +51,7 @@ interface IRoyaltyAutoClaim {
     event SubmissionReviewed(string indexed titleHash, address indexed reviewer, uint16 royaltyLevel, string title);
     event RoyaltyClaimed(address indexed recipient, uint256 amount, string title);
 
-    // View functions
+    // View
     function admin() external view returns (address);
     function token() external view returns (address);
     function submissions(string memory title) external view returns (Submission memory);
@@ -115,7 +114,6 @@ interface IRoyaltyAutoClaim {
 contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradeable, IAccount, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeTransferLib for address;
-    using StringUtils for *;
 
     uint8 public constant ROYALTY_LEVEL_20 = 20;
     uint8 public constant ROYALTY_LEVEL_40 = 40;
