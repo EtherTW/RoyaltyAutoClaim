@@ -8,13 +8,11 @@ import {Verifier} from "../circuits/verifier.sol";
 
 interface IRegistrationVerifier {
     error ZeroAddress();
-    error EmptyString();
     error InvalidEmailSender(bytes32 emailSender);
     error InvalidDKIMPublicKey(bytes32 publicKeyHash);
-    error InvalidProof();
     error EmailHeaderHashMismatch(bytes32 expected, bytes32 actual);
     error EmailSenderMismatch(bytes32 expected, string actual);
-    error SubjectPrefixMismatch(string expected, string actual);
+    error InvalidSubjectPrefix(Intention intention, uint256 actual0, uint256 actual1);
     error InvalidIntention(Intention intention);
     error TitleHashMismatch(bytes32 expected, string actual);
     error RecipientAddressMismatch(address expected, string actual);
@@ -36,19 +34,24 @@ interface IRegistrationVerifier {
         address recipient,
         bytes32 headerHash,
         Intention intention,
-        ZkEmailProof calldata proof
-    ) external view;
-
-    function verifyUserOpHash(bytes32 userOpHash, ZkEmailProof calldata proof) external view returns (bool);
+        ZkEmailProof calldata proof,
+        bytes32 userOpHash
+    ) external view returns (bool);
 }
 
 contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
     using StringUtils for *;
 
     string public constant DOMAIN = "gmail.com";
-    string public constant REGISTRATION_PREFIX = "56K66KqN5bey5pS25Yiw5oqV56i/"; // base64 version of 確認已收到投稿
-    string public constant RECIPIENT_UPDATE_PREFIX = "56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2A"; // base64 version of 確認此投稿更改稿費收取地址
     bytes32 public immutable EMAIL_SENDER;
+
+    uint256 public constant REGISTRATION_SUBJECT_PREFIX_SIGNAL_0 =
+        4992959312512230116538335825132076927052637790830533900315071821365;
+    uint256 public constant REGISTRATION_SUBJECT_PREFIX_SIGNAL_1 = 0;
+    uint256 public constant RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_0 =
+        185893070597506392968176665448466928770679305951148005942719960109701346869;
+    uint256 public constant RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_1 =
+        95285067689723810438499876746722580514607937107503;
 
     IDKIMRegistry public dkimRegistry;
 
@@ -68,25 +71,46 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
         address recipient,
         bytes32 headerHash,
         Intention intention,
+        ZkEmailProof calldata proof,
+        bytes32 userOpHash
+    ) external view virtual returns (bool) {
+        // revert if signal mismatch
+        _requireSignalMatch(title, recipient, headerHash, intention, proof);
+
+        // verify proof
+        if (!verifyProof(proof.a, proof.b, proof.c, proof.signals)) {
+            return false;
+        }
+
+        // verify userOpHash if provided
+        if (userOpHash != bytes32(0)) {
+            string memory userOpHashStr = _parseUserOpHashStr(proof);
+            if (!userOpHash.toString().stringEq(userOpHashStr.lower())) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    function _requireSignalMatch(
+        string memory title,
+        address recipient,
+        bytes32 headerHash,
+        Intention intention,
         ZkEmailProof calldata proof
-    ) external view virtual {
+    ) internal view {
         (
             bytes32 _pubkeyHash,
             bytes32 _headerHash,
             string memory _emailSender,
-            string memory _subjectPrefix,
             string memory _idStr,
-            string memory _recipientStr,
-        ) = parseSignals(proof.signals);
+            string memory _recipientStr
+        ) = _parseSignals(proof.signals);
 
         // verify DKIM public key
         if (!dkimRegistry.isDKIMPublicKeyHashValid(DOMAIN, _pubkeyHash)) {
             revert InvalidDKIMPublicKey(_pubkeyHash);
-        }
-
-        // verify proof
-        if (!verifyProof(proof.a, proof.b, proof.c, proof.signals)) {
-            revert InvalidProof();
         }
 
         // verify header hash
@@ -101,12 +125,18 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
 
         // verify subject prefix
         if (intention == Intention.REGISTRATION) {
-            if (!_subjectPrefix.stringEq(REGISTRATION_PREFIX)) {
-                revert SubjectPrefixMismatch(REGISTRATION_PREFIX, _subjectPrefix);
+            if (
+                proof.signals[4] != REGISTRATION_SUBJECT_PREFIX_SIGNAL_0
+                    && proof.signals[5] != REGISTRATION_SUBJECT_PREFIX_SIGNAL_1
+            ) {
+                revert InvalidSubjectPrefix(intention, proof.signals[4], proof.signals[5]);
             }
         } else if (intention == Intention.RECIPIENT_UPDATE) {
-            if (!_subjectPrefix.stringEq(RECIPIENT_UPDATE_PREFIX)) {
-                revert SubjectPrefixMismatch(RECIPIENT_UPDATE_PREFIX, _subjectPrefix);
+            if (
+                proof.signals[4] != RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_0
+                    && proof.signals[5] != RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_1
+            ) {
+                revert InvalidSubjectPrefix(intention, proof.signals[4], proof.signals[5]);
             }
         } else {
             revert InvalidIntention(intention);
@@ -124,25 +154,15 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
         }
     }
 
-    function verifyUserOpHash(bytes32 userOpHash, ZkEmailProof calldata proof) external view virtual returns (bool) {
-        (,,,,,, string memory _userOpHashStr) = parseSignals(proof.signals);
-        if (!userOpHash.toString().stringEq(_userOpHashStr.lower())) {
-            return false;
-        }
-        return true;
-    }
-
-    function parseSignals(uint256[15] calldata signals)
-        public
+    function _parseSignals(uint256[15] calldata signals)
+        internal
         pure
         returns (
             bytes32 _pubkeyHash,
             bytes32 _headerHash,
             string memory _emailSender,
-            string memory _subjectPrefix,
             string memory _id,
-            string memory _recipient,
-            string memory _userOpHash
+            string memory _recipient
         )
     {
         _pubkeyHash = bytes32(signals[0]);
@@ -155,10 +175,7 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
         _emailSenderList[0] = signals[3];
         _emailSender = _emailSenderList.convertPackedBytesToString();
 
-        uint256[] memory subjectPrefixList = new uint256[](2);
-        subjectPrefixList[0] = signals[4];
-        subjectPrefixList[1] = signals[5];
-        _subjectPrefix = subjectPrefixList.convertPackedBytesToString();
+        // Note that signals[4] and signals[5] is subject prefix
 
         uint256[] memory idList = new uint256[](3);
         idList[0] = signals[6];
@@ -172,11 +189,13 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
         _recipient = recipientList.convertPackedBytesToString();
 
         // Note that signals[11] is zkemail default public output: proverETHAddress; See circuits/circuit.circom
+    }
 
+    function _parseUserOpHashStr(ZkEmailProof calldata proof) internal pure returns (string memory _userOpHashStr) {
         uint256[] memory userOpHashList = new uint256[](3);
-        userOpHashList[0] = signals[12];
-        userOpHashList[1] = signals[13];
-        userOpHashList[2] = signals[14];
-        _userOpHash = userOpHashList.convertPackedBytesToString();
+        userOpHashList[0] = proof.signals[12];
+        userOpHashList[1] = proof.signals[13];
+        userOpHashList[2] = proof.signals[14];
+        _userOpHashStr = userOpHashList.convertPackedBytesToString();
     }
 }

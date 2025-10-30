@@ -81,8 +81,6 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     // ======================================== registerSubmission ========================================
 
     function test_registerSubmission() public {
-        address recipient = vm.randomAddress();
-        vm.prank(admin);
         _registerSubmission("test", recipient);
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
         assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should be the recipient");
@@ -95,11 +93,20 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         );
     }
 
+    function testCannot_registerSubmission_invalid_proof() public {
+        vm.mockCall(
+            address(mockRegistrationVerifier),
+            abi.encodeWithSelector(IRegistrationVerifier.verify.selector),
+            abi.encode(false)
+        );
+
+        vm.expectRevert(IRoyaltyAutoClaim.InvalidProof.selector);
+        _registerSubmission("test", recipient);
+    }
+
     function testCannot_registerSubmission_if_the_submission_already_exists_or_is_claimed() public {
-        vm.prank(admin);
         _registerSubmission("test", recipient);
 
-        vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyRegistered.selector));
         _registerSubmission("test", recipient);
 
@@ -115,13 +122,11 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     }
 
     function testCannot_registerSubmission_with_empty_title() public {
-        vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmptyString.selector));
         _registerSubmission("", vm.randomAddress());
     }
 
     function testCannot_registerSubmission_with_zero_address() public {
-        vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         _registerSubmission("test", address(0));
     }
@@ -132,15 +137,25 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         address originalRecipient = vm.randomAddress();
         address newRecipient = vm.randomAddress();
 
-        vm.prank(admin);
         _registerSubmission("test", originalRecipient);
-
-        // Update recipient
-        vm.prank(admin);
         _updateRoyaltyRecipient("test", newRecipient);
-
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
         assertEq(submission.royaltyRecipient, newRecipient, "Royalty recipient should be updated");
+    }
+
+    function testCannot_updateRoyaltyRecipient_invalid_proof() public {
+        address originalRecipient = vm.randomAddress();
+        address newRecipient = vm.randomAddress();
+        _registerSubmission("test", originalRecipient);
+
+        vm.mockCall(
+            address(mockRegistrationVerifier),
+            abi.encodeWithSelector(IRegistrationVerifier.verify.selector),
+            abi.encode(false)
+        );
+
+        vm.expectRevert(IRoyaltyAutoClaim.InvalidProof.selector);
+        _updateRoyaltyRecipient("test", newRecipient);
     }
 
     function testCannot_updateRoyaltyRecipient_if_the_submission_is_claimed_or_not_exist() public {

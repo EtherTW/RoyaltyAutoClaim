@@ -2,28 +2,22 @@ import zkeSdk from '@zk-email/sdk'
 import fs from 'fs/promises'
 import path from 'path'
 
-const SLUG = 'johnson86tw/RoyaltyAutoClaim@v20'
-const EML = path.join(__dirname, '..', '..', 'emails', 'success.eml')
-
-console.log('Generating proof for:', SLUG)
-console.log('Email file:', EML)
+const SLUG = 'johnson86tw/RoyaltyAutoClaim@v27'
+const EML = path.join(__dirname, '..', '..', 'emails', 'registration.eml')
 
 const sdk = zkeSdk()
-
-// Get blueprint from the registry
 const blueprint = await sdk.getBlueprint(SLUG)
-
 const prover = blueprint.createProver({ isLocal: false })
-
-// Read email file
 const eml = await fs.readFile(EML, 'utf-8')
 
-const inputs = await prover.generateProofInputs(eml)
+const inputs = JSON.parse(
+	await prover.generateProofInputs(eml, [
+		{
+			name: 'userOpHash',
+			value: '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297', // keccak("userOpHash")
+			maxLength: 66,
+		},
+	]),
+)
 
 console.log(inputs)
-
-if (inputs) {
-	await fs.writeFile(path.join(__dirname, '..', '..', 'circuits', 'input.json'), inputs)
-	console.log('')
-	console.log('Wrote inputs to', path.join(__dirname, '..', '..', 'circuits', 'circuit_js', 'input.json'))
-}

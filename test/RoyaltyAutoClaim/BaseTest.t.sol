@@ -3,11 +3,14 @@ pragma solidity 0.8.30;
 
 import "../../src/RoyaltyAutoClaim.sol";
 import "../../src/RoyaltyAutoClaimProxy.sol";
-import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import "../utils/AATest.t.sol";
+import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {MockToken} from "../../src/MockToken.sol";
-import {ZKUtils} from "../utils/ZKUtils.sol";
+import {ZKTest} from "../utils/ZKTest.sol";
 import {MockRegistrationVerifier} from "../utils/MockRegistrationVerifier.sol";
+import {MockDKIMRegistry} from "../utils/MockDKIMRegistry.sol";
+import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
+import {IRegistrationVerifier, RegistrationVerifier} from "../../src/RegistrationVerifier.sol";
 
 /// @dev for testing internal functions
 contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
@@ -25,9 +28,7 @@ contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {
     }
 }
 
-abstract contract BaseTest is AATest {
-    using ZKUtils for *;
-
+abstract contract BaseTest is AATest, ZKTest {
     address fake;
     uint256 fakeKey;
     address owner;
@@ -48,6 +49,9 @@ abstract contract BaseTest is AATest {
     address[] initialReviewers = new address[](2);
 
     IRegistrationVerifier public mockRegistrationVerifier;
+    IDKIMRegistry public mockDKIMRegistry;
+    IRegistrationVerifier public registrationVerifier;
+
     RoyaltyAutoClaim impl;
     RoyaltyAutoClaimProxy proxy;
     RoyaltyAutoClaim royaltyAutoClaim;
@@ -85,6 +89,8 @@ abstract contract BaseTest is AATest {
         harness = new RoyaltyAutoClaimHarness();
 
         mockRegistrationVerifier = new MockRegistrationVerifier();
+        mockDKIMRegistry = new MockDKIMRegistry();
+        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, keccak256("johnson86tw"));
 
         impl = new RoyaltyAutoClaim();
         proxy = new RoyaltyAutoClaimProxy(
@@ -121,58 +127,53 @@ abstract contract BaseTest is AATest {
     }
 
     function _registerSubmission(string memory _title, address _recipient) internal {
-        (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash) = _createRandomizedProof();
-        royaltyAutoClaim.registerSubmission(_title, _recipient, headerHash, proof);
+        royaltyAutoClaim.registerSubmission(_title, _recipient, bytes32(vm.randomUint()), validRegistrationProof());
     }
 
     function _registerSubmission4337(string memory _title, address _recipient) public {
-        (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash) = _createRandomizedProof();
-
         PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
             address(royaltyAutoClaim),
-            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission, (_title, _recipient, headerHash))
+            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission, (_title, _recipient, bytes32(vm.randomUint())))
         );
 
-        userOp.signature = abi.encode(proof);
+        userOp.signature = abi.encode(validRegistrationProof());
 
         _handleUserOp(userOp);
     }
 
     function _updateRoyaltyRecipient(string memory _title, address _recipient) internal {
-        (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash) = _createRandomizedProof();
-        royaltyAutoClaim.updateRoyaltyRecipient(_title, _recipient, headerHash, proof);
+        royaltyAutoClaim.updateRoyaltyRecipient(
+            _title, _recipient, bytes32(vm.randomUint()), validRecipientUpdateProof()
+        );
     }
 
     function _updateRoyaltyRecipient4337(string memory _title, address _recipient) public {
-        (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash) = _createRandomizedProof();
-
         PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
             address(royaltyAutoClaim),
-            abi.encodeCall(IRoyaltyAutoClaim.updateRoyaltyRecipient, (_title, _recipient, headerHash))
+            abi.encodeCall(IRoyaltyAutoClaim.updateRoyaltyRecipient, (_title, _recipient, bytes32(vm.randomUint())))
         );
 
-        userOp.signature = abi.encode(proof);
+        userOp.signature = abi.encode(validRecipientUpdateProof());
 
         _handleUserOp(userOp);
     }
 
-    /// @dev Creates a ZkEmailProof with randomized email header hash for testing
-    function _createRandomizedProof()
-        internal
-        returns (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash)
-    {
-        proof = ZKUtils.parseJsonProof();
-        headerHash = bytes32(vm.randomUint());
+    // function _createRandomizedProof()
+    //     internal
+    //     returns (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash)
+    // {
+    //     proof = parseJsonProof("registration-proof");
+    //     headerHash = bytes32(vm.randomUint());
 
-        // Modify headerHash for testing
-        (uint256 headerHashHi, uint256 headerHashLo) = splitFromBytes32(headerHash);
-        proof.signals[1] = headerHashHi;
-        proof.signals[2] = headerHashLo;
-    }
+    //     // Modify headerHash for testing
+    //     (uint256 headerHashHi, uint256 headerHashLo) = splitFromBytes32(headerHash);
+    //     proof.signals[1] = headerHashHi;
+    //     proof.signals[2] = headerHashLo;
+    // }
 
-    function splitFromBytes32(bytes32 _headerHash) internal pure returns (uint256 headerHashHi, uint256 headerHashLo) {
-        headerHashHi = uint256(_headerHash) >> 128;
-        headerHashLo = uint256(_headerHash) & ((1 << 128) - 1);
-        return (headerHashHi, headerHashLo);
-    }
+    // function splitFromBytes32(bytes32 _headerHash) internal pure returns (uint256 headerHashHi, uint256 headerHashLo) {
+    //     headerHashHi = uint256(_headerHash) >> 128;
+    //     headerHashLo = uint256(_headerHash) & ((1 << 128) - 1);
+    //     return (headerHashHi, headerHashLo);
+    // }
 }

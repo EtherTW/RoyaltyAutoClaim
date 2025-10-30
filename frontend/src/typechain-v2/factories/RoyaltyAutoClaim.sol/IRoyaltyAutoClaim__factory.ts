@@ -600,6 +600,11 @@ const _abi = [
   },
   {
     type: "error",
+    name: "InvalidProof",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "InvalidRoyaltyLevel",
     inputs: [
       {

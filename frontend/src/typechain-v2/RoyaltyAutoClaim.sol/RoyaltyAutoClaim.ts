@@ -140,8 +140,6 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
       | "upgradeToAndCall"
       | "validateUserOp"
-      | "verifyRecipientUpdate"
-      | "verifySubmissionRegistration"
   ): FunctionFragment;
 
   getEvent(
@@ -308,24 +306,6 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     functionFragment: "validateUserOp",
     values: [PackedUserOperationStruct, BytesLike, BigNumberish]
   ): string;
-  encodeFunctionData(
-    functionFragment: "verifyRecipientUpdate",
-    values: [
-      string,
-      AddressLike,
-      BytesLike,
-      IRegistrationVerifier.ZkEmailProofStruct
-    ]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "verifySubmissionRegistration",
-    values: [
-      string,
-      AddressLike,
-      BytesLike,
-      IRegistrationVerifier.ZkEmailProofStruct
-    ]
-  ): string;
 
   decodeFunctionResult(
     functionFragment: "NATIVE_TOKEN",
@@ -453,14 +433,6 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "validateUserOp",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "verifyRecipientUpdate",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "verifySubmissionRegistration",
     data: BytesLike
   ): Result;
 }
@@ -880,28 +852,6 @@ export interface RoyaltyAutoClaim extends BaseContract {
     "nonpayable"
   >;
 
-  verifyRecipientUpdate: TypedContractMethod<
-    [
-      title: string,
-      newRecipient: AddressLike,
-      emailHeaderHash: BytesLike,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
-    ],
-    [void],
-    "view"
-  >;
-
-  verifySubmissionRegistration: TypedContractMethod<
-    [
-      title: string,
-      royaltyRecipient: AddressLike,
-      emailHeaderHash: BytesLike,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
-    ],
-    [void],
-    "view"
-  >;
-
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -1091,30 +1041,6 @@ export interface RoyaltyAutoClaim extends BaseContract {
     ],
     [bigint],
     "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "verifyRecipientUpdate"
-  ): TypedContractMethod<
-    [
-      title: string,
-      newRecipient: AddressLike,
-      emailHeaderHash: BytesLike,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
-    ],
-    [void],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "verifySubmissionRegistration"
-  ): TypedContractMethod<
-    [
-      title: string,
-      royaltyRecipient: AddressLike,
-      emailHeaderHash: BytesLike,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
-    ],
-    [void],
-    "view"
   >;
 
   getEvent(

@@ -1,7 +1,49 @@
-import { MockToken__factory, RoyaltyAutoClaim__factory } from '@/typechain-types'
-import { Interface } from 'ethers'
-import { isError, ErrorCode } from 'ethers'
 import type { ethers } from 'ethers'
+import { ErrorCode, Interface, isError } from 'ethers'
+import { extractHexString } from 'sendop'
+import { MockToken__factory, RoyaltyAutoClaim__factory } from '../typechain-types'
+import { RegistrationVerifier__factory } from '../typechain-v2'
+
+export function handleUserOpError(e: unknown) {
+	const revert = extractHexString((e as Error).message) || ''
+	const customError = parseContractError(
+		{
+			RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
+			RegistrationVerifier: RegistrationVerifier__factory.createInterface(),
+		},
+		revert,
+	)
+	if (customError) {
+		console.info({
+			[revert]: customError,
+		})
+	}
+	throw e
+}
+
+export function parseContractError(interfaces: Record<string, Interface>, revert: string, nameOnly?: boolean): string {
+	if (!revert) return ''
+
+	for (const [name, iface] of Object.entries(interfaces)) {
+		try {
+			const decodedError = iface.parseError(revert)
+
+			if (decodedError) {
+				const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
+
+				if (nameOnly) {
+					return `${decodedError.name}${errorArgs}`
+				}
+				return `${name}.${decodedError.name}${errorArgs} (Note: The prefix "${name}" may not correspond to the actual contract that triggered the revert.)`
+			}
+		} catch {
+			// Continue to next interface if parsing fails
+			continue
+		}
+	}
+
+	return ''
+}
 
 // Returned error is used for console.error
 export function normalizeError(unknownError: unknown): Error {

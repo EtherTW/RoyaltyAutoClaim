@@ -1,4 +1,5 @@
 import zkeSdk, { ProofData } from '@zk-email/sdk'
+import { keccak256, toUtf8Bytes } from 'ethers'
 import fs from 'fs/promises'
 import path from 'path'
 
@@ -14,19 +15,15 @@ console.log('Generating proof for:', SLUG)
 console.log('Email file:', EML)
 
 const sdk = zkeSdk()
-
-// Get blueprint from the registry
 const blueprint = await sdk.getBlueprint(SLUG)
-
 const prover = blueprint.createProver({ isLocal: false })
 
-// Read email file
 const eml = await fs.readFile(EML, 'utf-8')
 
 const proof = await prover.generateProof(eml, [
 	{
 		name: 'userOpHash',
-		value: '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297', // keccak("userOpHash")
+		value: keccak256(toUtf8Bytes('fake')),
 		maxLength: 66,
 	},
 ])
@@ -64,5 +61,8 @@ if (verified) {
 		return typeof value === 'bigint' ? value.toString() : value
 	}
 
-	await fs.writeFile(path.join(__dirname, '..', '..', 'proof.json'), JSON.stringify(args, bigIntReplacer, 2))
+	await fs.writeFile(
+		path.join(__dirname, '..', '..', `${emailFile}-proof.json`),
+		JSON.stringify(args, bigIntReplacer, 2),
+	)
 }

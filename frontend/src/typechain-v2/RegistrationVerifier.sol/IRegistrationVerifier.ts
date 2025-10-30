@@ -43,7 +43,7 @@ export declare namespace IRegistrationVerifier {
 }
 
 export interface IRegistrationVerifierInterface extends Interface {
-  getFunction(nameOrSignature: "verify" | "verifyUserOpHash"): FunctionFragment;
+  getFunction(nameOrSignature: "verify"): FunctionFragment;
 
   encodeFunctionData(
     functionFragment: "verify",
@@ -52,19 +52,12 @@ export interface IRegistrationVerifierInterface extends Interface {
       AddressLike,
       BytesLike,
       BigNumberish,
-      IRegistrationVerifier.ZkEmailProofStruct
+      IRegistrationVerifier.ZkEmailProofStruct,
+      BytesLike
     ]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "verifyUserOpHash",
-    values: [BytesLike, IRegistrationVerifier.ZkEmailProofStruct]
   ): string;
 
   decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "verifyUserOpHash",
-    data: BytesLike
-  ): Result;
 }
 
 export interface IRegistrationVerifier extends BaseContract {
@@ -116,14 +109,9 @@ export interface IRegistrationVerifier extends BaseContract {
       recipient: AddressLike,
       headerHash: BytesLike,
       intention: BigNumberish,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
+      proof: IRegistrationVerifier.ZkEmailProofStruct,
+      userOpHash: BytesLike
     ],
-    [void],
-    "view"
-  >;
-
-  verifyUserOpHash: TypedContractMethod<
-    [userOpHash: BytesLike, proof: IRegistrationVerifier.ZkEmailProofStruct],
     [boolean],
     "view"
   >;
@@ -140,15 +128,9 @@ export interface IRegistrationVerifier extends BaseContract {
       recipient: AddressLike,
       headerHash: BytesLike,
       intention: BigNumberish,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
+      proof: IRegistrationVerifier.ZkEmailProofStruct,
+      userOpHash: BytesLike
     ],
-    [void],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "verifyUserOpHash"
-  ): TypedContractMethod<
-    [userOpHash: BytesLike, proof: IRegistrationVerifier.ZkEmailProofStruct],
     [boolean],
     "view"
   >;

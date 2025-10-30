@@ -60,45 +60,10 @@ const _abi = [
           },
         ],
       },
-    ],
-    outputs: [],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "verifyUserOpHash",
-    inputs: [
       {
         name: "userOpHash",
         type: "bytes32",
         internalType: "bytes32",
-      },
-      {
-        name: "proof",
-        type: "tuple",
-        internalType: "struct IRegistrationVerifier.ZkEmailProof",
-        components: [
-          {
-            name: "a",
-            type: "uint256[2]",
-            internalType: "uint256[2]",
-          },
-          {
-            name: "b",
-            type: "uint256[2][2]",
-            internalType: "uint256[2][2]",
-          },
-          {
-            name: "c",
-            type: "uint256[2]",
-            internalType: "uint256[2]",
-          },
-          {
-            name: "signals",
-            type: "uint256[15]",
-            internalType: "uint256[15]",
-          },
-        ],
       },
     ],
     outputs: [
@@ -144,11 +109,6 @@ const _abi = [
   },
   {
     type: "error",
-    name: "EmptyString",
-    inputs: [],
-  },
-  {
-    type: "error",
     name: "InvalidDKIMPublicKey",
     inputs: [
       {
@@ -182,8 +142,24 @@ const _abi = [
   },
   {
     type: "error",
-    name: "InvalidProof",
-    inputs: [],
+    name: "InvalidSubjectPrefix",
+    inputs: [
+      {
+        name: "intention",
+        type: "uint8",
+        internalType: "enum IRegistrationVerifier.Intention",
+      },
+      {
+        name: "actual0",
+        type: "uint256",
+        internalType: "uint256",
+      },
+      {
+        name: "actual1",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
   },
   {
     type: "error",
@@ -193,22 +169,6 @@ const _abi = [
         name: "expected",
         type: "address",
         internalType: "address",
-      },
-      {
-        name: "actual",
-        type: "string",
-        internalType: "string",
-      },
-    ],
-  },
-  {
-    type: "error",
-    name: "SubjectPrefixMismatch",
-    inputs: [
-      {
-        name: "expected",
-        type: "string",
-        internalType: "string",
       },
       {
         name: "actual",

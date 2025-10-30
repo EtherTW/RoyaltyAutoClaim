@@ -54,8 +54,8 @@ export const BUNDLER_URL: { [key: string]: string } = {
 	[CHAIN_ID.LOCAL]: 'http://localhost:4337',
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-	[CHAIN_ID.BASE_SEPOLIA]: 'https://api.candide.dev/bundler/v3/base-sepolia/569f6f756834509e752305edd333cef7',
-	[CHAIN_ID.BASE]: 'https://api.candide.dev/bundler/v3/base/569f6f756834509e752305edd333cef7',
+	[CHAIN_ID.BASE_SEPOLIA]: 'https://api.pimlico.io/v2/84532/rpc?apikey=pim_nDodV8Xhz7bXSEoeL9UbGh',
+	[CHAIN_ID.BASE]: 'https://api.pimlico.io/v2/8453/rpc?apikey=pim_nDodV8Xhz7bXSEoeL9UbGh',
 }
 
 // Duration of error notification in ms, -1 means it will not disappear automatically

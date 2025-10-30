@@ -49,16 +49,16 @@ export interface RegistrationVerifierInterface extends Interface {
     nameOrSignature:
       | "DOMAIN"
       | "EMAIL_SENDER"
-      | "RECIPIENT_UPDATE_PREFIX"
-      | "REGISTRATION_PREFIX"
+      | "RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_0"
+      | "RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_1"
+      | "REGISTRATION_SUBJECT_PREFIX_SIGNAL_0"
+      | "REGISTRATION_SUBJECT_PREFIX_SIGNAL_1"
       | "dkimRegistry"
       | "owner"
-      | "parseSignals"
       | "renounceOwnership"
       | "transferOwnership"
       | "verify"
       | "verifyProof"
-      | "verifyUserOpHash"
   ): FunctionFragment;
 
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
@@ -69,11 +69,19 @@ export interface RegistrationVerifierInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "RECIPIENT_UPDATE_PREFIX",
+    functionFragment: "RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_0",
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "REGISTRATION_PREFIX",
+    functionFragment: "RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_1",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "REGISTRATION_SUBJECT_PREFIX_SIGNAL_0",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "REGISTRATION_SUBJECT_PREFIX_SIGNAL_1",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -81,10 +89,6 @@ export interface RegistrationVerifierInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "parseSignals",
-    values: [BigNumberish[]]
-  ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
@@ -100,7 +104,8 @@ export interface RegistrationVerifierInterface extends Interface {
       AddressLike,
       BytesLike,
       BigNumberish,
-      IRegistrationVerifier.ZkEmailProofStruct
+      IRegistrationVerifier.ZkEmailProofStruct,
+      BytesLike
     ]
   ): string;
   encodeFunctionData(
@@ -112,10 +117,6 @@ export interface RegistrationVerifierInterface extends Interface {
       BigNumberish[]
     ]
   ): string;
-  encodeFunctionData(
-    functionFragment: "verifyUserOpHash",
-    values: [BytesLike, IRegistrationVerifier.ZkEmailProofStruct]
-  ): string;
 
   decodeFunctionResult(functionFragment: "DOMAIN", data: BytesLike): Result;
   decodeFunctionResult(
@@ -123,11 +124,19 @@ export interface RegistrationVerifierInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "RECIPIENT_UPDATE_PREFIX",
+    functionFragment: "RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_0",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "REGISTRATION_PREFIX",
+    functionFragment: "RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_1",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "REGISTRATION_SUBJECT_PREFIX_SIGNAL_0",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "REGISTRATION_SUBJECT_PREFIX_SIGNAL_1",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -135,10 +144,6 @@ export interface RegistrationVerifierInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "parseSignals",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
     data: BytesLike
@@ -150,10 +155,6 @@ export interface RegistrationVerifierInterface extends Interface {
   decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "verifyProof",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "verifyUserOpHash",
     data: BytesLike
   ): Result;
 }
@@ -218,29 +219,33 @@ export interface RegistrationVerifier extends BaseContract {
 
   EMAIL_SENDER: TypedContractMethod<[], [string], "view">;
 
-  RECIPIENT_UPDATE_PREFIX: TypedContractMethod<[], [string], "view">;
+  RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_0: TypedContractMethod<
+    [],
+    [bigint],
+    "view"
+  >;
 
-  REGISTRATION_PREFIX: TypedContractMethod<[], [string], "view">;
+  RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_1: TypedContractMethod<
+    [],
+    [bigint],
+    "view"
+  >;
+
+  REGISTRATION_SUBJECT_PREFIX_SIGNAL_0: TypedContractMethod<
+    [],
+    [bigint],
+    "view"
+  >;
+
+  REGISTRATION_SUBJECT_PREFIX_SIGNAL_1: TypedContractMethod<
+    [],
+    [bigint],
+    "view"
+  >;
 
   dkimRegistry: TypedContractMethod<[], [string], "view">;
 
   owner: TypedContractMethod<[], [string], "view">;
-
-  parseSignals: TypedContractMethod<
-    [signals: BigNumberish[]],
-    [
-      [string, string, string, string, string, string, string] & {
-        _pubkeyHash: string;
-        _headerHash: string;
-        _emailSender: string;
-        _subjectPrefix: string;
-        _id: string;
-        _recipient: string;
-        _userOpHash: string;
-      }
-    ],
-    "view"
-  >;
 
   renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
 
@@ -256,9 +261,10 @@ export interface RegistrationVerifier extends BaseContract {
       recipient: AddressLike,
       headerHash: BytesLike,
       intention: BigNumberish,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
+      proof: IRegistrationVerifier.ZkEmailProofStruct,
+      userOpHash: BytesLike
     ],
-    [void],
+    [boolean],
     "view"
   >;
 
@@ -269,12 +275,6 @@ export interface RegistrationVerifier extends BaseContract {
       c: [BigNumberish, BigNumberish],
       input: BigNumberish[]
     ],
-    [boolean],
-    "view"
-  >;
-
-  verifyUserOpHash: TypedContractMethod<
-    [userOpHash: BytesLike, proof: IRegistrationVerifier.ZkEmailProofStruct],
     [boolean],
     "view"
   >;
@@ -290,34 +290,23 @@ export interface RegistrationVerifier extends BaseContract {
     nameOrSignature: "EMAIL_SENDER"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: "RECIPIENT_UPDATE_PREFIX"
-  ): TypedContractMethod<[], [string], "view">;
+    nameOrSignature: "RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_0"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
-    nameOrSignature: "REGISTRATION_PREFIX"
-  ): TypedContractMethod<[], [string], "view">;
+    nameOrSignature: "RECIPIENT_UPDATE_SUBJECT_PREFIX_SIGNAL_1"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "REGISTRATION_SUBJECT_PREFIX_SIGNAL_0"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "REGISTRATION_SUBJECT_PREFIX_SIGNAL_1"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "dkimRegistry"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "owner"
   ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "parseSignals"
-  ): TypedContractMethod<
-    [signals: BigNumberish[]],
-    [
-      [string, string, string, string, string, string, string] & {
-        _pubkeyHash: string;
-        _headerHash: string;
-        _emailSender: string;
-        _subjectPrefix: string;
-        _id: string;
-        _recipient: string;
-        _userOpHash: string;
-      }
-    ],
-    "view"
-  >;
   getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -332,9 +321,10 @@ export interface RegistrationVerifier extends BaseContract {
       recipient: AddressLike,
       headerHash: BytesLike,
       intention: BigNumberish,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
+      proof: IRegistrationVerifier.ZkEmailProofStruct,
+      userOpHash: BytesLike
     ],
-    [void],
+    [boolean],
     "view"
   >;
   getFunction(
@@ -346,13 +336,6 @@ export interface RegistrationVerifier extends BaseContract {
       c: [BigNumberish, BigNumberish],
       input: BigNumberish[]
     ],
-    [boolean],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "verifyUserOpHash"
-  ): TypedContractMethod<
-    [userOpHash: BytesLike, proof: IRegistrationVerifier.ZkEmailProofStruct],
     [boolean],
     "view"
   >;

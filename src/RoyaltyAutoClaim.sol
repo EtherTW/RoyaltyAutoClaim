@@ -80,6 +80,7 @@ interface IRoyaltyAutoClaim {
     error SameAddress();
     error SameStatus();
     error ZeroAmount();
+    error InvalidProof();
 
     // Structs
     struct Configs {
@@ -278,7 +279,9 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         bytes32 emailHeaderHash,
         IRegistrationVerifier.ZkEmailProof calldata proof
     ) public {
-        this.verifySubmissionRegistration(title, royaltyRecipient, emailHeaderHash, proof);
+        if (!_verifySubmissionRegistration(title, royaltyRecipient, emailHeaderHash, proof, bytes32(0))) {
+            revert InvalidProof();
+        }
         _registerSubmission(title, royaltyRecipient, emailHeaderHash);
     }
 
@@ -290,19 +293,27 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         _registerSubmission(title, royaltyRecipient, emailHeaderHash);
     }
 
-    /// @dev It’s marked as external because we need to use try/catch within validateUserOp.
-    function verifySubmissionRegistration(
+    function _verifySubmissionRegistration(
         string memory title,
         address royaltyRecipient,
         bytes32 emailHeaderHash,
-        IRegistrationVerifier.ZkEmailProof calldata proof
-    ) external view {
+        IRegistrationVerifier.ZkEmailProof memory proof,
+        bytes32 userOpHash
+    ) internal view returns (bool) {
         require(bytes(title).length > 0, EmptyString());
         require(royaltyRecipient != address(0), ZeroAddress());
         require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
         require(!isEmailProofUsed(emailHeaderHash), EmailProofUsed());
-        _getMainStorage().configs.registrationVerifier
-            .verify(title, royaltyRecipient, emailHeaderHash, IRegistrationVerifier.Intention.REGISTRATION, proof);
+
+        return _getMainStorage().configs.registrationVerifier
+            .verify(
+                title,
+                royaltyRecipient,
+                emailHeaderHash,
+                IRegistrationVerifier.Intention.REGISTRATION,
+                proof,
+                userOpHash
+            );
     }
 
     function _registerSubmission(string memory title, address royaltyRecipient, bytes32 emailHeaderHash) internal {
@@ -320,7 +331,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         bytes32 emailHeaderHash,
         IRegistrationVerifier.ZkEmailProof calldata proof
     ) public {
-        this.verifyRecipientUpdate(title, newRecipient, emailHeaderHash, proof);
+        if (!_verifyRecipientUpdate(title, newRecipient, emailHeaderHash, proof, bytes32(0))) {
+            revert InvalidProof();
+        }
+
         _updateRoyaltyRecipient(title, newRecipient, emailHeaderHash);
     }
 
@@ -332,18 +346,26 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         _updateRoyaltyRecipient(title, newRecipient, emailHeaderHash);
     }
 
-    /// @dev It’s marked as external because we need to use try/catch within validateUserOp.
-    function verifyRecipientUpdate(
+    function _verifyRecipientUpdate(
         string memory title,
         address newRecipient,
         bytes32 emailHeaderHash,
-        IRegistrationVerifier.ZkEmailProof calldata proof
-    ) external view {
+        IRegistrationVerifier.ZkEmailProof memory proof,
+        bytes32 userOpHash
+    ) internal view returns (bool) {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         require(newRecipient != submissions(title).royaltyRecipient, SameAddress());
         require(!isEmailProofUsed(emailHeaderHash), EmailProofUsed());
-        _getMainStorage().configs.registrationVerifier
-            .verify(title, newRecipient, emailHeaderHash, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, proof);
+
+        return _getMainStorage().configs.registrationVerifier
+            .verify(
+                title,
+                newRecipient,
+                emailHeaderHash,
+                IRegistrationVerifier.Intention.RECIPIENT_UPDATE,
+                proof,
+                userOpHash
+            );
     }
 
     function _updateRoyaltyRecipient(string memory title, address newRecipient, bytes32 emailHeaderHash) internal {
@@ -436,23 +458,20 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             IRegistrationVerifier.ZkEmailProof memory proof =
                 abi.decode(userOp.signature, (IRegistrationVerifier.ZkEmailProof));
 
-            if (!_getMainStorage().configs.registrationVerifier.verifyUserOpHash(userOpHash, proof)) {
+            if (
+                selector == IRoyaltyAutoClaim.registerSubmission.selector
+                    && !_verifySubmissionRegistration(title, recipient, emailHeaderHash, proof, userOpHash)
+            ) {
                 return SIG_VALIDATION_FAILED;
             }
 
-            if (selector == IRoyaltyAutoClaim.registerSubmission.selector) {
-                try this.verifySubmissionRegistration(title, recipient, emailHeaderHash, proof) {
-                    return 0;
-                } catch {
-                    return SIG_VALIDATION_FAILED;
-                }
-            } else if (selector == IRoyaltyAutoClaim.updateRoyaltyRecipient.selector) {
-                try this.verifyRecipientUpdate(title, recipient, emailHeaderHash, proof) {
-                    return 0;
-                } catch {
-                    return SIG_VALIDATION_FAILED;
-                }
+            if (
+                selector == IRoyaltyAutoClaim.updateRoyaltyRecipient.selector
+                    && !_verifyRecipientUpdate(title, recipient, emailHeaderHash, proof, userOpHash)
+            ) {
+                return SIG_VALIDATION_FAILED;
             }
+            return 0;
         }
 
         /// ========================= Other functions =========================

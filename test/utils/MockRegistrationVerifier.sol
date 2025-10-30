@@ -9,15 +9,12 @@ contract MockRegistrationVerifier is RegistrationVerifier {
         RegistrationVerifier(IDKIMRegistry(0xA4896a3F93bf4bf58378e579f3Cf193bB4Af1022), keccak256("testEmailSender"))
     {}
 
-    function verify(
-        string memory title,
-        address recipient,
-        bytes32 headerHash,
-        Intention intention,
-        ZkEmailProof calldata proof
-    ) external view override {}
-
-    function verifyUserOpHash(bytes32, ZkEmailProof calldata) external pure override returns (bool) {
+    function verify(string memory, address, bytes32, Intention, ZkEmailProof calldata, bytes32)
+        external
+        pure
+        override
+        returns (bool)
+    {
         return true;
     }
 }

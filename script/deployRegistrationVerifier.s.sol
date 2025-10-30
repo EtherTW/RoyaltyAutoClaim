@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
-import "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
-import "@zk-email/contracts/DKIMRegistry.sol";
+import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
 import {RegistrationVerifier} from "../src/RegistrationVerifier.sol";
 
 /*

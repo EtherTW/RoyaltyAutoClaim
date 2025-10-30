@@ -42,6 +42,16 @@ forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url RPC_URL --broadcast -
     -   [contract](https://vscode.blockscan.com/8453/0x0537487ff990df53b29bd3e4b4a4c5c80c17f958)
     -   [address on base](https://basescan.org/address/0x3D3935B3C030893f118a84C92C66dF1B9E4169d6#readProxyContract)
 
+Test Commands
+
+```
+forge script script/deployRegistrationVerifier.s.sol --rpc-url https://sepolia.base.org --broadcast --verify
+cast send --account dev --rpc-url https://sepolia.base.org 0xaCf34e475Ef850AF607ECA2563C07542F5D2F47a --value 0.0003ether
+cd frontend
+bun run scripts/register.ts registration 0xaCf34e475Ef850AF607ECA2563C07542F5D2F47a
+bun run scripts/update-recipient.ts recipient-update 0xaCf34e475Ef850AF607ECA2563C07542F5D2F47a
+```
+
 ## Frontend
 
 -   Remember to set up .env in frontend

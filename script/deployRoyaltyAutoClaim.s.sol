@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity 0.8.30;
 
 import {Script, console} from "forge-std/Script.sol";
 import {RoyaltyAutoClaim} from "../src/RoyaltyAutoClaim.sol";
 import {RoyaltyAutoClaimProxy} from "../src/RoyaltyAutoClaimProxy.sol";
-import {IRegistrationVerifier} from "../src/RegistrationVerifier.sol";
+import {RegistrationVerifier} from "../src/RegistrationVerifier.sol";
+import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
 
 /*
 
@@ -22,15 +23,19 @@ contract DeployRoyaltyAutoClaimScript is Script {
         address admin = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.admin");
         address token = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.token");
         address[] memory reviewers = vm.parseJsonAddressArray(json, ".RoyaltyAutoClaim.reviewers");
-        address verifierAddr = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.verifier");
+        address dkimRegistryAddr = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.dkimRegistry");
+        string memory emailSender = vm.parseJsonString(json, ".RoyaltyAutoClaim.emailSender");
 
         vm.startBroadcast(deployer);
 
-        IRegistrationVerifier verifier = IRegistrationVerifier(verifierAddr);
+        IDKIMRegistry dkimRegistry = IDKIMRegistry(dkimRegistryAddr);
+        RegistrationVerifier registrationVerifier =
+            new RegistrationVerifier(dkimRegistry, keccak256(bytes(emailSender)));
+
         RoyaltyAutoClaim royaltyAutoClaim = new RoyaltyAutoClaim();
         RoyaltyAutoClaimProxy proxy = new RoyaltyAutoClaimProxy(
             address(royaltyAutoClaim),
-            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, token, reviewers, verifier))
+            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, token, reviewers, registrationVerifier))
         );
 
         console.log("RoyaltyAutoClaim implementation at:", address(royaltyAutoClaim));
