@@ -1,6 +1,8 @@
 import { ENTRY_POINT_V08_ADDRESS, EntryPointV08__factory, fetchGasPricePimlico, UserOpBuilder } from 'sendop'
 import { BUNDLER_URL } from '../config'
 
+const FIXED_VERIFICATION_GAS_LIMIT = 1_089_906
+
 export async function buildUserOp({ royaltyAutoClaimAddress, chainId, client, bundler, callData }) {
 	const ep8 = EntryPointV08__factory.connect(ENTRY_POINT_V08_ADDRESS, client)
 	return new UserOpBuilder({ chainId: chainId, bundler, entryPointAddress: ENTRY_POINT_V08_ADDRESS })
@@ -12,6 +14,6 @@ export async function buildUserOp({ royaltyAutoClaimAddress, chainId, client, bu
 
 export async function setFixedVerificationGasLimitForZkProof(op: UserOpBuilder) {
 	op.setGasValue({
-		verificationGasLimit: 1089906n,
+		verificationGasLimit: FIXED_VERIFICATION_GAS_LIMIT,
 	})
 }

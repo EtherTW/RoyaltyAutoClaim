@@ -1,9 +1,9 @@
-import { ERROR_NOTIFICATION_DURATION } from '@/config'
-import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+import { ERROR_NOTIFICATION_DURATION } from '../config'
+import { useRoyaltyAutoClaimStore } from '../stores/useRoyaltyAutoClaim'
 import { notify } from '@kyvg/vue3-notification'
 import { formatErrMsg, normalizeError, UserRejectedActionError } from './error'
 import { isSameAddress } from 'sendop'
-import { useBlockchainStore } from '@/stores/useBlockchain'
+import { useBlockchainStore } from '../stores/useBlockchain'
 import { useVueDapp } from '@vue-dapp/core'
 
 export function useContractCall<T extends unknown[] = []>(options: {

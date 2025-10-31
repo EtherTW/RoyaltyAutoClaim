@@ -59,6 +59,7 @@ export interface RegistrationVerifierInterface extends Interface {
       | "transferOwnership"
       | "verify"
       | "verifyProof"
+      | "verifyUserOpHash"
   ): FunctionFragment;
 
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
@@ -104,8 +105,7 @@ export interface RegistrationVerifierInterface extends Interface {
       AddressLike,
       BytesLike,
       BigNumberish,
-      IRegistrationVerifier.ZkEmailProofStruct,
-      BytesLike
+      IRegistrationVerifier.ZkEmailProofStruct
     ]
   ): string;
   encodeFunctionData(
@@ -116,6 +116,10 @@ export interface RegistrationVerifierInterface extends Interface {
       [BigNumberish, BigNumberish],
       BigNumberish[]
     ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "verifyUserOpHash",
+    values: [IRegistrationVerifier.ZkEmailProofStruct, BytesLike]
   ): string;
 
   decodeFunctionResult(functionFragment: "DOMAIN", data: BytesLike): Result;
@@ -155,6 +159,10 @@ export interface RegistrationVerifierInterface extends Interface {
   decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "verifyProof",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "verifyUserOpHash",
     data: BytesLike
   ): Result;
 }
@@ -261,8 +269,7 @@ export interface RegistrationVerifier extends BaseContract {
       recipient: AddressLike,
       headerHash: BytesLike,
       intention: BigNumberish,
-      proof: IRegistrationVerifier.ZkEmailProofStruct,
-      userOpHash: BytesLike
+      proof: IRegistrationVerifier.ZkEmailProofStruct
     ],
     [boolean],
     "view"
@@ -275,6 +282,12 @@ export interface RegistrationVerifier extends BaseContract {
       c: [BigNumberish, BigNumberish],
       input: BigNumberish[]
     ],
+    [boolean],
+    "view"
+  >;
+
+  verifyUserOpHash: TypedContractMethod<
+    [proof: IRegistrationVerifier.ZkEmailProofStruct, userOpHash: BytesLike],
     [boolean],
     "view"
   >;
@@ -321,8 +334,7 @@ export interface RegistrationVerifier extends BaseContract {
       recipient: AddressLike,
       headerHash: BytesLike,
       intention: BigNumberish,
-      proof: IRegistrationVerifier.ZkEmailProofStruct,
-      userOpHash: BytesLike
+      proof: IRegistrationVerifier.ZkEmailProofStruct
     ],
     [boolean],
     "view"
@@ -336,6 +348,13 @@ export interface RegistrationVerifier extends BaseContract {
       c: [BigNumberish, BigNumberish],
       input: BigNumberish[]
     ],
+    [boolean],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "verifyUserOpHash"
+  ): TypedContractMethod<
+    [proof: IRegistrationVerifier.ZkEmailProofStruct, userOpHash: BytesLike],
     [boolean],
     "view"
   >;

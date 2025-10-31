@@ -60,6 +60,47 @@ const _abi = [
           },
         ],
       },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "verifyUserOpHash",
+    inputs: [
+      {
+        name: "proof",
+        type: "tuple",
+        internalType: "struct IRegistrationVerifier.ZkEmailProof",
+        components: [
+          {
+            name: "a",
+            type: "uint256[2]",
+            internalType: "uint256[2]",
+          },
+          {
+            name: "b",
+            type: "uint256[2][2]",
+            internalType: "uint256[2][2]",
+          },
+          {
+            name: "c",
+            type: "uint256[2]",
+            internalType: "uint256[2]",
+          },
+          {
+            name: "signals",
+            type: "uint256[15]",
+            internalType: "uint256[15]",
+          },
+        ],
+      },
       {
         name: "userOpHash",
         type: "bytes32",
@@ -73,7 +114,7 @@ const _abi = [
         internalType: "bool",
       },
     ],
-    stateMutability: "view",
+    stateMutability: "pure",
   },
   {
     type: "error",

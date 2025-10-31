@@ -80,6 +80,7 @@ console.log('Giving proxy 0.001 ETH...')
 const tx = await dev.sendTransaction({
 	to: racAddress,
 	value: ethers.parseEther('0.001'),
+	gasLimit: 100000, // Explicit gas limit for contract interaction
 })
 await tx.wait()
 
@@ -87,3 +88,5 @@ await tx.wait()
 console.log('Sending 1000 tokens to proxy...')
 const tx2 = await token.transfer(racAddress, ethers.parseEther('1000'))
 await tx2.wait()
+
+console.log('Done!')

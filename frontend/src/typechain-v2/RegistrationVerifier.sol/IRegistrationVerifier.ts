@@ -43,7 +43,7 @@ export declare namespace IRegistrationVerifier {
 }
 
 export interface IRegistrationVerifierInterface extends Interface {
-  getFunction(nameOrSignature: "verify"): FunctionFragment;
+  getFunction(nameOrSignature: "verify" | "verifyUserOpHash"): FunctionFragment;
 
   encodeFunctionData(
     functionFragment: "verify",
@@ -52,12 +52,19 @@ export interface IRegistrationVerifierInterface extends Interface {
       AddressLike,
       BytesLike,
       BigNumberish,
-      IRegistrationVerifier.ZkEmailProofStruct,
-      BytesLike
+      IRegistrationVerifier.ZkEmailProofStruct
     ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "verifyUserOpHash",
+    values: [IRegistrationVerifier.ZkEmailProofStruct, BytesLike]
   ): string;
 
   decodeFunctionResult(functionFragment: "verify", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "verifyUserOpHash",
+    data: BytesLike
+  ): Result;
 }
 
 export interface IRegistrationVerifier extends BaseContract {
@@ -109,9 +116,14 @@ export interface IRegistrationVerifier extends BaseContract {
       recipient: AddressLike,
       headerHash: BytesLike,
       intention: BigNumberish,
-      proof: IRegistrationVerifier.ZkEmailProofStruct,
-      userOpHash: BytesLike
+      proof: IRegistrationVerifier.ZkEmailProofStruct
     ],
+    [boolean],
+    "view"
+  >;
+
+  verifyUserOpHash: TypedContractMethod<
+    [proof: IRegistrationVerifier.ZkEmailProofStruct, userOpHash: BytesLike],
     [boolean],
     "view"
   >;
@@ -128,9 +140,15 @@ export interface IRegistrationVerifier extends BaseContract {
       recipient: AddressLike,
       headerHash: BytesLike,
       intention: BigNumberish,
-      proof: IRegistrationVerifier.ZkEmailProofStruct,
-      userOpHash: BytesLike
+      proof: IRegistrationVerifier.ZkEmailProofStruct
     ],
+    [boolean],
+    "view"
+  >;
+  getFunction(
+    nameOrSignature: "verifyUserOpHash"
+  ): TypedContractMethod<
+    [proof: IRegistrationVerifier.ZkEmailProofStruct, userOpHash: BytesLike],
     [boolean],
     "view"
   >;

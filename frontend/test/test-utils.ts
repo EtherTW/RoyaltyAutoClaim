@@ -1,82 +1,112 @@
-import { BUNDLER_URL, CHAIN_ID, RPC_URL } from '@/config'
-import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
-import { MockToken__factory, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '@/typechain-types'
-import { ethers } from 'ethers'
-import { AlchemyBundler, PimlicoBundler } from 'sendop'
+import { ethers, JsonRpcProvider, Wallet } from 'ethers'
+import { RPC_URL } from '../src/config'
+import {
+	MockToken__factory,
+	RegistrationVerifier__factory,
+	RoyaltyAutoClaim__factory,
+	RoyaltyAutoClaimProxy__factory,
+	StringUtils__factory,
+} from '../src/typechain-v2'
+import { DKIM_REGISTRY_ADDRESS } from '../src/lib/zkemail-utils'
 
 export const ACCOUNT_0_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
 export const ACCOUNT_1_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'
 
-export async function deployContracts(chainId: CHAIN_ID, account0PrivateKey: string, account1PrivateKey: string) {
-	const client = new ethers.JsonRpcProvider(RPC_URL[chainId])
-	let bundler: PimlicoBundler | AlchemyBundler
-	if (chainId === CHAIN_ID.LOCAL) {
-		bundler = new PimlicoBundler(chainId, BUNDLER_URL[chainId])
-	} else {
-		bundler = new AlchemyBundler(chainId, BUNDLER_URL[chainId])
-	}
-
-	const account0 = new ethers.Wallet(account0PrivateKey, client) // owner, admin, reviewer
-	const account1 = new ethers.Wallet(account1PrivateKey, client) // reviewer
+export async function deployContracts({
+	chainId,
+	privateKey,
+	privateKey2,
+}: {
+	chainId: string
+	privateKey: string
+	privateKey2: string
+}) {
+	const client = new JsonRpcProvider(RPC_URL[chainId])
+	const dev = new Wallet(privateKey, client) // owner, admin, reviewer
+	const dev2 = new Wallet(privateKey2, client) // reviewer
 
 	// Deploy MockToken
-	const tokenFactory = new MockToken__factory(account0)
-	const token = await tokenFactory.deploy(account0.address, ethers.parseEther('2000'))
+	console.log('Deploying MockToken...')
+	const tokenFactory = new MockToken__factory(dev)
+	const token = await tokenFactory.deploy(dev.address, ethers.parseEther('2000'))
 	await token.waitForDeployment()
 	const tokenAddress = await token.getAddress()
-
 	console.log('token deployed to', tokenAddress)
 
-	const RoyaltyAutoClaimFactory = new RoyaltyAutoClaim__factory(account0)
-	const RoyaltyAutoClaimProxyFactory = new RoyaltyAutoClaimProxy__factory(account0)
+	// Deploy StringUtils
+	console.log('Deploying StringUtils...')
+	const stringUtils = await new StringUtils__factory(dev).deploy()
+	await stringUtils.waitForDeployment()
+	const stringUtilsAddress = await stringUtils.getAddress()
+
+	// Deploy RegistrationVerifier
+	console.log('Deploying RegistrationVerifier...')
+	const RegistrationVerifier = new RegistrationVerifier__factory(
+		{
+			'lib/zk-email-verify/packages/contracts/utils/StringUtils.sol:StringUtils': stringUtilsAddress,
+		},
+		dev,
+	)
+	const emailSender = ethers.keccak256(ethers.toUtf8Bytes('johnson86tw'))
+	const registrationVerifier = await RegistrationVerifier.deploy(DKIM_REGISTRY_ADDRESS, emailSender)
+	await registrationVerifier.waitForDeployment()
+	const registrationVerifierAddress = await registrationVerifier.getAddress()
+	console.log('RegistrationVerifier deployed to', registrationVerifierAddress)
 
 	// Deploy RoyaltyAutoClaim Implementation
+	console.log('Deploying RoyaltyAutoClaim...')
+	const RoyaltyAutoClaimFactory = new RoyaltyAutoClaim__factory(dev)
 	const impl = await RoyaltyAutoClaimFactory.deploy()
 	await impl.waitForDeployment()
 	const implAddress = await impl.getAddress()
+	console.log('RoyaltyAutoClaim implementation deployed to', implAddress)
 
-	const initData = impl.interface.encodeFunctionData('initialize', [
-		account0.address,
-		account0.address,
-		tokenAddress,
-		[account0.address, account1.address],
-	])
+	// Wait for block confirmations to ensure block propagation
+	console.log('Waiting for block confirmations...')
+	const receipt = await impl.deploymentTransaction()?.wait(2)
+	console.log(`Implementation confirmed at block ${receipt?.blockNumber}`)
 
 	// Deploy RoyaltyAutoClaim Proxy
+	console.log('Deploying RoyaltyAutoClaim Proxy...')
+	const initData = impl.interface.encodeFunctionData('initialize', [
+		dev.address,
+		dev.address,
+		tokenAddress,
+		[dev.address, dev2.address],
+		registrationVerifierAddress,
+	])
+	const RoyaltyAutoClaimProxyFactory = new RoyaltyAutoClaimProxy__factory(dev)
 	const proxy = await RoyaltyAutoClaimProxyFactory.deploy(implAddress, initData)
 	await proxy.waitForDeployment()
-	const proxyAddress = await proxy.getAddress()
+	const racAddress = await proxy.getAddress()
+	console.log('RoyaltyAutoClaim (proxy) deployed to', racAddress)
 
 	// Give proxy address initial balance
-	const initialBalance = chainId === CHAIN_ID.LOCAL ? ethers.parseEther('100') : ethers.parseEther('0.1')
-	const tx = await account0.sendTransaction({
-		to: proxyAddress,
-		value: initialBalance,
+	console.log('Giving proxy 0.001 ETH...')
+	const tx = await dev.sendTransaction({
+		to: racAddress,
+		value: ethers.parseEther('0.001'),
+		gasLimit: 100000, // Explicit gas limit for contract interaction
 	})
 	await tx.wait()
 
 	// Send ERC20 tokens to proxy address
-	const tx2 = await token.transfer(proxyAddress, ethers.parseEther('1000'))
+	console.log('Sending 1000 tokens to proxy...')
+	const tx2 = await token.transfer(racAddress, ethers.parseEther('1000'))
 	await tx2.wait()
 
-	console.log('RoyaltyAutoClaim (proxy) deployed to', proxyAddress)
+	const royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(racAddress, dev)
 
-	const royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(proxyAddress, account0)
-	const royaltyAutoClaim4337 = new RoyaltyAutoClaim4337({
-		sender: proxyAddress,
-		client,
-		bundler,
-		signer: account0,
-	})
+	console.log('Done!')
 
 	return {
-		account0,
-		account1,
+		dev,
+		dev2,
 		token,
 		tokenAddress,
-		proxyAddress,
+		racAddress,
+		registrationVerifier,
 		royaltyAutoClaim,
-		royaltyAutoClaim4337,
 		client,
 	}
 }

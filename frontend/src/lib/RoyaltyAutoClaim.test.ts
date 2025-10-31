@@ -1,5 +1,5 @@
-import { CHAIN_ID, RPC_URL } from '@/config'
-import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '@/typechain-types'
+import { CHAIN_ID, RPC_URL } from '../config'
+import { RoyaltyAutoClaim, RoyaltyAutoClaim__factory, RoyaltyAutoClaimProxy__factory } from '../typechain-types'
 import { faker } from '@faker-js/faker'
 import { getAddress, JsonRpcProvider, Wallet } from 'ethers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

@@ -9,6 +9,7 @@ import { IRegistrationVerifier } from '../typechain-v2'
 
 // https://registry.zk.email/386dac60-44ed-4be5-b09c-13f155184e32/parameters
 export const BLUEPRINT_SLUG = 'johnson86tw/RoyaltyAutoClaim@v27'
+export const DKIM_REGISTRY_ADDRESS = '0x3D3935B3C030893f118a84C92C66dF1B9E4169d6'
 
 let initialized = false
 
