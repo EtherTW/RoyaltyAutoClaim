@@ -131,6 +131,23 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         _registerSubmission("test", address(0));
     }
 
+    function testCannot_registerSubmission_with_used_email_proof() public {
+        bytes32 emailHeaderHash = bytes32(uint256(12345));
+
+        // First registration with the email header hash
+        royaltyAutoClaim.registerSubmission("test", recipient, emailHeaderHash, validRegistrationProof());
+
+        // Verify the email header hash is marked as used
+        assertTrue(royaltyAutoClaim.isEmailProofUsed(emailHeaderHash), "Email proof should be marked as used");
+
+        // Second registration with the same email header hash should fail even with different title
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmailProofUsed.selector));
+        royaltyAutoClaim.registerSubmission("test2", recipient, emailHeaderHash, validRegistrationProof());
+
+        // Third registration with a new email header hash should succeed
+        royaltyAutoClaim.registerSubmission("test2", recipient, bytes32(vm.randomBytes(32)), validRegistrationProof());
+    }
+
     // ======================================== updateRoyaltyRecipient ========================================
 
     function test_updateRoyaltyRecipient() public {
@@ -187,6 +204,27 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
         _updateRoyaltyRecipient("test", recipient);
+    }
+
+    function testCannot_updateRoyaltyRecipient_with_used_email_proof() public {
+        bytes32 emailHeaderHash = bytes32(uint256(54321));
+
+        // First registration with the email header hash
+        royaltyAutoClaim.registerSubmission("test", recipient, emailHeaderHash, validRegistrationProof());
+
+        // Verify the email header hash is marked as used
+        assertTrue(royaltyAutoClaim.isEmailProofUsed(emailHeaderHash), "Email proof should be marked as used");
+
+        // Try to update royalty recipient using the same email header hash should fail
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmailProofUsed.selector));
+        royaltyAutoClaim.updateRoyaltyRecipient(
+            "test", vm.randomAddress(), emailHeaderHash, validRecipientUpdateProof()
+        );
+
+        // Update with a new email header hash should succeed
+        royaltyAutoClaim.updateRoyaltyRecipient(
+            "test", vm.randomAddress(), bytes32(vm.randomBytes(32)), validRecipientUpdateProof()
+        );
     }
 
     // ======================================== Owner Functions ========================================

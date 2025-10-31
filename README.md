@@ -54,6 +54,12 @@ bun run scripts/update-recipient.ts recipient-update 0xaCf34e475Ef850AF607ECA256
 
 ## Frontend
 
+### Notices
+
+-   Don’t use the alias @ in .ts files, because some scripts depend on functions from the src directory, and running those scripts directly won’t recognize @.
+
+### Notes
+
 -   Remember to set up .env in frontend
 -   If the contract has been updated, remember to run `forge build` before `bun run generate-types`
 -   We use Pimlico bundler in local devnet but use Alchemy bundler on Sepolia and Mainnet. Check out frontend/src/config.ts BUNDLER_URL.
