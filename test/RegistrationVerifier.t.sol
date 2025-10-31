@@ -60,7 +60,7 @@ contract RegistrationVerifierTest is ZKTest {
         );
     }
 
-    function test_verify_userOpHash() public view {
+    function test_verify() public view {
         // valid proof
         assert(
             registrationVerifier.verify(
@@ -68,8 +68,7 @@ contract RegistrationVerifierTest is ZKTest {
                 RECIPIENT,
                 REGISTRATION_HEADER_HASH,
                 IRegistrationVerifier.Intention.REGISTRATION,
-                validRegistrationProof(),
-                USER_OP_HASH
+                validRegistrationProof()
             )
         );
 
@@ -80,44 +79,19 @@ contract RegistrationVerifierTest is ZKTest {
                 RECIPIENT,
                 REGISTRATION_HEADER_HASH,
                 IRegistrationVerifier.Intention.REGISTRATION,
-                invalidRegistrationProof(),
-                USER_OP_HASH
+                invalidRegistrationProof()
             )
         );
+    }
+
+    function test_verifyUserOpHash() public view {
+        // valid userOpHash
+        assert(registrationVerifier.verifyUserOpHash(validRegistrationProof(), USER_OP_HASH));
 
         // invalid userOpHash
         assertFalse(
-            registrationVerifier.verify(
-                TITLE,
-                RECIPIENT,
-                REGISTRATION_HEADER_HASH,
-                IRegistrationVerifier.Intention.REGISTRATION,
-                invalidRegistrationProof(),
-                keccak256(bytes(unicode"fake-userOpHash"))
-            )
-        );
-
-        // valid proof without userOpHash
-        assert(
-            registrationVerifier.verify(
-                TITLE,
-                RECIPIENT,
-                REGISTRATION_HEADER_HASH,
-                IRegistrationVerifier.Intention.REGISTRATION,
-                validRegistrationProof(),
-                bytes32(0)
-            )
-        );
-
-        // invalid proof without userOpHash
-        assertFalse(
-            registrationVerifier.verify(
-                TITLE,
-                RECIPIENT,
-                REGISTRATION_HEADER_HASH,
-                IRegistrationVerifier.Intention.REGISTRATION,
-                invalidRegistrationProof(),
-                bytes32(0)
+            registrationVerifier.verifyUserOpHash(
+                validRegistrationProof(), keccak256(bytes(unicode"fake-userOpHash"))
             )
         );
     }

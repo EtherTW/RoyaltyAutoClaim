@@ -279,7 +279,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         bytes32 emailHeaderHash,
         IRegistrationVerifier.ZkEmailProof calldata proof
     ) public {
-        if (!_verifySubmissionRegistration(title, royaltyRecipient, emailHeaderHash, proof, bytes32(0))) {
+        if (!_verifySubmissionRegistration(title, royaltyRecipient, emailHeaderHash, proof)) {
             revert InvalidProof();
         }
         _registerSubmission(title, royaltyRecipient, emailHeaderHash);
@@ -297,8 +297,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         string memory title,
         address royaltyRecipient,
         bytes32 emailHeaderHash,
-        IRegistrationVerifier.ZkEmailProof memory proof,
-        bytes32 userOpHash
+        IRegistrationVerifier.ZkEmailProof memory proof
     ) internal view returns (bool) {
         require(bytes(title).length > 0, EmptyString());
         require(royaltyRecipient != address(0), ZeroAddress());
@@ -311,8 +310,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
                 royaltyRecipient,
                 emailHeaderHash,
                 IRegistrationVerifier.Intention.REGISTRATION,
-                proof,
-                userOpHash
+                proof
             );
     }
 
@@ -331,7 +329,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         bytes32 emailHeaderHash,
         IRegistrationVerifier.ZkEmailProof calldata proof
     ) public {
-        if (!_verifyRecipientUpdate(title, newRecipient, emailHeaderHash, proof, bytes32(0))) {
+        if (!_verifyRecipientUpdate(title, newRecipient, emailHeaderHash, proof)) {
             revert InvalidProof();
         }
 
@@ -350,8 +348,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         string memory title,
         address newRecipient,
         bytes32 emailHeaderHash,
-        IRegistrationVerifier.ZkEmailProof memory proof,
-        bytes32 userOpHash
+        IRegistrationVerifier.ZkEmailProof memory proof
     ) internal view returns (bool) {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         require(newRecipient != submissions(title).royaltyRecipient, SameAddress());
@@ -363,8 +360,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
                 newRecipient,
                 emailHeaderHash,
                 IRegistrationVerifier.Intention.RECIPIENT_UPDATE,
-                proof,
-                userOpHash
+                proof
             );
     }
 
@@ -460,17 +456,23 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
             if (
                 selector == IRoyaltyAutoClaim.registerSubmission.selector
-                    && !_verifySubmissionRegistration(title, recipient, emailHeaderHash, proof, userOpHash)
+                    && !_verifySubmissionRegistration(title, recipient, emailHeaderHash, proof)
             ) {
                 return SIG_VALIDATION_FAILED;
             }
 
             if (
                 selector == IRoyaltyAutoClaim.updateRoyaltyRecipient.selector
-                    && !_verifyRecipientUpdate(title, recipient, emailHeaderHash, proof, userOpHash)
+                    && !_verifyRecipientUpdate(title, recipient, emailHeaderHash, proof)
             ) {
                 return SIG_VALIDATION_FAILED;
             }
+
+            // Verify userOpHash last to allow gas estimation with valid proof but mismatched userOpHash
+            if (!_getMainStorage().configs.registrationVerifier.verifyUserOpHash(proof, userOpHash)) {
+                return SIG_VALIDATION_FAILED;
+            }
+
             return 0;
         }
 

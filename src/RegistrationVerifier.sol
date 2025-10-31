@@ -34,9 +34,10 @@ interface IRegistrationVerifier {
         address recipient,
         bytes32 headerHash,
         Intention intention,
-        ZkEmailProof calldata proof,
-        bytes32 userOpHash
+        ZkEmailProof calldata proof
     ) external view returns (bool);
+
+    function verifyUserOpHash(ZkEmailProof calldata proof, bytes32 userOpHash) external pure returns (bool);
 }
 
 contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
@@ -71,8 +72,7 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
         address recipient,
         bytes32 headerHash,
         Intention intention,
-        ZkEmailProof calldata proof,
-        bytes32 userOpHash
+        ZkEmailProof calldata proof
     ) external view virtual returns (bool) {
         // revert if signal mismatch
         _requireSignalMatch(title, recipient, headerHash, intention, proof);
@@ -82,15 +82,17 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
             return false;
         }
 
-        // verify userOpHash if provided
-        if (userOpHash != bytes32(0)) {
-            string memory userOpHashStr = _parseUserOpHashStr(proof);
-            if (!userOpHash.toString().stringEq(userOpHashStr.lower())) {
-                return false;
-            }
-        }
-
         return true;
+    }
+
+    function verifyUserOpHash(ZkEmailProof calldata proof, bytes32 userOpHash)
+        external
+        pure
+        virtual
+        returns (bool)
+    {
+        string memory userOpHashStr = _parseUserOpHashStr(proof);
+        return userOpHash.toString().stringEq(userOpHashStr.lower());
     }
 
     function _requireSignalMatch(
