@@ -85,12 +85,7 @@ contract RegistrationVerifier is IRegistrationVerifier, Verifier, Ownable {
         return true;
     }
 
-    function verifyUserOpHash(ZkEmailProof calldata proof, bytes32 userOpHash)
-        external
-        pure
-        virtual
-        returns (bool)
-    {
+    function verifyUserOpHash(ZkEmailProof calldata proof, bytes32 userOpHash) external pure virtual returns (bool) {
         string memory userOpHashStr = _parseUserOpHashStr(proof);
         return userOpHash.toString().stringEq(userOpHashStr.lower());
     }

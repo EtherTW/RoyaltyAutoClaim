@@ -8,6 +8,15 @@ import "./BaseTest.t.sol";
 
 forge test test/RoyaltyAutoClaim/integration.t.sol -vvvv --skip test/RoyaltyAutoClaim/e2e.t.sol
 
+---
+
+Test case order
+(Find following keywords to quickly navigate)
+
+Email-based operations
+Other operations
+
+---
 
 Expected Error of _handleUserOp
 
@@ -42,7 +51,8 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     }
 
     function test_validateUserOp_owner_functions() public {
-        // note: 這裡只驗證 validateUserOp 的資格，沒檢查 userOp 的執行，所以 zero address 交易雖成功，理論上 userop 要是失敗的
+        // note: Here we only check the success/failure of the validation phase and not the execution phase,
+        // therefore the function parameters can be random
         bytes[] memory ownerCalls = new bytes[](5);
         ownerCalls[0] = abi.encodeCall(UUPSUpgradeable.upgradeToAndCall, (address(0), ""));
         ownerCalls[1] = abi.encodeCall(RoyaltyAutoClaim.transferOwnership, (address(0)));
@@ -290,9 +300,130 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         _handleUserOp(userOp);
     }
 
-    // TODO
-    // test_registerSubmission
-    // test_updateRoyaltyRecipient
+    /// ========================= Email-based operations =========================
+
+    function test_registerSubmission_with_valid_proof() public {
+        RoyaltyAutoClaim realContract = _deployWithRealVerifier();
+
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
+            address(realContract),
+            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission, (TITLE, RECIPIENT, REGISTRATION_HEADER_HASH))
+        );
+        userOp.signature = abi.encode(validRegistrationProof());
+
+        // Mock the verifyUserOpHash call to return true since the proof's userOpHash doesn't match the real one
+        vm.mockCall(
+            address(registrationVerifier),
+            abi.encodeWithSelector(IRegistrationVerifier.verifyUserOpHash.selector),
+            abi.encode(true)
+        );
+
+        _handleUserOp(userOp);
+
+        // Verify submission was registered
+        IRoyaltyAutoClaim.Submission memory submission = realContract.submissions(TITLE);
+        assertEq(submission.royaltyRecipient, RECIPIENT, "Recipient should match");
+        assertEq(
+            uint8(submission.status),
+            uint8(IRoyaltyAutoClaim.SubmissionStatus.Registered),
+            "Status should be Registered"
+        );
+    }
+
+    function testCannot_registerSubmission_with_invalid_proof() public {
+        RoyaltyAutoClaim realContract = _deployWithRealVerifier();
+
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
+            address(realContract),
+            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission, (TITLE, RECIPIENT, REGISTRATION_HEADER_HASH))
+        );
+        userOp.signature = abi.encode(invalidRegistrationProof());
+
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+        _handleUserOp(userOp);
+    }
+
+    function testCannot_registerSubmission_with_mismatched_userOpHash() public {
+        RoyaltyAutoClaim realContract = _deployWithRealVerifier();
+
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
+            address(realContract),
+            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission, (TITLE, RECIPIENT, REGISTRATION_HEADER_HASH))
+        );
+        // The hardcoded valid proof uses a userOpHash that’s different from the hash of this userOp itself.
+        userOp.signature = abi.encode(validRegistrationProof());
+
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+        _handleUserOp(userOp);
+    }
+
+    function test_updateRoyaltyRecipient_with_valid_proof() public {
+        RoyaltyAutoClaim realContract = _deployWithRealVerifier();
+
+        // Mock the verifyUserOpHash call to return true for both registration and update operations
+        vm.mockCall(
+            address(registrationVerifier),
+            abi.encodeWithSelector(IRegistrationVerifier.verifyUserOpHash.selector),
+            abi.encode(true)
+        );
+
+        // First register the submission with the real contract
+        vm.prank(address(entryPoint));
+        realContract.registerSubmission(TITLE, RECIPIENT, REGISTRATION_HEADER_HASH, validRegistrationProof());
+
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
+            address(realContract),
+            abi.encodeCall(
+                IRoyaltyAutoClaim.updateRoyaltyRecipient, (TITLE, NEW_RECIPIENT, RECIPIENT_UPDATE_HEADER_HASH)
+            )
+        );
+        userOp.signature = abi.encode(validRecipientUpdateProof());
+
+        _handleUserOp(userOp);
+
+        // Verify recipient was updated
+        IRoyaltyAutoClaim.Submission memory submission = realContract.submissions(TITLE);
+        assertEq(submission.royaltyRecipient, NEW_RECIPIENT, "Recipient should be updated");
+    }
+
+    function testCannot_updateRoyaltyRecipient_with_invalid_proof() public {
+        RoyaltyAutoClaim realContract = _deployWithRealVerifier();
+
+        vm.prank(address(entryPoint));
+        realContract.registerSubmission(TITLE, RECIPIENT, REGISTRATION_HEADER_HASH, validRegistrationProof());
+
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
+            address(realContract),
+            abi.encodeCall(
+                IRoyaltyAutoClaim.updateRoyaltyRecipient, (TITLE, NEW_RECIPIENT, RECIPIENT_UPDATE_HEADER_HASH)
+            )
+        );
+        userOp.signature = abi.encode(invalidRecipientUpdateProof());
+
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+        _handleUserOp(userOp);
+    }
+
+    function testCannot_updateRoyaltyRecipient_with_mismatched_userOpHash() public {
+        RoyaltyAutoClaim realContract = _deployWithRealVerifier();
+
+        // First register the submission with the real contract
+        vm.prank(address(entryPoint));
+        realContract.registerSubmission(TITLE, RECIPIENT, REGISTRATION_HEADER_HASH, validRegistrationProof());
+
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
+            address(realContract),
+            abi.encodeCall(
+                IRoyaltyAutoClaim.updateRoyaltyRecipient, (TITLE, NEW_RECIPIENT, RECIPIENT_UPDATE_HEADER_HASH)
+            )
+        );
+        userOp.signature = abi.encode(validRecipientUpdateProof());
+
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+        _handleUserOp(userOp);
+    }
+
+    /// ========================= Other operations =========================
 
     function test_reviewSubmission() public {
         _registerSubmission(testSubmissionTitle, recipient);

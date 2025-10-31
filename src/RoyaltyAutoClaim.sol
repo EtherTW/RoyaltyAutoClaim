@@ -305,13 +305,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(!isEmailProofUsed(emailHeaderHash), EmailProofUsed());
 
         return _getMainStorage().configs.registrationVerifier
-            .verify(
-                title,
-                royaltyRecipient,
-                emailHeaderHash,
-                IRegistrationVerifier.Intention.REGISTRATION,
-                proof
-            );
+            .verify(title, royaltyRecipient, emailHeaderHash, IRegistrationVerifier.Intention.REGISTRATION, proof);
     }
 
     function _registerSubmission(string memory title, address royaltyRecipient, bytes32 emailHeaderHash) internal {
@@ -355,13 +349,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(!isEmailProofUsed(emailHeaderHash), EmailProofUsed());
 
         return _getMainStorage().configs.registrationVerifier
-            .verify(
-                title,
-                newRecipient,
-                emailHeaderHash,
-                IRegistrationVerifier.Intention.RECIPIENT_UPDATE,
-                proof
-            );
+            .verify(title, newRecipient, emailHeaderHash, IRegistrationVerifier.Intention.RECIPIENT_UPDATE, proof);
     }
 
     function _updateRoyaltyRecipient(string memory title, address newRecipient, bytes32 emailHeaderHash) internal {
@@ -442,7 +430,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
         bytes4 selector = bytes4(userOp.callData[0:4]);
 
-        /// ========================= Registration & Recipient Update =========================
+        /// ========================= Email-based operations =========================
         /// @dev userOp.signature equals to the encoded proof
         if (
             selector == IRoyaltyAutoClaim.registerSubmission.selector
@@ -476,7 +464,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             return 0;
         }
 
-        /// ========================= Other functions =========================
+        /// ========================= Other operations =========================
         /// @dev userOp.signature[0:65]: actual signature
         /// @dev userOp.signature[65:85]: appended signer address
         /// @notice The reason for needing appendedSigner instead of directly using signer is because eth_estimateUserOperationGas uses a dummy signature

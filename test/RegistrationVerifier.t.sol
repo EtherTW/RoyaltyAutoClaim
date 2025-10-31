@@ -90,9 +90,7 @@ contract RegistrationVerifierTest is ZKTest {
 
         // invalid userOpHash
         assertFalse(
-            registrationVerifier.verifyUserOpHash(
-                validRegistrationProof(), keccak256(bytes(unicode"fake-userOpHash"))
-            )
+            registrationVerifier.verifyUserOpHash(validRegistrationProof(), keccak256(bytes(unicode"fake-userOpHash")))
         );
     }
 }

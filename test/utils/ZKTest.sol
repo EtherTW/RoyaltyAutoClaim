@@ -7,6 +7,7 @@ import {IRegistrationVerifier} from "../../src/RegistrationVerifier.sol";
 abstract contract ZKTest is Test {
     string constant TITLE = unicode"隱私池的設計 by cc liang";
     address constant RECIPIENT = 0xd78B5013757Ea4A7841811eF770711e6248dC282;
+    address constant NEW_RECIPIENT = 0x9e8f8C3Ad87dBE7ACFFC5f5800e7433c8dF409F2;
     bytes32 constant REGISTRATION_HEADER_HASH = 0x86cbd6a1dcf53636ccfe282575446622847dba5be5bd08cc1d00b5e5f53243d5;
     bytes32 constant RECIPIENT_UPDATE_HEADER_HASH = 0xc6f6f9f6da412891ba108edbfd76778d6aa7f502697580a5d0497f5bf49e7a2f;
     bytes32 constant USER_OP_HASH = keccak256(bytes(unicode"dummy-registration"));

@@ -148,6 +148,21 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.registerSubmission("test2", recipient, bytes32(vm.randomBytes(32)), validRegistrationProof());
     }
 
+    function testCannot_registerSubmission_if_not_called_by_entrypoint(
+        address caller,
+        address recipientAddress,
+        bytes32 emailHash
+    ) public {
+        // Assume caller is not the entry point
+        vm.assume(caller != ENTRY_POINT);
+        vm.assume(recipientAddress != address(0));
+
+        // Try to call the onlyEntryPoint version directly (not through EntryPoint)
+        vm.prank(caller);
+        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
+        royaltyAutoClaim.registerSubmission("test", recipientAddress, emailHash);
+    }
+
     // ======================================== updateRoyaltyRecipient ========================================
 
     function test_updateRoyaltyRecipient() public {
@@ -225,6 +240,24 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.updateRoyaltyRecipient(
             "test", vm.randomAddress(), bytes32(vm.randomBytes(32)), validRecipientUpdateProof()
         );
+    }
+
+    function testCannot_updateRoyaltyRecipient_if_not_called_by_entrypoint(
+        address caller,
+        address newRecipient,
+        bytes32 emailHash
+    ) public {
+        // Assume caller is not the entry point
+        vm.assume(caller != ENTRY_POINT);
+        vm.assume(newRecipient != address(0));
+
+        // First register a submission
+        _registerSubmission("test", recipient);
+
+        // Try to call the onlyEntryPoint version directly (not through EntryPoint)
+        vm.prank(caller);
+        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
+        royaltyAutoClaim.updateRoyaltyRecipient("test", newRecipient, emailHash);
     }
 
     // ======================================== Owner Functions ========================================

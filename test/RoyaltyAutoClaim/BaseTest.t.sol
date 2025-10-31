@@ -158,22 +158,21 @@ abstract contract BaseTest is AATest, ZKTest {
         _handleUserOp(userOp);
     }
 
-    // function _createRandomizedProof()
-    //     internal
-    //     returns (IRegistrationVerifier.ZkEmailProof memory proof, bytes32 headerHash)
-    // {
-    //     proof = parseJsonProof("registration-proof");
-    //     headerHash = bytes32(vm.randomUint());
+    /// @dev Deploy a separate RoyaltyAutoClaim instance with real RegistrationVerifier for ZK proof testing
+    function _deployWithRealVerifier() internal returns (RoyaltyAutoClaim) {
+        RoyaltyAutoClaim realImpl = new RoyaltyAutoClaim();
+        RoyaltyAutoClaimProxy realProxy = new RoyaltyAutoClaimProxy(
+            address(realImpl),
+            abi.encodeCall(
+                RoyaltyAutoClaim.initialize, (owner, admin, address(token), initialReviewers, registrationVerifier)
+            )
+        );
 
-    //     // Modify headerHash for testing
-    //     (uint256 headerHashHi, uint256 headerHashLo) = splitFromBytes32(headerHash);
-    //     proof.signals[1] = headerHashHi;
-    //     proof.signals[2] = headerHashLo;
-    // }
+        vm.deal(address(realProxy), 100 ether);
 
-    // function splitFromBytes32(bytes32 _headerHash) internal pure returns (uint256 headerHashHi, uint256 headerHashLo) {
-    //     headerHashHi = uint256(_headerHash) >> 128;
-    //     headerHashLo = uint256(_headerHash) & ((1 << 128) - 1);
-    //     return (headerHashHi, headerHashLo);
-    // }
+        // Deal tokens directly to the new contract instead of transferring from owner
+        deal(address(token), address(realProxy), 10 ether);
+
+        return RoyaltyAutoClaim(payable(address(realProxy)));
+    }
 }
