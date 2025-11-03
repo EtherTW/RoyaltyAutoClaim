@@ -12,7 +12,7 @@ export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA = import.meta.env
 export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE = import.meta.env
 	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE as string
 
-export const ALCHEMY_API_KEY = import.meta.env.VITE_ALCHEMY_API_KEY
+export const ALCHEMY_API_KEY = import.meta.env.VITE_ALCHEMY_API_KEY as string
 if (!ALCHEMY_API_KEY) {
 	throw new Error('ALCHEMY_API_KEY is not set in .env')
 }

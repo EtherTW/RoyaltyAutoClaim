@@ -1,11 +1,8 @@
-import { fetchExistingSubmissions } from '@/lib/fetchExistingSubmissions'
-import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
 import { normalizeError } from '@/lib/error'
+import { fetchExistingSubmissions } from '@/lib/fetchExistingSubmissions'
 import { RoyaltyAutoClaim__factory } from '@/typechain-types'
-import { JsonRpcSigner } from 'ethers'
 import { defineStore } from 'pinia'
 import { useBlockchainStore } from './useBlockchain'
-import { useEOAStore } from './useEOA'
 
 export type Submission = {
 	title: string
@@ -20,21 +17,6 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 
 	const royaltyAutoClaim = computed(() => {
 		return RoyaltyAutoClaim__factory.connect(blockchainStore.royaltyAutoClaimProxyAddress, blockchainStore.client)
-	})
-
-	const royaltyAutoClaim4337 = computed(() => {
-		const eoaStore = useEOAStore()
-
-		if (eoaStore.signer) {
-			return new RoyaltyAutoClaim4337({
-				sender: blockchainStore.royaltyAutoClaimProxyAddress,
-				client: blockchainStore.client,
-				bundler: blockchainStore.bundler,
-				signer: eoaStore.signer as JsonRpcSigner,
-			})
-		}
-
-		return null
 	})
 
 	const submissions = ref<Submission[]>([])
@@ -81,7 +63,6 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 
 	return {
 		royaltyAutoClaim,
-		royaltyAutoClaim4337,
 		submissions,
 		isLoadingBasicSubmissions,
 		isLoadingSubmissionData,

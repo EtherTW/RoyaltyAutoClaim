@@ -6,9 +6,7 @@ import { useContractCall } from '@/lib/useContractCall'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 
-const isButtonDisabled = computed(
-	() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value || !royaltyAutoClaimStore.royaltyAutoClaim4337,
-)
+const isButtonDisabled = computed(() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value)
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 const blockchainStore = useBlockchainStore()

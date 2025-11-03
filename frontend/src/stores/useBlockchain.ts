@@ -1,20 +1,22 @@
-import { JsonRpcProvider } from 'ethers'
-import { defineStore } from 'pinia'
-import { AlchemyBundler, PimlicoBundler } from 'sendop'
 import {
-	CHAIN_ID,
-	RPC_URL,
-	EXPLORER_URL,
+	ALCHEMY_API_KEY,
 	BUNDLER_URL,
+	CHAIN_ID,
+	DEFAULT_CHAIN_ID,
+	EXPLORER_URL,
 	IS_DEV,
+	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE,
+	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA,
+	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_LOCAL,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA,
-	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_LOCAL,
+	RPC_URL,
 	TENDERLY_RPC_URL,
-	DEFAULT_CHAIN_ID,
-	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA,
-	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE,
 } from '@/config'
+import { JsonRpcProvider } from 'ethers'
+import { defineStore } from 'pinia'
+import { ERC4337Bundler } from 'sendop'
+import { alchemy, AlchemyChain, pimlico, PimlicoChain } from 'evm-providers'
 
 export const useBlockchainStore = defineStore(
 	'useBlockchainStore',
@@ -104,10 +106,15 @@ export const useBlockchainStore = defineStore(
 		const bundlerUrl = computed(() => BUNDLER_URL[chainId.value])
 
 		const bundler = computed(() => {
-			if (chainId.value === CHAIN_ID.LOCAL) {
-				return new PimlicoBundler(chainId.value, bundlerUrl.value)
-			}
-			return new AlchemyBundler(chainId.value, bundlerUrl.value)
+			return new ERC4337Bundler(bundlerUrl.value)
+		})
+
+		const alchemyUrl = computed(() => {
+			return alchemy(Number(chainId.value) as AlchemyChain, ALCHEMY_API_KEY)
+		})
+
+		const pimlicoUrl = computed(() => {
+			return pimlico(Number(chainId.value) as PimlicoChain, 'pim_nDodV8Xhz7bXSEoeL9UbGh')
 		})
 
 		return {
@@ -121,6 +128,8 @@ export const useBlockchainStore = defineStore(
 			bundlerUrl,
 			bundler,
 			tenderlyClient,
+			alchemyUrl,
+			pimlicoUrl,
 			setChainId,
 		}
 	},

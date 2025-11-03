@@ -1,10 +1,20 @@
-import { ERROR_NOTIFICATION_DURATION } from '../config'
-import { useRoyaltyAutoClaimStore } from '../stores/useRoyaltyAutoClaim'
+import { useEOAStore } from '@/stores/useEOA'
+import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { notify } from '@kyvg/vue3-notification'
-import { formatErrMsg, normalizeError, UserRejectedActionError } from './error'
-import { isSameAddress } from 'sendop'
-import { useBlockchainStore } from '../stores/useBlockchain'
 import { useVueDapp } from '@vue-dapp/core'
+import { concat, getBytes } from 'ethers'
+import {
+	DUMMY_ECDSA_SIGNATURE,
+	ENTRY_POINT_V07_ADDRESS,
+	EntryPointV07__factory,
+	ERC4337Error,
+	fetchGasPriceAlchemy,
+	isSameAddress,
+	UserOpBuilder,
+} from 'sendop'
+import { ERROR_NOTIFICATION_DURATION } from '../config'
+import { useBlockchainStore } from '../stores/useBlockchain'
+import { normalizeError, parseContractRevert, UserRejectedActionError } from './error'
 
 export function useContractCall<T extends unknown[] = []>(options: {
 	getCalldata: (...args: T) => string
@@ -14,22 +24,21 @@ export function useContractCall<T extends unknown[] = []>(options: {
 	onBeforeCall?: (...args: T) => Promise<void> | void
 	onAfterCall?: (...args: T) => Promise<void> | void
 }) {
-	const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
+	const blockchainStore = useBlockchainStore()
+	const eoaStore = useEOAStore()
+
 	const isLoading = ref(false)
 
 	async function send(...args: T) {
-		if (!royaltyAutoClaimStore.royaltyAutoClaim4337) {
-			throw new Error('useContractCall: No royaltyAutoClaim4337')
+		if (!eoaStore.signer) {
+			throw new Error('Please connect your EOA wallet first')
 		}
 
 		const { chainId: walletChainId, connector } = useVueDapp()
-		const blockchainStore = useBlockchainStore()
 
 		if (walletChainId.value !== Number(blockchainStore.chainId)) {
 			await connector.value?.switchChain?.(Number(blockchainStore.chainId))
 		}
-
-		const senderAddress = royaltyAutoClaimStore.royaltyAutoClaim4337.getSender()
 
 		try {
 			isLoading.value = true
@@ -38,18 +47,42 @@ export function useContractCall<T extends unknown[] = []>(options: {
 				await options.onBeforeCall(...args)
 			}
 
-			const op = await royaltyAutoClaimStore.royaltyAutoClaim4337.sendCalldata(options.getCalldata(...args))
-			console.info(`${options.waitingTitle} opHash: ${op.hash}`)
+			const senderAddress = blockchainStore.royaltyAutoClaimProxyAddress
+
+			// estimate gas
+			const ep7 = EntryPointV07__factory.connect(ENTRY_POINT_V07_ADDRESS, blockchainStore.client)
+			const op = new UserOpBuilder({
+				chainId: blockchainStore.chainId,
+				bundler: blockchainStore.bundler,
+				entryPointAddress: ENTRY_POINT_V07_ADDRESS,
+			})
+				.setSender(blockchainStore.royaltyAutoClaimProxyAddress)
+				.setNonce(await ep7.getNonce(senderAddress, 0))
+				.setCallData(options.getCalldata(...args))
+				.setGasPrice(await fetchGasPriceAlchemy(blockchainStore.alchemyUrl))
+				.setSignature(concat([DUMMY_ECDSA_SIGNATURE, eoaStore.signer.address]))
+
+			await op.estimateGas()
+
+			// sign
+			const signature = await eoaStore.signer.signMessage(getBytes(op.hash()))
+			op.setSignature(concat([signature, eoaStore.signer.address]))
+
+			console.info(`${options.waitingTitle} opHash: ${op.hash()}`)
+
+			// send
+			await op.send()
 
 			const waitingToast = Date.now()
 			notify({
 				id: waitingToast,
 				title: options.waitingTitle,
-				text: `op hash: ${op.hash}`,
+				text: `op hash: ${op.hash()}`,
 				type: 'info',
 				duration: -1,
 			})
 
+			// wait
 			const receipt = await op.wait()
 
 			if (!receipt.success) {
@@ -58,9 +91,10 @@ export function useContractCall<T extends unknown[] = []>(options: {
 
 			notify.close(waitingToast)
 
-			const txLink = receipt.logs.filter(log => isSameAddress(log.address, senderAddress))[0]?.transactionHash
+			const txLink = receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
+				?.transactionHash
 				? `${useBlockchainStore().explorerUrl}/tx/${
-						receipt.logs.filter(log => isSameAddress(log.address, senderAddress))[0].transactionHash
+						receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0].transactionHash
 				  }`
 				: '#'
 
@@ -74,9 +108,25 @@ export function useContractCall<T extends unknown[] = []>(options: {
 			if (options.onAfterCall) {
 				await options.onAfterCall(...args)
 			}
-		} catch (error: unknown) {
-			const err = normalizeError(error)
-			console.error(err)
+		} catch (e: unknown) {
+			const err = normalizeError(e)
+
+			let revert = ''
+
+			if (err instanceof ERC4337Error) {
+				console.error(err.message, err.method, err.data)
+				if (err.data?.revertData) {
+					const revertMsg = parseContractRevert(err.data.revertData, {
+						RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
+					})
+					if (revertMsg) {
+						console.error(revertMsg)
+						revert = revertMsg
+					}
+				}
+			} else {
+				console.log(err)
+			}
 
 			// Do not show error when the user cancels their action
 			if (err instanceof UserRejectedActionError) {
@@ -85,7 +135,7 @@ export function useContractCall<T extends unknown[] = []>(options: {
 
 			notify({
 				title: options.errorTitle,
-				text: formatErrMsg(err),
+				text: revert || err.message,
 				type: 'error',
 				duration: ERROR_NOTIFICATION_DURATION,
 			})

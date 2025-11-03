@@ -28,6 +28,7 @@
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"ethers": "^6.15.0",
+		"evm-providers": "^0.5.8",
 		"lucide-vue-next": "^0.473.0",
 		"pinia": "^2.3.0",
 		"pinia-plugin-persistedstate": "^4.2.0",

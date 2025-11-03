@@ -6,13 +6,10 @@ import { RegistrationVerifier__factory } from '../typechain-v2'
 
 export function handleUserOpError(e: unknown) {
 	const revert = extractHexString((e as Error).message) || ''
-	const customError = parseContractError(
-		{
-			RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
-			RegistrationVerifier: RegistrationVerifier__factory.createInterface(),
-		},
-		revert,
-	)
+	const customError = parseContractRevert(revert, {
+		RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
+		RegistrationVerifier: RegistrationVerifier__factory.createInterface(),
+	})
 	if (customError) {
 		console.info({
 			[revert]: customError,
@@ -21,7 +18,11 @@ export function handleUserOpError(e: unknown) {
 	throw e
 }
 
-export function parseContractError(interfaces: Record<string, Interface>, revert: string, nameOnly?: boolean): string {
+export function parseContractRevert(
+	revert: string,
+	interfaces: Record<string, Interface>,
+	nameOnly: boolean = true,
+): string {
 	if (!revert) return ''
 
 	for (const [name, iface] of Object.entries(interfaces)) {
@@ -47,21 +48,10 @@ export function parseContractError(interfaces: Record<string, Interface>, revert
 
 // Returned error is used for console.error
 export function normalizeError(unknownError: unknown): Error {
-	let err: Error
 	if (unknownError instanceof Error) {
-		if (EthersError.isEthersError(unknownError)) {
-			err = new EthersError(unknownError.message, { cause: unknownError })
-
-			if (err.message.includes('user rejected action')) {
-				err = new UserRejectedActionError(err.message, { cause: err })
-			}
-		} else {
-			err = unknownError
-		}
-	} else {
-		err = new Error(String(unknownError))
+		return unknownError
 	}
-	return err
+	return new Error(String(unknownError))
 }
 
 // Returned string is used for UI notification

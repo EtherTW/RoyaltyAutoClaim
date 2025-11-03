@@ -16,7 +16,6 @@ const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
 const isBtnDisabled = computed(
 	() =>
-		!royaltyAutoClaimStore.royaltyAutoClaim4337 ||
 		isRegisterLoading.value ||
 		isUpdateLoading.value ||
 		isRevokeLoading.value ||
