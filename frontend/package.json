@@ -20,7 +20,7 @@
 		"@kyvg/vue3-notification": "^3.4.1",
 		"@vue-dapp/core": "^1.5.9",
 		"@vue-dapp/modal": "^1.5.9",
-		"@vueuse/core": "^12.4.0",
+		"@vueuse/core": "^14.0.0",
 		"@zk-email/helpers": "^6.4.2",
 		"@zk-email/relayer-utils": "^0.4.65",
 		"@zk-email/sdk": "0.0.139",

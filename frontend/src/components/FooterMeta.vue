@@ -2,6 +2,8 @@
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import pkg from '../../package.json'
 import { shortenAddress } from '@vue-dapp/core'
+import CopyButton from './CopyButton.vue'
+import AddressLinkButton from './AddressLinkButton.vue'
 
 const blockchainStore = useBlockchainStore()
 
@@ -15,17 +17,12 @@ const contractLink = computed(() => {
 
 <template>
 	<footer
-		class="px-2 h-[20px] text-xs text-gray-800 bg-gray-200 fixed bottom-0 flex justify-between items-center w-full"
+		class="px-2 h-[20px] text-xs text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 fixed bottom-0 flex justify-between items-center w-full"
 	>
 		<div class="flex items-center gap-1">
-			<a
-				class="text-gray-600 hover:text-gray-800"
-				:href="contractLink ? contractLink : undefined"
-				target="_blank"
-			>
-				{{ shortenAddress(blockchainStore.royaltyAutoClaimProxyAddress) }}
-			</a>
-			<CopyButton size="xs" :address="blockchainStore.royaltyAutoClaimProxyAddress" :is-round="false" />
+			<div>{{ shortenAddress(blockchainStore.royaltyAutoClaimProxyAddress) }}</div>
+			<CopyButton size="xs" :address="blockchainStore.royaltyAutoClaimProxyAddress" />
+			<AddressLinkButton size="xs" :address="blockchainStore.royaltyAutoClaimProxyAddress" />
 		</div>
 
 		<div class="flex items-center gap-x-2">

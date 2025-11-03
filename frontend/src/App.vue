@@ -8,6 +8,7 @@ import { Loader2, Settings, X } from 'lucide-vue-next'
 import { useEOAStore } from './stores/useEOA'
 import { useRoyaltyAutoClaimStore } from './stores/useRoyaltyAutoClaim'
 import { useBlockchainStore } from './stores/useBlockchain'
+import ThemeSwitch from './components/ThemeSwitch.vue'
 
 const { addConnectors, watchWalletChanged, watchDisconnect } = useVueDapp()
 
@@ -61,6 +62,8 @@ const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 					>
 						<Settings class="hover:text-gray-600" />
 					</RouterLink>
+
+					<ThemeSwitch />
 				</div>
 			</div>
 		</header>
