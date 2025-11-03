@@ -23,7 +23,7 @@
 			"@/*": ["./src/*"]
 		},
 		"noImplicitAny": false, // prevents error in router.ts when importing component
-		"types": ["vitest/globals"]
+		"types": ["vitest/globals", "bun"]
 	},
 	"include": ["src/**/*.ts", "src/**/*.vue", "test/**/*.test.ts", "scripts/**/*.ts"]
 }
