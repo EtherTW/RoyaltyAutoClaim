@@ -4,12 +4,11 @@ import { BrowserWalletConnector, useVueDapp } from '@vue-dapp/core'
 import { VueDappModal } from '@vue-dapp/modal'
 import '@vue-dapp/modal/dist/style.css'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
-import { Loader2, Settings, X } from 'lucide-vue-next'
-import { useEOAStore } from './stores/useEOA'
-import { useRoyaltyAutoClaimStore } from './stores/useRoyaltyAutoClaim'
+import { X } from 'lucide-vue-next'
 import { useBlockchainStore } from './stores/useBlockchain'
-import ThemeSwitch from './components/ThemeSwitch.vue'
+import { useEOAStore } from './stores/useEOA'
 
+const breakpoints = useBreakpoints(breakpointsTailwind)
 const { addConnectors, watchWalletChanged, watchDisconnect } = useVueDapp()
 
 addConnectors([new BrowserWalletConnector()])
@@ -23,50 +22,11 @@ watchWalletChanged(async wallet => {
 watchDisconnect(() => {
 	eoaStore.resetWallet()
 })
-
-const blockchainStore = useBlockchainStore()
-
-watch(
-	() => blockchainStore.chainId,
-	() => {
-		location.reload()
-	},
-)
-
-const breakpoints = useBreakpoints(breakpointsTailwind)
-const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 </script>
 
 <template>
 	<div class="min-h-screen flex flex-col">
-		<header
-			class="fixed top-0 left-0 right-0 z-50 h-[156px] -translate-y-[100px] flex items-end bg-background border-b px-4 lg:px-6"
-		>
-			<div class="h-[56px] flex w-full max-w-6xl mx-auto justify-between items-center">
-				<div class="flex items-center gap-6">
-					<router-link to="/" class="flex items-center gap-2">
-						<h1 class="font-semibold text-lg" :class="{ 'text-md': breakpoints.isSmaller('sm') }">
-							{{ breakpoints.isSmaller('sm') ? 'RAC' : 'RoyaltyAutoClaim' }}
-						</h1>
-						<Loader2 v-if="royaltyAutoClaimStore.isLoading" :size="16" class="animate-spin" />
-					</router-link>
-				</div>
-
-				<div class="flex items-center sm:gap-4" :class="{ 'gap-3': breakpoints.isSmaller('sm') }">
-					<NetworkSelector />
-					<ConnectButton />
-
-					<RouterLink
-						to="/config"
-						class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
-					>
-						<Settings class="hover:text-gray-600" />
-					</RouterLink>
-
-					<ThemeSwitch />
-				</div>
-			</div>
-		</header>
+		<Header />
 
 		<main class="flex-1 pt-14 pb-5">
 			<router-view />

@@ -5,13 +5,29 @@ const router = createRouter({
 	routes: [
 		{
 			path: '/',
-			name: 'home',
-			component: () => import('@/views/HomePage.vue'),
+			name: 'v2',
+			component: () => import('@/views/HomePageV2.vue'),
 		},
 		{
 			path: '/config',
-			name: 'config',
-			component: () => import('@/views/ConfigPage.vue'),
+			name: 'v2-config',
+			component: () => import('@/views/ConfigPageV2.vue'),
+		},
+
+		{
+			path: '/v1',
+			children: [
+				{
+					path: '',
+					name: 'v1',
+					component: () => import('@/views/HomePage.vue'),
+				},
+				{
+					path: 'config',
+					name: 'v1-config',
+					component: () => import('@/views/ConfigPage.vue'),
+				},
+			],
 		},
 	],
 	scrollBehavior: (_to, _from, savedPosition) => {

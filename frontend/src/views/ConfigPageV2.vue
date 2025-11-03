@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -226,17 +225,6 @@ const displayTokenAmount = computed(() => {
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
-		<div class="flex justify-start mb-4">
-			<RouterLink
-				:to="{
-					name: 'v1',
-				}"
-				class="inline-flex items-center gap-2 text-sm font-medium transition-colors"
-			>
-				<ArrowLeft class="hover:text-muted-foreground" />
-			</RouterLink>
-		</div>
-
 		<Card class="mb-8">
 			<CardHeader>
 				<div class="flex items-center justify-between">

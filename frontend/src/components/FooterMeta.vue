@@ -36,6 +36,8 @@ const contractLink = computed(() => {
 				</svg>
 			</a>
 			<p>v{{ pkg.version }}</p>
+
+			<ThemeSwitch />
 		</div>
 	</footer>
 </template>
