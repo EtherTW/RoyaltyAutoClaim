@@ -5,7 +5,6 @@ import { VueDappModal } from '@vue-dapp/modal'
 import '@vue-dapp/modal/dist/style.css'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { X } from 'lucide-vue-next'
-import { useBlockchainStore } from './stores/useBlockchain'
 import { useEOAStore } from './stores/useEOA'
 
 const breakpoints = useBreakpoints(breakpointsTailwind)

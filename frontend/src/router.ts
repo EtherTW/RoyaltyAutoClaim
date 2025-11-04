@@ -6,12 +6,12 @@ const router = createRouter({
 		{
 			path: '/',
 			name: 'v2',
-			component: () => import('@/views/HomePageV2.vue'),
+			component: () => import('@/views/HomePage.vue'),
 		},
 		{
 			path: '/config',
 			name: 'v2-config',
-			component: () => import('@/views/ConfigPageV2.vue'),
+			component: () => import('@/views/ConfigPage.vue'),
 		},
 
 		{
@@ -20,12 +20,12 @@ const router = createRouter({
 				{
 					path: '',
 					name: 'v1',
-					component: () => import('@/views/HomePage.vue'),
+					component: () => import('@/views/HomePageV1.vue'),
 				},
 				{
 					path: 'config',
 					name: 'v1-config',
-					component: () => import('@/views/ConfigPage.vue'),
+					component: () => import('@/views/ConfigPageV1.vue'),
 				},
 			],
 		},

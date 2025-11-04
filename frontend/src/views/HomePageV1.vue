@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Settings } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -94,6 +95,15 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
+		<div class="flex justify-end mb-4">
+			<RouterLink
+				:to="{ name: 'v1-config' }"
+				class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
+			>
+				<Settings class="hover:text-muted-foreground" />
+			</RouterLink>
+		</div>
+
 		<div class="space-y-4">
 			<div
 				v-if="!royaltyAutoClaimStore.submissions.length && !royaltyAutoClaimStore.isLoading"

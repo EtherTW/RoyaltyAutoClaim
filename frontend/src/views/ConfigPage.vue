@@ -229,7 +229,7 @@ const displayTokenAmount = computed(() => {
 		<div class="flex justify-start mb-4">
 			<RouterLink
 				:to="{
-					name: 'v1',
+					name: 'v2',
 				}"
 				class="inline-flex items-center gap-2 text-sm font-medium transition-colors"
 			>

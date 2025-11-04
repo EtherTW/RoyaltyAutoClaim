@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Settings } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useContractCall } from '@/lib/useContractCall'
+import { parseEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+import { Plus, Settings } from 'lucide-vue-next'
 
 const isButtonDisabled = computed(() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value)
 
@@ -18,6 +19,54 @@ onMounted(async () => {
 	}
 	await royaltyAutoClaimStore.fetchSubmissions()
 })
+
+// ===================================== email upload =====================================
+
+const showUploadCard = ref(false)
+const uploadedFile = ref<File | null>(null)
+const fileContent = ref('')
+const parsedEmailData = ref<Awaited<ReturnType<typeof parseEmailData>> | null>(null)
+const parseError = ref<string | null>(null)
+const isParsingEmail = ref(false)
+
+const handleFileUpload = async (event: Event) => {
+	const target = event.target as HTMLInputElement
+	const file = target.files?.[0]
+	if (!file) return
+
+	uploadedFile.value = file
+	parseError.value = null
+	parsedEmailData.value = null
+
+	const reader = new FileReader()
+	reader.onload = async e => {
+		const text = e.target?.result as string
+		fileContent.value = text
+
+		isParsingEmail.value = true
+		try {
+			parsedEmailData.value = await parseEmailData(text)
+		} catch (error) {
+			parseError.value = error instanceof Error ? error.message : 'Failed to parse email'
+			console.error('Error parsing email:', error)
+		} finally {
+			isParsingEmail.value = false
+		}
+	}
+	reader.readAsText(file)
+}
+
+const toggleUploadCard = () => {
+	showUploadCard.value = !showUploadCard.value
+	if (!showUploadCard.value) {
+		// Reset form when closing
+		uploadedFile.value = null
+		fileContent.value = ''
+		parsedEmailData.value = null
+		parseError.value = null
+		isParsingEmail.value = false
+	}
+}
 
 // ===================================== submit review & claim royalty =====================================
 
@@ -95,15 +144,82 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
-		<div class="flex justify-end mb-4">
-			<RouterLink
-				:to="{ name: 'v1-config' }"
+		<div class="flex justify-between items-center mb-4">
+			<button
+				@click="toggleUploadCard"
 				class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
 			>
-				<Settings class="hover:text-muted-foreground" />
+				<Plus :size="18" />
+				<span class="whitespace-nowrap">Register</span>
+			</button>
+			<RouterLink
+				:to="{ name: 'v2-config' }"
+				class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
+			>
+				<Settings :size="18" />
 			</RouterLink>
 		</div>
 
+		<!-- Email Upload Section -->
+		<Card v-if="showUploadCard" class="mb-6">
+			<CardContent class="pt-6">
+				<div class="flex flex-col gap-3">
+					<div class="flex items-center justify-between">
+						<h3 class="text-sm font-medium">Upload Email</h3>
+						<button
+							@click="toggleUploadCard"
+							class="text-muted-foreground hover:text-foreground transition-colors text-xs"
+						>
+							✕
+						</button>
+					</div>
+					<input
+						type="file"
+						@change="handleFileUpload"
+						accept=".eml"
+						class="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-input file:text-xs file:font-medium file:bg-background file:text-foreground hover:file:bg-accent cursor-pointer"
+					/>
+					<div
+						v-if="isParsingEmail"
+						class="text-xs text-muted-foreground bg-muted px-3 py-2 rounded flex items-center gap-2"
+					>
+						<div
+							class="animate-spin h-3 w-3 border-2 border-muted-foreground border-t-transparent rounded-full"
+						></div>
+						Parsing email...
+					</div>
+					<div v-if="parseError" class="text-xs text-red-500 bg-red-50 dark:bg-red-950 px-3 py-2 rounded">
+						Error: {{ parseError }}
+					</div>
+					<div v-if="parsedEmailData" class="space-y-2 text-xs bg-muted px-3 py-3 rounded">
+						<div class="grid gap-1.5">
+							<div>
+								<span class="text-muted-foreground">Email Sender: </span>
+								<span class="text-foreground">{{ parsedEmailData.emailSender }}</span>
+							</div>
+							<div>
+								<span class="text-muted-foreground">Title: </span>
+								<span class="text-foreground">{{ parsedEmailData.title }}</span>
+							</div>
+							<div>
+								<span class="text-muted-foreground">ID: </span>
+								<span class="text-foreground">{{ parsedEmailData.id }}</span>
+							</div>
+							<div>
+								<span class="text-muted-foreground">Recipient: </span>
+								<span class="text-foreground font-mono">{{ parsedEmailData.recipient }}</span>
+							</div>
+							<div>
+								<span class="text-muted-foreground">Type: </span>
+								<span class="text-foreground">{{ parsedEmailData.subjectType }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</CardContent>
+		</Card>
+
+		<!-- Submissions Section -->
 		<div class="space-y-4">
 			<div
 				v-if="!royaltyAutoClaimStore.submissions.length && !royaltyAutoClaimStore.isLoading"
