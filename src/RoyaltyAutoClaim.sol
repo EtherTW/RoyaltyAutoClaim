@@ -475,7 +475,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
         bytes memory actualSignature = bytes(userOp.signature[:65]);
         address appendedSigner = address(bytes20(userOp.signature[65:]));
-        address signer = ECDSA.recover(ECDSA.toEthSignedMessageHash(userOpHash), actualSignature);
+        address signer = ECDSA.recover(userOpHash, actualSignature);
 
         if (
             // ========================= Owner =========================

@@ -26,8 +26,7 @@ abstract contract AATest is Test {
         view
         returns (bytes memory)
     {
-        (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, entryPoint.getUserOpHash(userOp));
         return abi.encodePacked(r, s, v, claimedSigner);
     }
 
