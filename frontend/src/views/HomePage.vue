@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useContractCall } from '@/lib/useContractCall'
-import { parseEmailData } from '@/lib/zkemail-utils'
+import { useContractCallV2 } from '@/lib/useContractCallV2'
+import { ParsedEmailData, parseEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { Plus, Settings } from 'lucide-vue-next'
+import { Plus, Settings, X } from 'lucide-vue-next'
 
 const isButtonDisabled = computed(() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value)
 
@@ -18,15 +18,27 @@ onMounted(async () => {
 	await royaltyAutoClaimStore.fetchSubmissions()
 })
 
-// ===================================== email upload =====================================
+// ===================================== email-based operations =====================================
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const showUploadCard = ref(false)
 const uploadedFile = ref<File | null>(null)
 const fileContent = ref('')
-const parsedEmailData = ref<Awaited<ReturnType<typeof parseEmailData>> | null>(null)
+const parsedEmailData = ref<ParsedEmailData | null>(null)
 const parseError = ref<string | null>(null)
 const isParsingEmail = ref(false)
+
+function toggleUploadCard() {
+	showUploadCard.value = !showUploadCard.value
+	if (!showUploadCard.value) {
+		// Reset form when closing
+		uploadedFile.value = null
+		fileContent.value = ''
+		parsedEmailData.value = null
+		parseError.value = null
+		isParsingEmail.value = false
+	}
+}
 
 async function handleFileUpload(event: Event) {
 	const target = event.target as HTMLInputElement
@@ -55,17 +67,35 @@ async function handleFileUpload(event: Event) {
 	reader.readAsText(file)
 }
 
-function toggleUploadCard() {
-	showUploadCard.value = !showUploadCard.value
-	if (!showUploadCard.value) {
-		// Reset form when closing
-		uploadedFile.value = null
-		fileContent.value = ''
-		parsedEmailData.value = null
-		parseError.value = null
-		isParsingEmail.value = false
-	}
-}
+// Register Submission
+const { isLoading: isRegisterSubmissionLoading, send: onClickRegisterSubmission } = useContractCallV2({
+	getEmailOperation: () => ({
+		type: 'registration',
+		eml: fileContent.value,
+		parsedEmailData: parsedEmailData.value,
+	}),
+	successTitle: 'Successfully Registered Submission',
+	waitingTitle: 'Waiting for Register Submission',
+	errorTitle: 'Error Registering Submission',
+	onAfterCall: async () => {
+		await royaltyAutoClaimStore.fetchSubmissions()
+	},
+})
+
+// Update Recipient
+const { isLoading: isUpdateRecipientLoading, send: onClickUpdateRecipient } = useContractCallV2({
+	getEmailOperation: () => ({
+		type: 'recipient-update',
+		eml: fileContent.value,
+		parsedEmailData: parsedEmailData.value,
+	}),
+	successTitle: 'Successfully Updated Recipient',
+	waitingTitle: 'Waiting for Update Recipient',
+	errorTitle: 'Error Updating Recipient',
+	onAfterCall: async () => {
+		await royaltyAutoClaimStore.fetchSubmissions()
+	},
+})
 
 // ===================================== submit review & claim royalty =====================================
 
@@ -80,7 +110,7 @@ const selectedRoyaltyLevel = ref<'20' | '40' | '60' | '80'>('20')
 const submissionBeingOperated = ref<string | null>(null)
 
 // Submit Review
-const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContractCall({
+const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContractCallV2({
 	getCalldata: (submissionTitle: string) =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', [
 			submissionTitle,
@@ -104,7 +134,7 @@ const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContr
 })
 
 // Claim Royalty
-const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContractCall({
+const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContractCallV2({
 	getCalldata: (submissionTitle: string) =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('claimRoyalty', [submissionTitle]),
 	successTitle: 'Successfully Claimed Royalty',
@@ -144,9 +174,14 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
 		<div class="flex justify-between items-center mb-2">
-			<Button @click="toggleUploadCard" size="sm" variant="ghost">
+			<Button v-if="!showUploadCard" @click="toggleUploadCard" size="sm" variant="ghost">
 				<Plus :size="16" />
 				<div>Register or Update Recipient</div>
+			</Button>
+
+			<Button v-else @click="toggleUploadCard" size="sm" variant="ghost">
+				<X :size="16" />
+				<div>Close</div>
 			</Button>
 
 			<RouterLink :to="{ name: 'v2-config' }">
@@ -160,7 +195,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 		<Card v-if="showUploadCard" class="mb-6">
 			<CardContent class="pt-6">
 				<div class="flex flex-col gap-3">
-					<div class="flex items-center justify-between">
+					<div class="flex items-center">
 						<div class="flex items-center gap-3 flex-1">
 							<input
 								ref="fileInputRef"
@@ -169,14 +204,18 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 								accept=".eml"
 								class="hidden"
 							/>
-							<Button @click="() => fileInputRef?.click()" variant="default" size="sm">
+							<Button
+								@click="() => fileInputRef?.click()"
+								:disabled="isParsingEmail"
+								variant="default"
+								size="sm"
+							>
 								Upload Email (.eml)
 							</Button>
 							<span v-if="uploadedFile" class="text-sm text-muted-foreground truncate">
 								{{ uploadedFile.name }}
 							</span>
 						</div>
-						<Button @click="toggleUploadCard" size="sm" variant="secondary"> Close </Button>
 					</div>
 
 					<div
@@ -215,10 +254,21 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 							</div> -->
 						</div>
 					</div>
-					<Button v-if="parsedEmailData">
-						{{
-							parsedEmailData.subjectType === 'registration' ? 'Register Submission' : 'Update Recipient'
-						}}
+					<Button
+						v-if="parsedEmailData && parsedEmailData.subjectType === 'registration'"
+						:loading="isRegisterSubmissionLoading"
+						:disabled="isRegisterSubmissionLoading || isParsingEmail"
+						@click="onClickRegisterSubmission"
+					>
+						Register Submission
+					</Button>
+					<Button
+						v-if="parsedEmailData && parsedEmailData.subjectType === 'recipient-update'"
+						:loading="isUpdateRecipientLoading"
+						:disabled="isUpdateRecipientLoading || isParsingEmail"
+						@click="onClickUpdateRecipient"
+					>
+						Update Recipient
 					</Button>
 				</div>
 			</CardContent>

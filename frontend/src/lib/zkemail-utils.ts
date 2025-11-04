@@ -20,7 +20,22 @@ export async function initOnce() {
 	}
 }
 
-export async function parseEmailData(eml: string, userOpHash?: string) {
+export type EmailSubjectType = 'registration' | 'recipient-update'
+
+export type ParsedEmailData = {
+	publicKeyHash: string
+	headerHash: string
+	emailSender: string
+	subject: string
+	title: string
+	subjectType: EmailSubjectType
+	id: string
+	recipient: string
+	userOpHash: string
+	signals: string[]
+}
+
+export async function parseEmailData(eml: string, userOpHash?: string): Promise<ParsedEmailData> {
 	await initOnce()
 	const parsedEmail = await parseEmail(eml)
 
@@ -72,7 +87,7 @@ export async function parseEmailData(eml: string, userOpHash?: string) {
 	signals[3] = packBytesIntoNBytes(emailSender, 31).toString()
 
 	// subject prefix
-	let subjectType: 'registration' | 'recipient-update'
+	let subjectType: EmailSubjectType
 	const REGISTRATION_PREFIX = '確認已收到投稿'
 	const RECIPIENT_UPDATE_PREFIX = '確認此投稿更改稿費收取地址'
 

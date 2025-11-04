@@ -12,7 +12,7 @@ export async function buildUserOp({ royaltyAutoClaimAddress, chainId, client, bu
 		.setGasPrice(await fetchGasPricePimlico(BUNDLER_URL[chainId]))
 }
 
-export async function setFixedVerificationGasLimitForZkProof(op: UserOpBuilder) {
+export function setFixedVerificationGasLimitForZkProof(op: UserOpBuilder) {
 	op.setGasValue({
 		verificationGasLimit: FIXED_VERIFICATION_GAS_LIMIT,
 	})

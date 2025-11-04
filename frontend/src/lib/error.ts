@@ -51,7 +51,7 @@ export function normalizeError(unknownError: unknown): Error {
 	if (unknownError instanceof Error) {
 		return unknownError
 	}
-	return new Error(String(unknownError))
+	return new Error(JSON.stringify(unknownError))
 }
 
 // Returned string is used for UI notification

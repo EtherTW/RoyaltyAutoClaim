@@ -25,7 +25,7 @@ const mdSmallerOrEqual = breakpoints.smallerOrEqual('md')
 					<h1 class="font-semibold text-lg" :class="{ 'text-md': mdSmallerOrEqual }">RoyaltyAutoClaim</h1>
 				</div>
 
-				<router-link to="/" class="text-sm flex items-center gap-2">
+				<router-link to="/" class="text-sm flex items-center gap-2 hover:underline">
 					<div
 						:class="{
 							'text-muted-foreground': isV1Route,
@@ -35,7 +35,7 @@ const mdSmallerOrEqual = breakpoints.smallerOrEqual('md')
 					</div>
 				</router-link>
 
-				<router-link to="/v1" class="text-sm flex items-center gap-2">
+				<router-link to="/v1" class="text-sm flex items-center gap-2 hover:underline">
 					<div
 						:class="{
 							'text-muted-foreground': !isV1Route,
