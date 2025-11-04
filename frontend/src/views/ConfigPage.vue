@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { formatErrMsg, normalizeError } from '@/lib/error'
-import { useContractCall } from '@/lib/useContractCall'
+import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+import { RoyaltyAutoClaim__factory } from '@/typechain-v2'
 import { Contract, formatEther, parseEther } from 'ethers'
 import { ArrowLeft } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
+const iface = RoyaltyAutoClaim__factory.createInterface()
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
 const isBtnDisabled = computed(
@@ -33,11 +35,9 @@ onMounted(async () => {
 const title = ref('')
 
 // Revoke Submission
-const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('revokeSubmission', [title.value]),
+const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('revokeSubmission', [title.value]),
 	successTitle: 'Successfully Revoked Submission',
-	waitingTitle: 'Waiting for Revoke Submission',
 	errorTitle: 'Error Revoking Submission',
 })
 
@@ -46,14 +46,9 @@ const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContrac
 const reviewer = ref('')
 
 // Add Reviewer
-const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateReviewers', [
-			[reviewer.value],
-			[true],
-		]),
+const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('updateReviewers', [[reviewer.value], [true]]),
 	successTitle: 'Successfully Added Reviewer',
-	waitingTitle: 'Waiting to Add Reviewer',
 	errorTitle: 'Error Adding Reviewer',
 	onBeforeCall: async () => {
 		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
@@ -64,14 +59,9 @@ const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContrac
 })
 
 // Remove Reviewer
-const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateReviewers', [
-			[reviewer.value],
-			[false],
-		]),
+const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('updateReviewers', [[reviewer.value], [false]]),
 	successTitle: 'Successfully Removed Reviewer',
-	waitingTitle: 'Waiting to Remove Reviewer',
 	errorTitle: 'Error Removing Reviewer',
 	onBeforeCall: async () => {
 		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
@@ -87,11 +77,9 @@ const newAdmin = ref('')
 const newToken = ref('')
 
 // Change Admin
-const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('changeAdmin', [newAdmin.value]),
+const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('changeAdmin', [newAdmin.value]),
 	successTitle: 'Successfully Changed Admin',
-	waitingTitle: 'Waiting to Change Admin',
 	errorTitle: 'Error Changing Admin',
 	onBeforeCall: async () => {
 		if (newAdmin.value === currentAdmin.value) {
@@ -104,11 +92,9 @@ const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContrac
 })
 
 // Change Token
-const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('changeRoyaltyToken', [newToken.value]),
+const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('changeRoyaltyToken', [newToken.value]),
 	successTitle: 'Successfully Changed Token',
-	waitingTitle: 'Waiting to Change Token',
 	errorTitle: 'Error Changing Token',
 	onBeforeCall: async () => {
 		if (newToken.value === currentToken.value) {
@@ -127,14 +113,10 @@ const withdrawToken = ref(NATIVE_TOKEN)
 const withdrawAmount = ref<string>('0')
 
 // Emergency Withdraw
-const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCall({
+const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCallV2({
 	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('emergencyWithdraw', [
-			withdrawToken.value,
-			withdrawAmount.value.toString(),
-		]),
+		iface.encodeFunctionData('emergencyWithdraw', [withdrawToken.value, withdrawAmount.value.toString()]),
 	successTitle: 'Successfully Withdrew Tokens',
-	waitingTitle: 'Waiting for Emergency Withdraw',
 	errorTitle: 'Error Withdrawing Tokens',
 	onBeforeCall: async () => {
 		if (parseEther(withdrawAmount.value.toString()) <= 0) {
@@ -221,7 +203,7 @@ const displayTokenAmount = computed(() => {
 						<Button
 							variant="destructive"
 							:loading="isRevokeLoading"
-							:disabled="isBtnDisabled"
+							:disabled="isBtnDisabled || !title"
 							@click="onClickRevokeSubmission"
 						>
 							Revoke Submission

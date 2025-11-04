@@ -1,8 +1,23 @@
 import type { ethers } from 'ethers'
 import { ErrorCode, Interface, isError } from 'ethers'
-import { extractHexString } from 'sendop'
+import { ERC4337Error, extractHexString } from 'sendop'
 import { MockToken__factory, RoyaltyAutoClaim__factory } from '../typechain-types'
 import { RegistrationVerifier__factory } from '../typechain-v2'
+
+export function extractAndParseRevert(err: ERC4337Error, interfaces: Record<string, Interface>): string {
+	// Alchemy format: structured revertData property
+	if (err.data?.revertData) {
+		return parseContractRevert(err.data.revertData, interfaces)
+	}
+
+	// Pimlico format: hex string embedded in error message
+	const revertData = extractHexString(err.message)
+	if (revertData) {
+		return parseContractRevert(revertData, interfaces)
+	}
+
+	return ''
+}
 
 export function handleUserOpError(e: unknown) {
 	const revert = extractHexString((e as Error).message) || ''

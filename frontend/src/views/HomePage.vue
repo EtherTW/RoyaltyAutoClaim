@@ -3,7 +3,8 @@ import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { ParsedEmailData, parseEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { Plus, Settings, X } from 'lucide-vue-next'
+import { RoyaltyAutoClaim__factory } from '@/typechain-v2'
+import { Loader2, Plus, Settings, X } from 'lucide-vue-next'
 
 const isButtonDisabled = computed(() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value)
 
@@ -75,7 +76,6 @@ const { isLoading: isRegisterSubmissionLoading, send: onClickRegisterSubmission 
 		parsedEmailData: parsedEmailData.value,
 	}),
 	successTitle: 'Successfully Registered Submission',
-	waitingTitle: 'Waiting for Register Submission',
 	errorTitle: 'Error Registering Submission',
 	onAfterCall: async () => {
 		await royaltyAutoClaimStore.fetchSubmissions()
@@ -90,7 +90,6 @@ const { isLoading: isUpdateRecipientLoading, send: onClickUpdateRecipient } = us
 		parsedEmailData: parsedEmailData.value,
 	}),
 	successTitle: 'Successfully Updated Recipient',
-	waitingTitle: 'Waiting for Update Recipient',
 	errorTitle: 'Error Updating Recipient',
 	onAfterCall: async () => {
 		await royaltyAutoClaimStore.fetchSubmissions()
@@ -117,13 +116,16 @@ const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContr
 			selectedRoyaltyLevel.value,
 		]),
 	successTitle: 'Successfully Submitted Review',
-	waitingTitle: 'Waiting for Review Submission',
 	errorTitle: 'Error Submitting Review',
 	onBeforeCall: async (submissionTitle: string) => {
 		submissionBeingOperated.value = submissionTitle
 	},
 	onAfterCall: async (submissionTitle: string) => {
-		const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submissionTitle)
+		const royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(
+			blockchainStore.royaltyAutoClaimProxyAddress,
+			blockchainStore.client,
+		)
+		const submissionData = await royaltyAutoClaim.submissions(submissionTitle)
 		const found = royaltyAutoClaimStore.submissions.find(submission => submission.title === submissionTitle)
 		if (!found) {
 			throw new Error('reviewSubmission onAfterCall: Submission not found')
@@ -138,13 +140,16 @@ const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContr
 	getCalldata: (submissionTitle: string) =>
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('claimRoyalty', [submissionTitle]),
 	successTitle: 'Successfully Claimed Royalty',
-	waitingTitle: 'Waiting for Royalty Claim',
 	errorTitle: 'Error Claiming Royalty',
 	onBeforeCall: async (submissionTitle: string) => {
 		submissionBeingOperated.value = submissionTitle
 	},
 	onAfterCall: async (submissionTitle: string) => {
-		const submissionData = await royaltyAutoClaimStore.royaltyAutoClaim.submissions(submissionTitle)
+		const royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(
+			blockchainStore.royaltyAutoClaimProxyAddress,
+			blockchainStore.client,
+		)
+		const submissionData = await royaltyAutoClaim.submissions(submissionTitle)
 		const found = royaltyAutoClaimStore.submissions.find(submission => submission.title === submissionTitle)
 		if (!found) {
 			throw new Error('claimRoyalty onAfterCall: Submission not found')
@@ -276,14 +281,18 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 
 		<!-- Submissions Section -->
 		<div class="space-y-4">
+			<div v-if="royaltyAutoClaimStore.isLoading" class="flex justify-center">
+				<Loader2 :size="20" class="animate-spin" />
+			</div>
+
 			<div
-				v-if="!royaltyAutoClaimStore.submissions.length && !royaltyAutoClaimStore.isLoading"
+				v-else-if="!royaltyAutoClaimStore.submissions.length && !royaltyAutoClaimStore.isLoading"
 				class="text-gray-500 text-center"
 			>
 				No Submissions
 			</div>
 
-			<Card v-for="submission in reversedSubmissions" :key="submission.title">
+			<Card v-else v-for="submission in reversedSubmissions" :key="submission.title">
 				<CardHeader>
 					<div class="flex items-center justify-between">
 						<CardTitle>{{ submission.title }}</CardTitle>
@@ -293,9 +302,12 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 				<CardContent>
 					<div class="space-y-1 text-sm text-muted-foreground flex justify-between">
 						<div>
-							<div>Recipient: <Address :address="submission.recipient" /></div>
+							<div class="flex">
+								<div>Recipient:&nbsp;</div>
+								<Address :address="submission.recipient" />
+							</div>
 							<p>Reviews: {{ submission.reviewCount }}</p>
-							<p>Avg Royalty: {{ getAvgRoyaltyLevel(submission) || 0 }} USD</p>
+							<p>Average Royalty: {{ getAvgRoyaltyLevel(submission) || 0 }} USD</p>
 							<p v-if="submission.status === 'claimed'">Status: {{ submission.status }}</p>
 						</div>
 					</div>

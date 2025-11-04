@@ -34,14 +34,14 @@ const mode = useColorMode()
 
 		<FooterMeta />
 	</div>
-	<VueDappModal autoConnect autoConnectBrowserWalletIfSolo />
+	<VueDappModal :dark="mode === 'dark'" autoConnect autoConnectBrowserWalletIfSolo />
 
 	<Toaster :theme="mode === 'dark' ? 'light' : 'dark'" position="bottom-right" closeButton>
 		<template #error-icon>
-			<CircleX class="text-red-600 w-[18px] h-[18px]" />
+			<CircleX class="text-red-600 w-[18px] h-[18px] relative left-[1px] top-[.5px]" />
 		</template>
 		<template #success-icon>
-			<CircleCheck class="text-green-600 w-[18px] h-[18px]" />
+			<CircleCheck class="text-green-600 w-[18px] h-[18px] relative left-[1px] top-[.5px]" />
 		</template>
 	</Toaster>
 </template>

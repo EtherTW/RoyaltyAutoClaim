@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Settings } from 'lucide-vue-next'
+import { Loader2, Settings } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -104,14 +104,18 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 		</div>
 
 		<div class="space-y-4">
+			<div v-if="royaltyAutoClaimStore.isLoading" class="flex justify-center">
+				<Loader2 :size="20" class="animate-spin" />
+			</div>
+
 			<div
-				v-if="!royaltyAutoClaimStore.submissions.length && !royaltyAutoClaimStore.isLoading"
+				v-else-if="!royaltyAutoClaimStore.submissions.length && !royaltyAutoClaimStore.isLoading"
 				class="text-gray-500 text-center"
 			>
 				No Submissions
 			</div>
 
-			<Card v-for="submission in reversedSubmissions" :key="submission.title">
+			<Card v-else v-for="submission in reversedSubmissions" :key="submission.title">
 				<CardHeader>
 					<div class="flex items-center justify-between">
 						<CardTitle>{{ submission.title }}</CardTitle>
@@ -121,9 +125,12 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 				<CardContent>
 					<div class="space-y-1 text-sm text-muted-foreground flex justify-between">
 						<div>
-							<div>Recipient: <Address :address="submission.recipient" /></div>
+							<div class="flex">
+								<div>Recipient:&nbsp;</div>
+								<Address :address="submission.recipient" />
+							</div>
 							<p>Reviews: {{ submission.reviewCount }}</p>
-							<p>Avg Royalty: {{ getAvgRoyaltyLevel(submission) || 0 }} USD</p>
+							<p>Average Royalty: {{ getAvgRoyaltyLevel(submission) || 0 }} USD</p>
 							<p v-if="submission.status === 'claimed'">Status: {{ submission.status }}</p>
 						</div>
 					</div>

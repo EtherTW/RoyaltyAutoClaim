@@ -1,5 +1,5 @@
 import { useEOAStore } from '@/stores/useEOA'
-import { IRoyaltyAutoClaim__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
+import { IRoyaltyAutoClaim__factory, RegistrationVerifier__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
 import { useVueDapp } from '@vue-dapp/core'
 import { concat } from 'ethers'
 import {
@@ -9,6 +9,7 @@ import {
 	ERC4337Bundler,
 	ERC4337Error,
 	fetchGasPricePimlico,
+	IERC20Errors__factory,
 	isSameAddress,
 	UserOpBuilder,
 } from 'sendop'
@@ -16,13 +17,12 @@ import { h } from 'vue'
 import { toast } from 'vue-sonner'
 import { useBlockchainStore } from '../stores/useBlockchain'
 import { buildUserOp, setFixedVerificationGasLimitForZkProof } from './erc4337-utils'
-import { normalizeError, parseContractRevert, UserRejectedActionError } from './error'
+import { extractAndParseRevert, normalizeError, UserRejectedActionError } from './error'
 import { EmailSubjectType, genProof, makeDummyProof, ParsedEmailData } from './zkemail-utils'
 
 export function useContractCallV2<T extends unknown[] = []>(options: {
 	getCalldata?: (...args: T) => string
 	successTitle: string
-	waitingTitle: string
 	errorTitle: string
 	onBeforeCall?: (...args: T) => Promise<void> | void
 	onAfterCall?: (...args: T) => Promise<void> | void
@@ -94,7 +94,12 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				op.setSignature(makeDummyProof(emailOperation.parsedEmailData.signals))
 
 				// Estimate gas
-				await op.estimateGas()
+				try {
+					await op.estimateGas()
+				} catch (e) {
+					console.info('handleOps', op.encodeHandleOpsDataWithDefaultGas())
+					throw e
+				}
 
 				// Set fixed verification gas limit for ZK proof
 				setFixedVerificationGasLimitForZkProof(op)
@@ -110,26 +115,30 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				toast.dismiss(genProofToast)
 
 				// Send
-				await op.send()
+				try {
+					await op.send()
+				} catch (e) {
+					console.info('handleOps', op.encodeHandleOpsData())
+					throw e
+				}
 
-				console.info(`${options.waitingTitle} opHash: ${op.hash()}`)
-				const waitingToast = toast.info(options.waitingTitle, {
-					description: `op hash: ${op.hash()}`,
+				console.info('opHash', op.hash())
+				const waitingToast = toast.info('Waiting for transaction...', {
 					duration: Infinity,
 				})
 
 				// Wait
 				const receipt = await op.wait()
 
+				toast.dismiss(waitingToast)
+
 				if (!receipt.success) {
 					throw new TransactionError(`UserOp is unsuccessful: ${JSON.stringify(receipt)}`)
 				}
 
-				toast.dismiss(waitingToast)
-
 				const txLink = receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
 					?.transactionHash
-					? `${useBlockchainStore().explorerUrl}/tx/${
+					? `${blockchainStore.explorerUrl}/tx/${
 							receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
 								.transactionHash
 					  }`
@@ -157,6 +166,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				if (!options.getCalldata) {
 					throw new Error('useContractCall: getCalldata is required')
 				}
+
 				if (!eoaStore.signer) {
 					throw new Error('Please connect your EOA wallet first')
 				}
@@ -174,34 +184,42 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 					.setGasPrice(await fetchGasPricePimlico(blockchainStore.pimlicoUrl))
 					.setSignature(concat([DUMMY_ECDSA_SIGNATURE, eoaStore.signer.address]))
 
-				await op.estimateGas()
+				try {
+					await op.estimateGas()
+				} catch (e) {
+					console.info('handleOps', op.encodeHandleOpsDataWithDefaultGas())
+					throw e
+				}
 
 				// sign
 				const signature = await eoaStore.signer.signTypedData(...op.typedData())
 				op.setSignature(concat([signature, eoaStore.signer.address]))
 
-				console.info(`${options.waitingTitle} opHash: ${op.hash()}`)
-
 				// send
-				await op.send()
+				try {
+					await op.send()
+				} catch (e) {
+					console.info('handleOps', op.encodeHandleOpsData())
+					throw e
+				}
 
-				const waitingToast = toast.info(options.waitingTitle, {
-					description: `op hash: ${op.hash()}`,
+				console.info('opHash', op.hash())
+				const waitingToast = toast.info('Waiting for transaction...', {
 					duration: Infinity,
 				})
 
 				// wait
 				const receipt = await op.wait()
 
+				toast.dismiss(waitingToast)
+
 				if (!receipt.success) {
 					throw new TransactionError(`UserOp is unsuccessful: ${JSON.stringify(receipt)}`)
 				}
 
-				toast.dismiss(waitingToast)
-
 				const txLink = receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
 					?.transactionHash
-					? `${useBlockchainStore().explorerUrl}/tx/${
+					? `${blockchainStore.explorerUrl}/tx/${
 							receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
 								.transactionHash
 					  }`
@@ -225,23 +243,17 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				await options.onAfterCall(...args)
 			}
 		} catch (e: unknown) {
+			console.error(e)
 			const err = normalizeError(e)
 
 			let revert = ''
 
 			if (err instanceof ERC4337Error) {
-				console.error(err.message, err.method, err.data)
-				if (err.data?.revertData) {
-					const revertMsg = parseContractRevert(err.data.revertData, {
-						RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
-					})
-					if (revertMsg) {
-						console.error(revertMsg)
-						revert = revertMsg
-					}
-				}
-			} else {
-				console.log(err)
+				revert = extractAndParseRevert(err, {
+					RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
+					RegistrationVerifier: RegistrationVerifier__factory.createInterface(),
+					IERC20Errors: IERC20Errors__factory.createInterface(),
+				})
 			}
 
 			// Do not show error when the user cancels their action

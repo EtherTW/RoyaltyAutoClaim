@@ -1,5 +1,4 @@
 import { useEOAStore } from '@/stores/useEOA'
-import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 import { useVueDapp } from '@vue-dapp/core'
 import { concat, getBytes } from 'ethers'
 import {
@@ -14,7 +13,8 @@ import {
 import { h } from 'vue'
 import { toast } from 'vue-sonner'
 import { useBlockchainStore } from '../stores/useBlockchain'
-import { normalizeError, parseContractRevert, UserRejectedActionError } from './error'
+import { extractAndParseRevert, normalizeError, UserRejectedActionError } from './error'
+import { RoyaltyAutoClaim__factory } from '@/typechain-types'
 
 export function useContractCall<T extends unknown[] = []>(options: {
 	getCalldata: (...args: T) => string
@@ -74,7 +74,6 @@ export function useContractCall<T extends unknown[] = []>(options: {
 			await op.send()
 
 			const waitingToast = toast.info(options.waitingTitle, {
-				description: `op hash: ${op.hash()}`,
 				duration: Infinity,
 			})
 
@@ -117,14 +116,11 @@ export function useContractCall<T extends unknown[] = []>(options: {
 
 			if (err instanceof ERC4337Error) {
 				console.error(err.message, err.method, err.data)
-				if (err.data?.revertData) {
-					const revertMsg = parseContractRevert(err.data.revertData, {
-						RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
-					})
-					if (revertMsg) {
-						console.error(revertMsg)
-						revert = revertMsg
-					}
+				revert = extractAndParseRevert(err, {
+					RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
+				})
+				if (revert) {
+					console.error(revert)
 				}
 			} else {
 				console.log(err)

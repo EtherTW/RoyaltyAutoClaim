@@ -2,7 +2,7 @@
 import { shortenAddress, useVueDapp } from '@vue-dapp/core'
 import { useVueDappModal } from '@vue-dapp/modal'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
-import { LogOut } from 'lucide-vue-next'
+import { Power } from 'lucide-vue-next'
 import CopyButton from './CopyButton.vue'
 
 const { disconnect, status, isConnected, address } = useVueDapp()
@@ -40,7 +40,7 @@ const breakpoints = useBreakpoints(breakpointsTailwind)
 						class="w-5 h-5 text-black flex items-center justify-center hover:cursor-pointer rounded-full bg-gray-100 hover:bg-gray-50"
 						@click="onClickDisconnect"
 					>
-						<LogOut class="w-2.5" />
+						<Power class="w-2.5" />
 					</div>
 				</div>
 			</div>
