@@ -1,5 +1,5 @@
-import Notifications, { notify } from '@kyvg/vue3-notification'
 import { createApp } from 'vue'
+import { toast } from 'vue-sonner'
 import App from './App.vue'
 import { ERROR_NOTIFICATION_DURATION } from './config'
 import { normalizeError } from './lib/error'
@@ -16,7 +16,6 @@ pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
 
 app.use(router)
-app.use(Notifications)
 
 app.mount('#app')
 
@@ -24,10 +23,8 @@ app.config.errorHandler = (error: unknown, _vm, _info) => {
 	const err = normalizeError(error)
 	console.error(err)
 
-	notify({
-		title: `${err.name}: ${err.message}`,
-		text: getDetailedErrorMessage(err),
-		type: 'error',
+	toast.error(`${err.name}: ${err.message}`, {
+		description: getDetailedErrorMessage(err),
 		duration: ERROR_NOTIFICATION_DURATION,
 	})
 }

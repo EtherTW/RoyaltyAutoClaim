@@ -26,6 +26,7 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 
 	async function fetchSubmissions() {
 		try {
+			submissions.value = []
 			isLoadingBasicSubmissions.value = true
 
 			const blockchainStore = useBlockchainStore()

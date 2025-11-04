@@ -1,6 +1,5 @@
 import { useEOAStore } from '@/stores/useEOA'
 import { RoyaltyAutoClaim__factory } from '@/typechain-types'
-import { notify } from '@kyvg/vue3-notification'
 import { useVueDapp } from '@vue-dapp/core'
 import { concat, getBytes } from 'ethers'
 import {
@@ -12,7 +11,8 @@ import {
 	isSameAddress,
 	UserOpBuilder,
 } from 'sendop'
-import { ERROR_NOTIFICATION_DURATION } from '../config'
+import { h } from 'vue'
+import { toast } from 'vue-sonner'
 import { useBlockchainStore } from '../stores/useBlockchain'
 import { normalizeError, parseContractRevert, UserRejectedActionError } from './error'
 
@@ -73,13 +73,9 @@ export function useContractCall<T extends unknown[] = []>(options: {
 			// send
 			await op.send()
 
-			const waitingToast = Date.now()
-			notify({
-				id: waitingToast,
-				title: options.waitingTitle,
-				text: `op hash: ${op.hash()}`,
-				type: 'info',
-				duration: -1,
+			const waitingToast = toast.info(options.waitingTitle, {
+				description: `op hash: ${op.hash()}`,
+				duration: Infinity,
 			})
 
 			// wait
@@ -89,7 +85,7 @@ export function useContractCall<T extends unknown[] = []>(options: {
 				throw new TransactionError(`UserOp is unsuccessful: ${JSON.stringify(receipt)}`)
 			}
 
-			notify.close(waitingToast)
+			toast.dismiss(waitingToast)
 
 			const txLink = receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
 				?.transactionHash
@@ -98,11 +94,17 @@ export function useContractCall<T extends unknown[] = []>(options: {
 				  }`
 				: '#'
 
-			notify({
-				title: options.successTitle,
-				text: `<a class="text-blue-700 hover:underline" href="${txLink}" target="_blank">View on Explorer</a>`,
-				type: 'success',
-				duration: -1,
+			toast.success(options.successTitle, {
+				description: h(
+					'a',
+					{
+						class: 'text-blue-700 hover:underline cursor-pointer',
+						href: txLink,
+						target: '_blank',
+					},
+					'View on Explorer',
+				),
+				duration: Infinity,
 			})
 
 			if (options.onAfterCall) {
@@ -133,11 +135,9 @@ export function useContractCall<T extends unknown[] = []>(options: {
 				return
 			}
 
-			notify({
-				title: options.errorTitle,
-				text: revert || err.message,
-				type: 'error',
-				duration: ERROR_NOTIFICATION_DURATION,
+			toast.error(options.errorTitle, {
+				description: revert || err.message,
+				duration: Infinity,
 			})
 		} finally {
 			isLoading.value = false

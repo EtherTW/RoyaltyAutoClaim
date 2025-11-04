@@ -17,6 +17,7 @@ onMounted(async () => {
 	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
 		throw new Error('RoyaltyAutoClaim address not set')
 	}
+
 	await royaltyAutoClaimStore.fetchSubmissions()
 })
 

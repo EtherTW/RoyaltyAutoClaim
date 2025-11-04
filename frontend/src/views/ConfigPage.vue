@@ -9,9 +9,9 @@ import { formatErrMsg, normalizeError } from '@/lib/error'
 import { useContractCall } from '@/lib/useContractCall'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { notify } from '@kyvg/vue3-notification'
 import { useThrottleFn } from '@vueuse/core'
 import { Contract, formatEther, parseEther } from 'ethers'
+import { toast } from 'vue-sonner'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
@@ -204,10 +204,8 @@ const onClickMax = useThrottleFn(async () => {
 		withdrawAmount.value = '0'
 		const err = normalizeError(e)
 		console.error(err)
-		notify({
-			title: 'Error Fetching Balance',
-			text: formatErrMsg(err),
-			type: 'error',
+		toast.error('Error Fetching Balance', {
+			description: formatErrMsg(err),
 			duration: ERROR_NOTIFICATION_DURATION,
 		})
 	} finally {

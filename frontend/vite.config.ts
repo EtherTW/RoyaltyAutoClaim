@@ -5,7 +5,6 @@ import tailwind from 'tailwindcss'
 import { defineConfig } from 'vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import NotificationsResolver from '@kyvg/vue3-notification/auto-import-resolver'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 // https://vite.dev/config/
@@ -28,7 +27,6 @@ export default defineConfig({
 		}),
 		Components({
 			dts: 'src/components.d.ts',
-			resolvers: [NotificationsResolver()],
 		}),
 	],
 	resolve: {
