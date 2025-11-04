@@ -224,14 +224,15 @@ const displayTokenAmount = computed(() => {
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
-		<div class="flex justify-start mb-4">
+		<div class="flex justify-start mb-2">
 			<RouterLink
 				:to="{
 					name: 'v1',
 				}"
-				class="inline-flex items-center gap-2 text-sm font-medium transition-colors"
 			>
-				<ArrowLeft class="hover:text-muted-foreground" />
+				<Button size="icon" variant="ghost">
+					<ArrowLeft />
+				</Button>
 			</RouterLink>
 		</div>
 

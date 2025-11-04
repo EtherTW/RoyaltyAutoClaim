@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useContractCall } from '@/lib/useContractCall'
 import { parseEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
@@ -23,6 +20,7 @@ onMounted(async () => {
 
 // ===================================== email upload =====================================
 
+const fileInputRef = ref<HTMLInputElement | null>(null)
 const showUploadCard = ref(false)
 const uploadedFile = ref<File | null>(null)
 const fileContent = ref('')
@@ -30,7 +28,7 @@ const parsedEmailData = ref<Awaited<ReturnType<typeof parseEmailData>> | null>(n
 const parseError = ref<string | null>(null)
 const isParsingEmail = ref(false)
 
-const handleFileUpload = async (event: Event) => {
+async function handleFileUpload(event: Event) {
 	const target = event.target as HTMLInputElement
 	const file = target.files?.[0]
 	if (!file) return
@@ -57,7 +55,7 @@ const handleFileUpload = async (event: Event) => {
 	reader.readAsText(file)
 }
 
-const toggleUploadCard = () => {
+function toggleUploadCard() {
 	showUploadCard.value = !showUploadCard.value
 	if (!showUploadCard.value) {
 		// Reset form when closing
@@ -145,19 +143,16 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
-		<div class="flex justify-between items-center mb-4">
-			<button
-				@click="toggleUploadCard"
-				class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
-			>
-				<Plus :size="18" />
-				<span class="whitespace-nowrap">Register</span>
-			</button>
-			<RouterLink
-				:to="{ name: 'v2-config' }"
-				class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
-			>
-				<Settings :size="18" />
+		<div class="flex justify-between items-center mb-2">
+			<Button @click="toggleUploadCard" size="sm" variant="ghost">
+				<Plus :size="16" />
+				<div>Register or Update Recipient</div>
+			</Button>
+
+			<RouterLink :to="{ name: 'v2-config' }">
+				<Button size="icon" variant="ghost">
+					<Settings />
+				</Button>
 			</RouterLink>
 		</div>
 
@@ -166,20 +161,24 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 			<CardContent class="pt-6">
 				<div class="flex flex-col gap-3">
 					<div class="flex items-center justify-between">
-						<h3 class="text-sm font-medium">Upload Email</h3>
-						<button
-							@click="toggleUploadCard"
-							class="text-muted-foreground hover:text-foreground transition-colors text-xs"
-						>
-							✕
-						</button>
+						<div class="flex items-center gap-3 flex-1">
+							<input
+								ref="fileInputRef"
+								type="file"
+								@change="handleFileUpload"
+								accept=".eml"
+								class="hidden"
+							/>
+							<Button @click="() => fileInputRef?.click()" variant="default" size="sm">
+								Upload Email (.eml)
+							</Button>
+							<span v-if="uploadedFile" class="text-sm text-muted-foreground truncate">
+								{{ uploadedFile.name }}
+							</span>
+						</div>
+						<Button @click="toggleUploadCard" size="sm" variant="secondary"> Close </Button>
 					</div>
-					<input
-						type="file"
-						@change="handleFileUpload"
-						accept=".eml"
-						class="block w-full text-sm text-muted-foreground file:mr-3 file:py-1.5 file:px-3 file:rounded file:border file:border-input file:text-xs file:font-medium file:bg-background file:text-foreground hover:file:bg-accent cursor-pointer"
-					/>
+
 					<div
 						v-if="isParsingEmail"
 						class="text-xs text-muted-foreground bg-muted px-3 py-2 rounded flex items-center gap-2"
@@ -194,28 +193,33 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 					</div>
 					<div v-if="parsedEmailData" class="space-y-2 text-xs bg-muted px-3 py-3 rounded">
 						<div class="grid gap-1.5">
-							<div>
+							<!-- <div>
 								<span class="text-muted-foreground">Email Sender: </span>
 								<span class="text-foreground">{{ parsedEmailData.emailSender }}</span>
-							</div>
+							</div> -->
 							<div>
 								<span class="text-muted-foreground">Title: </span>
 								<span class="text-foreground">{{ parsedEmailData.title }}</span>
 							</div>
-							<div>
+							<!-- <div>
 								<span class="text-muted-foreground">ID: </span>
 								<span class="text-foreground">{{ parsedEmailData.id }}</span>
-							</div>
+							</div> -->
 							<div>
 								<span class="text-muted-foreground">Recipient: </span>
 								<span class="text-foreground font-mono">{{ parsedEmailData.recipient }}</span>
 							</div>
-							<div>
+							<!-- <div>
 								<span class="text-muted-foreground">Type: </span>
 								<span class="text-foreground">{{ parsedEmailData.subjectType }}</span>
-							</div>
+							</div> -->
 						</div>
 					</div>
+					<Button v-if="parsedEmailData">
+						{{
+							parsedEmailData.subjectType === 'registration' ? 'Register Submission' : 'Update Recipient'
+						}}
+					</Button>
 				</div>
 			</CardContent>
 		</Card>

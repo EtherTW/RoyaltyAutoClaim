@@ -95,12 +95,11 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
-		<div class="flex justify-end mb-4">
-			<RouterLink
-				:to="{ name: 'v1-config' }"
-				class="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-primary"
-			>
-				<Settings class="hover:text-muted-foreground" />
+		<div class="flex justify-end mb-2">
+			<RouterLink :to="{ name: 'v1-config' }">
+				<Button size="icon" variant="ghost">
+					<Settings />
+				</Button>
 			</RouterLink>
 		</div>
 

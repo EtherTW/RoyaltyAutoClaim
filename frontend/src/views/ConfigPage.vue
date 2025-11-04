@@ -1,24 +1,17 @@
 <script setup lang="ts">
-import { ArrowLeft } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { formatErrMsg, normalizeError } from '@/lib/error'
 import { useContractCall } from '@/lib/useContractCall'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { useThrottleFn } from '@vueuse/core'
 import { Contract, formatEther, parseEther } from 'ethers'
+import { ArrowLeft } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 
 const isBtnDisabled = computed(
 	() =>
-		isRegisterLoading.value ||
-		isUpdateLoading.value ||
 		isRevokeLoading.value ||
 		isAddReviewerLoading.value ||
 		isRemoveReviewerLoading.value ||
@@ -38,31 +31,6 @@ onMounted(async () => {
 // ===================================== Submission Management =====================================
 
 const title = ref('')
-const recipient = ref('')
-
-// Register Submission
-const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('registerSubmission', [
-			title.value,
-			recipient.value,
-		]),
-	successTitle: 'Successfully Registered Submission',
-	waitingTitle: 'Waiting for Register Submission',
-	errorTitle: 'Error Registering Submission',
-})
-
-// Update Recipient
-const { isLoading: isUpdateLoading, send: onClickUpdateRecipient } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateRoyaltyRecipient', [
-			title.value,
-			recipient.value,
-		]),
-	successTitle: 'Successfully Updated Recipient',
-	waitingTitle: 'Waiting for Update Recipient',
-	errorTitle: 'Error Updating Recipient',
-})
 
 // Revoke Submission
 const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContractCall({
@@ -224,14 +192,15 @@ const displayTokenAmount = computed(() => {
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
-		<div class="flex justify-start mb-4">
+		<div class="flex justify-start mb-2">
 			<RouterLink
 				:to="{
 					name: 'v2',
 				}"
-				class="inline-flex items-center gap-2 text-sm font-medium transition-colors"
 			>
-				<ArrowLeft class="hover:text-muted-foreground" />
+				<Button size="icon" variant="ghost">
+					<ArrowLeft />
+				</Button>
 			</RouterLink>
 		</div>
 
@@ -248,27 +217,7 @@ const displayTokenAmount = computed(() => {
 						<Label for="submissionTitle">Submission Title</Label>
 						<Input id="submissionTitle" v-model="title" placeholder="title" />
 					</div>
-					<div class="flex flex-col space-y-1.5">
-						<Label for="royaltyRecipient">Royalty Recipient Address</Label>
-						<Input id="royaltyRecipient" v-model="recipient" placeholder="0x..." />
-					</div>
 					<div class="flex gap-4 flex-wrap">
-						<Button
-							variant="default"
-							:loading="isRegisterLoading"
-							:disabled="isBtnDisabled"
-							@click="onClickRegisterSubmission"
-						>
-							Register Submission
-						</Button>
-						<Button
-							variant="default"
-							:loading="isUpdateLoading"
-							:disabled="isBtnDisabled"
-							@click="onClickUpdateRecipient"
-						>
-							Update Recipient
-						</Button>
 						<Button
 							variant="destructive"
 							:loading="isRevokeLoading"
