@@ -33,6 +33,7 @@ const fileContent = ref('')
 const parsedEmailData = ref<ParsedEmailData | null>(null)
 const parseError = ref<string | null>(null)
 const isParsingEmail = ref(false)
+const useLocalProof = ref(false)
 
 function toggleUploadCard() {
 	showUploadCard.value = !showUploadCard.value
@@ -82,6 +83,7 @@ const { isLoading: isRegisterSubmissionLoading, send: onClickRegisterSubmission 
 		eml: fileContent.value,
 		parsedEmailData: parsedEmailData.value,
 	}),
+	getUseLocalProof: () => useLocalProof.value,
 	successTitle: 'Successfully Registered Submission',
 	errorTitle: 'Error Registering Submission',
 	onAfterCall: async (title: string) => {
@@ -96,6 +98,7 @@ const { isLoading: isUpdateRecipientLoading, send: onClickUpdateRecipient } = us
 		eml: fileContent.value,
 		parsedEmailData: parsedEmailData.value,
 	}),
+	getUseLocalProof: () => useLocalProof.value,
 	successTitle: 'Successfully Updated Recipient',
 	errorTitle: 'Error Updating Recipient',
 	onAfterCall: async (title: string, recipient: string) => {
@@ -294,8 +297,23 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 							</div>
 							<div>
 								<span class="text-muted-foreground">Recipient: </span>
-								<span class="text-foreground font-mono">{{ parsedEmailData.recipient }}</span>
+								<span class="text-foreground font-mono break-all">{{ parsedEmailData.recipient }}</span>
 							</div>
+						</div>
+					</div>
+					<div v-if="parsedEmailData" class="space-y-2">
+						<div class="flex items-start gap-2">
+							<input
+								id="proof-location"
+								type="checkbox"
+								v-model="useLocalProof"
+								:disabled="isButtonDisabled"
+								class="w-4 h-4 cursor-pointer mt-0.5 flex-shrink-0"
+							/>
+
+							<label for="proof-location" class="text-sm cursor-pointer select-none">
+								Use local proof generation (may take up to 10 minutes)
+							</label>
 						</div>
 					</div>
 					<Button

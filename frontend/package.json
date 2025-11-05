@@ -10,7 +10,7 @@
 		"test": "vitest --run",
 		"generate-types": "rm -rf src/typechain-types && typechain --target ethers-v6 --out-dir 'src/typechain-types' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json'",
 		"gen-types-v2": "rm -rf src/typechain-v2 && typechain --target ethers-v6 --out-dir 'src/typechain-v2' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json' '../out/**/RegistrationVerifier.sol/*.json' '../out/**/StringUtils.sol/*.json'",
-		"deploy-contracts:local": "bun run test test/deploy-local.test.ts",
+		"deploy": "bun run scripts/deploy.ts",
 		"typecheck": "vue-tsc --noEmit",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",

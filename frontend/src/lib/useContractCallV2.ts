@@ -27,6 +27,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 		eml: string
 		parsedEmailData: ParsedEmailData | null
 	}
+	getUseLocalProof?: () => boolean
 	successTitle: string
 	errorTitle: string
 	onBeforeCall?: (...args: T) => Promise<void> | void
@@ -110,7 +111,8 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				const genProofToast = toast.info('Generating proof...', {
 					duration: Infinity,
 				})
-				const { encodedProof } = await genProof(emailOperation.eml, op.hash())
+				const useLocalProof = options.getUseLocalProof?.() ?? false
+				const { encodedProof } = await genProof(emailOperation.eml, op.hash(), useLocalProof)
 				op.setSignature(encodedProof)
 
 				toast.dismiss(genProofToast)

@@ -180,10 +180,10 @@ export function encodeZkEmailProof(proof: IRegistrationVerifier.ZkEmailProofStru
 	return abiEncode(['tuple(uint256[2] a, uint256[2][2] b, uint256[2] c, uint256[15] signals)'], [proof])
 }
 
-export async function genProof(eml: string, userOpHash: string) {
+export async function genProof(eml: string, userOpHash: string, isLocal: boolean = false) {
 	const sdk = zkeSdk()
 	const blueprint = await sdk.getBlueprint(BLUEPRINT_SLUG)
-	const prover = blueprint.createProver({ isLocal: false })
+	const prover = blueprint.createProver({ isLocal })
 	const proof = await prover.generateProof(eml, [
 		{
 			name: 'userOpHash',
@@ -191,6 +191,7 @@ export async function genProof(eml: string, userOpHash: string) {
 			maxLength: 66,
 		},
 	])
+	console.log('proof', proof)
 
 	const proofData = proof.props.proofData as unknown as ProofData
 	const publicOutputs = proof.props.publicOutputs as unknown as string[]
