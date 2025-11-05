@@ -4,7 +4,7 @@ import { ParsedEmailData, parseEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { Loader2, Plus, Settings, X } from 'lucide-vue-next'
+import { Edit, Loader2, Settings, X } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
 
 const globalLoaderStore = useGlobalLoaderStore()
@@ -233,7 +233,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 				variant="ghost"
 				:disabled="isButtonDisabled"
 			>
-				<Plus :size="16" />
+				<Edit :size="16" />
 				<div>Register or Update Recipient</div>
 			</Button>
 
@@ -280,9 +280,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 						v-if="isParsingEmail"
 						class="text-xs text-muted-foreground bg-muted px-3 py-2 rounded flex items-center gap-2"
 					>
-						<div
-							class="animate-spin h-3 w-3 border-2 border-muted-foreground border-t-transparent rounded-full"
-						></div>
+						<Loader2 :size="14" class="animate-spin" />
 						Parsing email...
 					</div>
 					<div v-if="parseError" class="text-xs text-red-500 bg-red-50 dark:bg-red-950 px-3 py-2 rounded">
@@ -334,7 +332,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 			</div>
 
 			<Card v-else v-for="submission in reversedSubmissions" :key="submission.title">
-				<CardHeader>
+				<CardHeader class="pb-3">
 					<div class="flex items-center justify-between">
 						<CardTitle>{{ submission.title }}</CardTitle>
 					</div>

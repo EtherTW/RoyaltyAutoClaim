@@ -258,9 +258,9 @@ const displayTokenAmount = computed(() => {
 			<CardContent>
 				<div class="grid w-full items-center gap-4">
 					<div class="flex flex-col space-y-1.5">
-						<Label>Current Admin</Label>
-						<div class="text-sm text-muted-foreground break-all">
-							<Address :address="currentAdmin" />
+						<div class="flex items-center gap-2">
+							<Label>Current Admin:</Label>
+							<Address :address="currentAdmin" class="text-muted-foreground" />
 						</div>
 
 						<Label for="admin" class="mt-4">New Admin</Label>
@@ -271,9 +271,9 @@ const displayTokenAmount = computed(() => {
 					</Button>
 
 					<div class="flex flex-col space-y-1.5">
-						<Label>Current Token</Label>
-						<div class="text-sm text-muted-foreground break-all">
-							<Address :address="currentToken" />
+						<div class="flex items-center gap-2">
+							<Label>Current Token:</Label>
+							<Address :address="currentToken" class="text-muted-foreground" />
 						</div>
 
 						<Label for="token" class="mt-4">New Token</Label>
@@ -302,7 +302,7 @@ const displayTokenAmount = computed(() => {
 					<div class="flex flex-col space-y-1.5">
 						<Label for="amount">
 							Amount:
-							<span class="font-normal"> {{ displayTokenAmount }} token </span>
+							<span class="font-normal"> {{ displayTokenAmount }} </span>
 						</Label>
 						<div class="flex gap-2">
 							<Input id="amount" v-model="withdrawAmount" placeholder="wei" />
