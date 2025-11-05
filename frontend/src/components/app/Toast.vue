@@ -3,6 +3,23 @@ import { CircleCheck, CircleX } from 'lucide-vue-next'
 import { Toaster } from 'vue-sonner'
 
 const mode = useColorMode()
+
+// Test toast UI
+// import { toast } from 'vue-sonner'
+// onMounted(() => {
+// 	toast.success('Successfully Mounted', {
+// 		description: h(
+// 			'a',
+// 			{
+// 				class: 'text-blue-700 hover:underline cursor-pointer',
+// 				href: '#',
+// 				target: '_blank',
+// 			},
+// 			'View on Explorer',
+// 		),
+// 		duration: Infinity,
+// 	})
+// })
 </script>
 
 <template>
@@ -17,16 +34,51 @@ const mode = useColorMode()
 </template>
 
 <style lang="css">
+/* ============================================
+     CUSTOM TOAST STYLING - BOTTOM RIGHT POSITION
+     ============================================ */
+
+/* Make the close button positioned on the top right corner of the toast */
 [data-sonner-toast][data-styled='true'] [data-close-button] {
+	/* Moves the close button to align with the right edge of 300px toast */
+	/* translateX(285px) positions it at the right, translateY(-6px) moves it up slightly */
 	--toast-close-button-transform: translate(285px, -6px);
 }
 
-/* Toast width */
+/* Set a fixed toast width instead of using the default 356px */
 [data-sonner-toast] {
-	width: 300px; /* the width of the toast */
+	width: 300px; /* Custom width for each individual toast */
 }
+
+/* Control the toaster container positioning from the right edge */
 [data-sonner-toaster][data-x-position='right'] {
-	width: 280px; /* the distance from the right edge */
+	/* This acts as the right margin/offset from the viewport edge */
+	/* The actual toast will appear 280px from the right edge of the screen */
+	width: 280px;
+}
+
+/* ============================================
+     MOBILE OVERRIDES (screens <= 600px)
+     Override default mobile behavior that makes toasts full-width
+     ============================================ */
+@media (max-width: 600px) {
+	[data-sonner-toaster] {
+		/* Remove the default left positioning that centers toasts on mobile */
+		left: auto;
+		/* Keep toasts 32px from the right edge on mobile devices */
+		right: 32px;
+	}
+
+	[data-sonner-toaster][data-y-position='bottom'] {
+		/* Position toasts 32px from the bottom on mobile (default is 20px) */
+		bottom: 32px;
+	}
+
+	[data-sonner-toaster] [data-sonner-toast] {
+		/* Override the default mobile full-width behavior */
+		/* Keep the same 300px width as desktop instead of calc(100% - 32px) */
+		width: 300px;
+	}
 }
 
 /* Scrollable content */
