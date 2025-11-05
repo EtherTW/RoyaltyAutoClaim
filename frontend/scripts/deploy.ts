@@ -59,6 +59,25 @@ const RoyaltyAutoClaimFactory = new RoyaltyAutoClaim__factory(dev)
 const impl = await RoyaltyAutoClaimFactory.deploy()
 await impl.waitForDeployment()
 const implAddress = await impl.getAddress()
+console.log('RoyaltyAutoClaim implementation deployed to', implAddress)
+
+// Wait for the code to be available on-chain
+console.log('Verifying implementation has code...')
+let codeCheckAttempts = 0
+while (codeCheckAttempts < 10) {
+	const code = await client.getCode(implAddress)
+	if (code !== '0x') {
+		console.log('Implementation code verified')
+		break
+	}
+	console.log('Waiting for implementation code to be available...')
+	await new Promise((resolve) => setTimeout(resolve, 2000))
+	codeCheckAttempts++
+}
+
+if (codeCheckAttempts === 10) {
+	throw new Error('Implementation code not available after 10 attempts')
+}
 
 // Deploy RoyaltyAutoClaim Proxy
 console.log('Deploying RoyaltyAutoClaim Proxy...')
