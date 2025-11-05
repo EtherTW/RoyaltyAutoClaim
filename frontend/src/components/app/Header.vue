@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { breakpointsTailwind } from '@vueuse/core'
 
 const route = useRoute()
@@ -10,6 +11,8 @@ const isV1Route = computed(() => {
 const breakpoints = useBreakpoints(breakpointsTailwind)
 const mdSmallerOrEqual = breakpoints.smallerOrEqual('md')
 const smSmallerOrEqual = breakpoints.smallerOrEqual('sm')
+
+const isDisabled = computed(() => useGlobalLoaderStore().isGlobalLoading)
 </script>
 
 <template>
@@ -22,7 +25,13 @@ const smSmallerOrEqual = breakpoints.smallerOrEqual('sm')
 					<h1 class="font-semibold text-lg">RoyaltyAutoClaim</h1>
 				</div>
 
-				<router-link to="/" class="text-sm flex items-center gap-2 hover:underline">
+				<RouterLink
+					:to="isDisabled ? '' : '/'"
+					class="text-sm flex items-center gap-2 cursor-default"
+					:class="{
+						'hover:underline cursor-pointer': !isDisabled,
+					}"
+				>
 					<div
 						:class="{
 							'text-muted-foreground': isV1Route,
@@ -30,9 +39,15 @@ const smSmallerOrEqual = breakpoints.smallerOrEqual('sm')
 					>
 						{{ mdSmallerOrEqual ? 'v2' : 'Version 2 (Base)' }}
 					</div>
-				</router-link>
+				</RouterLink>
 
-				<router-link to="/v1" class="text-sm flex items-center gap-2 hover:underline">
+				<RouterLink
+					:to="isDisabled ? '' : '/v1'"
+					class="text-sm flex items-center gap-2 cursor-default"
+					:class="{
+						'hover:underline cursor-pointer': !isDisabled,
+					}"
+				>
 					<div
 						:class="{
 							'text-muted-foreground': !isV1Route,
@@ -40,7 +55,7 @@ const smSmallerOrEqual = breakpoints.smallerOrEqual('sm')
 					>
 						{{ mdSmallerOrEqual ? 'v1' : 'Version 1 (Mainnet)' }}
 					</div>
-				</router-link>
+				</RouterLink>
 			</div>
 
 			<div class="flex items-center sm:gap-4" :class="{ 'gap-3': mdSmallerOrEqual, 'gap-1': smSmallerOrEqual }">

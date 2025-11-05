@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto'
+import { hexlify, JsonRpcProvider } from 'ethers'
 import { ENTRY_POINT_V08_ADDRESS, EntryPointV08__factory, fetchGasPricePimlico, UserOpBuilder } from 'sendop'
 import { BUNDLER_URL } from '../config'
 
@@ -16,4 +18,9 @@ export function setFixedVerificationGasLimitForZkProof(op: UserOpBuilder) {
 	op.setGasValue({
 		verificationGasLimit: FIXED_VERIFICATION_GAS_LIMIT,
 	})
+}
+
+export async function getNonceV08(senderAddress: string, client: JsonRpcProvider) {
+	const ep8 = EntryPointV08__factory.connect(ENTRY_POINT_V08_ADDRESS, client)
+	return await ep8.getNonce(senderAddress, hexlify(randomBytes(8)))
 }

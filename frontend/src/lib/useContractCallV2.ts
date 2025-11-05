@@ -1,11 +1,11 @@
 import { useEOAStore } from '@/stores/useEOA'
+import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { IRoyaltyAutoClaim__factory, RegistrationVerifier__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
 import { useVueDapp } from '@vue-dapp/core'
 import { concat } from 'ethers'
 import {
 	DUMMY_ECDSA_SIGNATURE,
 	ENTRY_POINT_V08_ADDRESS,
-	EntryPointV08__factory,
 	ERC4337Bundler,
 	ERC4337Error,
 	fetchGasPricePimlico,
@@ -16,40 +16,49 @@ import {
 import { h } from 'vue'
 import { toast } from 'vue-sonner'
 import { useBlockchainStore } from '../stores/useBlockchain'
-import { buildUserOp, setFixedVerificationGasLimitForZkProof } from './erc4337-utils'
-import { extractAndParseRevert, normalizeError, UserRejectedActionError } from './error'
+import { getNonceV08, setFixedVerificationGasLimitForZkProof } from './erc4337-utils'
+import { extractAndParseRevert, isUserRejectedError, normalizeError } from './error'
 import { EmailSubjectType, genProof, makeDummyProof, ParsedEmailData } from './zkemail-utils'
 
 export function useContractCallV2<T extends unknown[] = []>(options: {
 	getCalldata?: (...args: T) => string
-	successTitle: string
-	errorTitle: string
-	onBeforeCall?: (...args: T) => Promise<void> | void
-	onAfterCall?: (...args: T) => Promise<void> | void
-	getEmailOperation?: () => {
+	getEmailOperation?: (...args: T) => {
 		type: EmailSubjectType
 		eml: string
 		parsedEmailData: ParsedEmailData | null
 	}
+	successTitle: string
+	errorTitle: string
+	onBeforeCall?: (...args: T) => Promise<void> | void
+	onAfterCall?: (...args: T) => Promise<void> | void
 }) {
 	const blockchainStore = useBlockchainStore()
 	const eoaStore = useEOAStore()
+	const globalLoaderStore = useGlobalLoaderStore()
 
 	const isLoading = ref(false)
 
 	async function send(...args: T) {
+		const client = blockchainStore.client
+		const chainId = blockchainStore.chainId
+		const senderAddress = blockchainStore.royaltyAutoClaimProxyAddress
+		const pimlicoUrl = blockchainStore.pimlicoUrl
+		const bundler = new ERC4337Bundler(pimlicoUrl, undefined, {
+			batchMaxCount: 1,
+		})
+		const entryPointAddress = ENTRY_POINT_V08_ADDRESS
+
 		try {
 			isLoading.value = true
+			globalLoaderStore.isGlobalLoading = true
 
 			if (options.onBeforeCall) {
 				await options.onBeforeCall(...args)
 			}
 
-			const senderAddress = blockchainStore.royaltyAutoClaimProxyAddress
-
 			if (options.getEmailOperation) {
 				// Email-based ZK proof flow
-				const emailOperation = options.getEmailOperation()
+				const emailOperation = options.getEmailOperation(...args)
 
 				if (!emailOperation.parsedEmailData) {
 					throw new Error('useContractCallV2: emailOperation.parsedEmailData is required')
@@ -79,19 +88,12 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				}
 
 				// Build user op
-				const bundler = new ERC4337Bundler(blockchainStore.pimlicoUrl, undefined, {
-					batchMaxCount: 1,
-				})
-				const op = await buildUserOp({
-					royaltyAutoClaimAddress: senderAddress,
-					chainId: blockchainStore.chainId,
-					client: blockchainStore.client,
-					bundler,
-					callData,
-				})
-
-				// Set dummy proof for gas estimation
-				op.setSignature(makeDummyProof(emailOperation.parsedEmailData.signals))
+				const op = new UserOpBuilder({ chainId, bundler, entryPointAddress })
+					.setSender(senderAddress)
+					.setNonce(await getNonceV08(senderAddress, client))
+					.setCallData(callData)
+					.setGasPrice(await fetchGasPricePimlico(pimlicoUrl))
+					.setSignature(makeDummyProof(emailOperation.parsedEmailData.signals)) // Set dummy proof for gas estimation
 
 				// Estimate gas
 				try {
@@ -108,59 +110,18 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				const genProofToast = toast.info('Generating proof...', {
 					duration: Infinity,
 				})
-
 				const { encodedProof } = await genProof(emailOperation.eml, op.hash())
 				op.setSignature(encodedProof)
 
 				toast.dismiss(genProofToast)
 
-				// Send
-				try {
-					await op.send()
-				} catch (e) {
-					console.info('handleOps', op.encodeHandleOpsData())
-					throw e
-				}
-
-				console.info('opHash', op.hash())
-				const waitingToast = toast.info('Waiting for transaction...', {
-					duration: Infinity,
-				})
-
-				// Wait
-				const receipt = await op.wait()
-
-				toast.dismiss(waitingToast)
-
-				if (!receipt.success) {
-					throw new TransactionError(`UserOp is unsuccessful: ${JSON.stringify(receipt)}`)
-				}
-
-				const txLink = receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
-					?.transactionHash
-					? `${blockchainStore.explorerUrl}/tx/${
-							receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
-								.transactionHash
-					  }`
-					: '#'
-
-				toast.success(options.successTitle, {
-					description: h(
-						'a',
-						{
-							class: 'text-blue-700 hover:underline cursor-pointer',
-							href: txLink,
-							target: '_blank',
-						},
-						'View on Explorer',
-					),
-					duration: Infinity,
-				})
+				// send
+				await sendAndWaitForUserOp(op, options.successTitle)
 			} else {
 				const { chainId: walletChainId, connector } = useVueDapp()
 
-				if (walletChainId.value !== Number(blockchainStore.chainId)) {
-					await connector.value?.switchChain?.(Number(blockchainStore.chainId))
+				if (walletChainId.value !== Number(chainId)) {
+					await connector.value?.switchChain?.(Number(chainId))
 				}
 
 				if (!options.getCalldata) {
@@ -172,18 +133,18 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				}
 
 				// EOA signature flow
-				const ep8 = EntryPointV08__factory.connect(ENTRY_POINT_V08_ADDRESS, blockchainStore.client)
 				const op = new UserOpBuilder({
-					chainId: blockchainStore.chainId,
-					bundler: new ERC4337Bundler(blockchainStore.pimlicoUrl),
-					entryPointAddress: ENTRY_POINT_V08_ADDRESS,
+					chainId,
+					bundler,
+					entryPointAddress,
 				})
-					.setSender(blockchainStore.royaltyAutoClaimProxyAddress)
-					.setNonce(await ep8.getNonce(senderAddress, 0))
+					.setSender(senderAddress)
+					.setNonce(await getNonceV08(senderAddress, client))
 					.setCallData(options.getCalldata(...args))
-					.setGasPrice(await fetchGasPricePimlico(blockchainStore.pimlicoUrl))
+					.setGasPrice(await fetchGasPricePimlico(pimlicoUrl))
 					.setSignature(concat([DUMMY_ECDSA_SIGNATURE, eoaStore.signer.address]))
 
+				// Estimate gas
 				try {
 					await op.estimateGas()
 				} catch (e) {
@@ -196,47 +157,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				op.setSignature(concat([signature, eoaStore.signer.address]))
 
 				// send
-				try {
-					await op.send()
-				} catch (e) {
-					console.info('handleOps', op.encodeHandleOpsData())
-					throw e
-				}
-
-				console.info('opHash', op.hash())
-				const waitingToast = toast.info('Waiting for transaction...', {
-					duration: Infinity,
-				})
-
-				// wait
-				const receipt = await op.wait()
-
-				toast.dismiss(waitingToast)
-
-				if (!receipt.success) {
-					throw new TransactionError(`UserOp is unsuccessful: ${JSON.stringify(receipt)}`)
-				}
-
-				const txLink = receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
-					?.transactionHash
-					? `${blockchainStore.explorerUrl}/tx/${
-							receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]
-								.transactionHash
-					  }`
-					: '#'
-
-				toast.success(options.successTitle, {
-					description: h(
-						'a',
-						{
-							class: 'text-blue-700 hover:underline cursor-pointer',
-							href: txLink,
-							target: '_blank',
-						},
-						'View on Explorer',
-					),
-					duration: Infinity,
-				})
+				await sendAndWaitForUserOp(op, options.successTitle)
 			}
 
 			if (options.onAfterCall) {
@@ -257,7 +178,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 			}
 
 			// Do not show error when the user cancels their action
-			if (err instanceof UserRejectedActionError) {
+			if (isUserRejectedError(e)) {
 				return
 			}
 
@@ -266,6 +187,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				duration: Infinity,
 			})
 		} finally {
+			globalLoaderStore.isGlobalLoading = false
 			isLoading.value = false
 		}
 	}
@@ -276,9 +198,46 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 	}
 }
 
-export class TransactionError extends Error {
-	constructor(message: string, options?: ErrorOptions) {
-		super(message, options)
-		this.name = 'TransactionError'
+async function sendAndWaitForUserOp(op: UserOpBuilder, successTitle: string) {
+	const blockchainStore = useBlockchainStore()
+
+	try {
+		await op.send()
+	} catch (e) {
+		console.info('handleOps', op.encodeHandleOpsData())
+		throw e
 	}
+
+	console.info('opHash', op.hash())
+	const waitingToast = toast.info('Waiting for transaction...', {
+		duration: Infinity,
+	})
+
+	const receipt = await op.wait()
+
+	toast.dismiss(waitingToast)
+
+	if (!receipt.success) {
+		console.error('userOpReceipt', receipt)
+		throw new Error('UserOp is failed')
+	}
+
+	const txLink = receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]?.transactionHash
+		? `${blockchainStore.explorerUrl}/tx/${
+				receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0].transactionHash
+		  }`
+		: '#'
+
+	toast.success(successTitle, {
+		description: h(
+			'a',
+			{
+				class: 'text-blue-700 hover:underline cursor-pointer',
+				href: txLink,
+				target: '_blank',
+			},
+			'View on Explorer',
+		),
+		duration: Infinity,
+	})
 }

@@ -4,6 +4,64 @@ import { ERC4337Error, extractHexString } from 'sendop'
 import { MockToken__factory, RoyaltyAutoClaim__factory } from '../typechain-types'
 import { RegistrationVerifier__factory } from '../typechain-v2'
 
+/**
+ * Checks if an error indicates a user rejection from browser wallet or passkey.
+ */
+export function isUserRejectedError(error: unknown): boolean {
+	if (error instanceof Error) {
+		if (isEthersError(error)) {
+			if (isError(error, 'ACTION_REJECTED')) {
+				return true
+			}
+		}
+		if (
+			// desktop chrome error
+			error.message.includes('The operation either timed out or was not allowed') ||
+			// mobile chrome error
+			error.message.includes(
+				'The request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.',
+			)
+		) {
+			return true
+		}
+	}
+
+	return false
+}
+
+export function isEthersError(error: unknown): error is EthersError {
+	const validErrorCodes: ErrorCode[] = [
+		'UNKNOWN_ERROR',
+		'NOT_IMPLEMENTED',
+		'UNSUPPORTED_OPERATION',
+		'NETWORK_ERROR',
+		'SERVER_ERROR',
+		'TIMEOUT',
+		'BAD_DATA',
+		'CANCELLED',
+		'BUFFER_OVERRUN',
+		'NUMERIC_FAULT',
+		'INVALID_ARGUMENT',
+		'MISSING_ARGUMENT',
+		'UNEXPECTED_ARGUMENT',
+		'VALUE_MISMATCH',
+		'CALL_EXCEPTION',
+		'INSUFFICIENT_FUNDS',
+		'NONCE_EXPIRED',
+		'REPLACEMENT_UNDERPRICED',
+		'TRANSACTION_REPLACED',
+		'UNCONFIGURED_NAME',
+		'OFFCHAIN_FAULT',
+		'ACTION_REJECTED',
+	]
+
+	if (typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string') {
+		return validErrorCodes.includes(error.code as ErrorCode)
+	}
+
+	return false
+}
+
 export function extractAndParseRevert(err: ERC4337Error, interfaces: Record<string, Interface>): string {
 	// Alchemy format: structured revertData property
 	if (err.data?.revertData) {

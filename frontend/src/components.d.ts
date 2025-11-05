@@ -19,8 +19,8 @@ declare module 'vue' {
     CardTitle: typeof import('./components/ui/card/CardTitle.vue')['default']
     ConnectButton: typeof import('./components/ConnectButton.vue')['default']
     CopyButton: typeof import('./components/CopyButton.vue')['default']
-    FooterMeta: typeof import('./components/FooterMeta.vue')['default']
-    Header: typeof import('./components/Header.vue')['default']
+    FooterMeta: typeof import('./components/app/FooterMeta.vue')['default']
+    Header: typeof import('./components/app/Header.vue')['default']
     Input: typeof import('./components/ui/input/Input.vue')['default']
     Label: typeof import('./components/ui/label/Label.vue')['default']
     NetworkSelector: typeof import('./components/NetworkSelector.vue')['default']
@@ -39,5 +39,7 @@ declare module 'vue' {
     SelectTrigger: typeof import('./components/ui/select/SelectTrigger.vue')['default']
     SelectValue: typeof import('./components/ui/select/SelectValue.vue')['default']
     ThemeSwitch: typeof import('./components/ThemeSwitch.vue')['default']
+    Toast: typeof import('./components/app/Toast.vue')['default']
+    VueDapp: typeof import('./components/app/VueDapp.vue')['default']
   }
 }

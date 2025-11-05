@@ -4,6 +4,7 @@ import { useVueDappModal } from '@vue-dapp/modal'
 import { breakpointsTailwind, useBreakpoints } from '@vueuse/core'
 import { Power } from 'lucide-vue-next'
 import CopyButton from './CopyButton.vue'
+import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 
 const { disconnect, status, isConnected, address } = useVueDapp()
 
@@ -13,6 +14,9 @@ function onClickConnect() {
 }
 
 function onClickDisconnect() {
+	if (useGlobalLoaderStore().isGlobalLoading) {
+		return
+	}
 	disconnect()
 }
 

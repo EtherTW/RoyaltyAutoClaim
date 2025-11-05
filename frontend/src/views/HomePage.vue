@@ -2,11 +2,16 @@
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { ParsedEmailData, parseEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
+import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { RoyaltyAutoClaim__factory } from '@/typechain-v2'
 import { Loader2, Plus, Settings, X } from 'lucide-vue-next'
+import { isSameAddress } from 'sendop'
 
-const isButtonDisabled = computed(() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value)
+const globalLoaderStore = useGlobalLoaderStore()
+
+const isButtonDisabled = computed(
+	() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value || globalLoaderStore.isGlobalLoading,
+)
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 const blockchainStore = useBlockchainStore()
@@ -56,6 +61,7 @@ async function handleFileUpload(event: Event) {
 		fileContent.value = text
 
 		isParsingEmail.value = true
+		useGlobalLoaderStore().isGlobalLoading = true
 		try {
 			parsedEmailData.value = await parseEmailData(text)
 		} catch (error) {
@@ -63,6 +69,7 @@ async function handleFileUpload(event: Event) {
 			console.error('Error parsing email:', error)
 		} finally {
 			isParsingEmail.value = false
+			useGlobalLoaderStore().isGlobalLoading = false
 		}
 	}
 	reader.readAsText(file)
@@ -70,29 +77,35 @@ async function handleFileUpload(event: Event) {
 
 // Register Submission
 const { isLoading: isRegisterSubmissionLoading, send: onClickRegisterSubmission } = useContractCallV2({
-	getEmailOperation: () => ({
+	getEmailOperation: (_title: string) => ({
 		type: 'registration',
 		eml: fileContent.value,
 		parsedEmailData: parsedEmailData.value,
 	}),
 	successTitle: 'Successfully Registered Submission',
 	errorTitle: 'Error Registering Submission',
-	onAfterCall: async () => {
-		await royaltyAutoClaimStore.fetchSubmissions()
+	onAfterCall: async (title: string) => {
+		await pollForSubmissionUpdate(title)
 	},
 })
 
 // Update Recipient
 const { isLoading: isUpdateRecipientLoading, send: onClickUpdateRecipient } = useContractCallV2({
-	getEmailOperation: () => ({
+	getEmailOperation: (_title: string, _recipient: string) => ({
 		type: 'recipient-update',
 		eml: fileContent.value,
 		parsedEmailData: parsedEmailData.value,
 	}),
 	successTitle: 'Successfully Updated Recipient',
 	errorTitle: 'Error Updating Recipient',
-	onAfterCall: async () => {
-		await royaltyAutoClaimStore.fetchSubmissions()
+	onAfterCall: async (title: string, recipient: string) => {
+		await pollForSubmissionUpdate(title, submission => {
+			// For recipient updates, verify the recipient was actually updated
+			if (!recipient) {
+				return true // Can't verify, but submission exists
+			}
+			return isSameAddress(submission.recipient, recipient)
+		})
 	},
 })
 
@@ -121,17 +134,18 @@ const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContr
 		submissionBeingOperated.value = submissionTitle
 	},
 	onAfterCall: async (submissionTitle: string) => {
-		const royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(
-			blockchainStore.royaltyAutoClaimProxyAddress,
-			blockchainStore.client,
-		)
-		const submissionData = await royaltyAutoClaim.submissions(submissionTitle)
-		const found = royaltyAutoClaimStore.submissions.find(submission => submission.title === submissionTitle)
-		if (!found) {
-			throw new Error('reviewSubmission onAfterCall: Submission not found')
-		}
-		found.reviewCount = Number(submissionData.reviewCount)
-		found.totalRoyaltyLevel = Number(submissionData.totalRoyaltyLevel)
+		// Store the previous values to verify the update
+		const previousSubmission = royaltyAutoClaimStore.submissions.find(s => s.title === submissionTitle)
+		const previousReviewCount = previousSubmission?.reviewCount ?? 0
+		const previousTotalRoyaltyLevel = previousSubmission?.totalRoyaltyLevel ?? 0
+
+		await pollForSubmissionUpdate(submissionTitle, submission => {
+			// Verify that review count and total royalty level have been updated
+			return (
+				(submission.reviewCount ?? 0) > previousReviewCount &&
+				(submission.totalRoyaltyLevel ?? 0) > previousTotalRoyaltyLevel
+			)
+		})
 	},
 })
 
@@ -145,18 +159,51 @@ const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContr
 		submissionBeingOperated.value = submissionTitle
 	},
 	onAfterCall: async (submissionTitle: string) => {
-		const royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(
-			blockchainStore.royaltyAutoClaimProxyAddress,
-			blockchainStore.client,
-		)
-		const submissionData = await royaltyAutoClaim.submissions(submissionTitle)
-		const found = royaltyAutoClaimStore.submissions.find(submission => submission.title === submissionTitle)
-		if (!found) {
-			throw new Error('claimRoyalty onAfterCall: Submission not found')
-		}
-		found.status = Number(submissionData.status) === 1 ? 'registered' : 'claimed'
+		await pollForSubmissionUpdate(submissionTitle, submission => {
+			// Verify that status has changed to 'claimed'
+			return submission.status === 'claimed'
+		})
 	},
 })
+
+const isPollingForSubmissionUpdate = ref(false)
+
+// Helper function to poll for submission updates after operations
+async function pollForSubmissionUpdate(
+	submissionTitle: string,
+	verifyFn?: (submission: Submission) => boolean,
+): Promise<void> {
+	const maxAttempts = 10
+	const delayMs = 500
+
+	isPollingForSubmissionUpdate.value = true
+
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		await royaltyAutoClaimStore.updateSubmissions()
+
+		const found = royaltyAutoClaimStore.submissions.find(s => s.title === submissionTitle)
+
+		if (found) {
+			// If verification function provided, check if update is reflected
+			if (verifyFn && !verifyFn(found)) {
+				// Continue polling if verification fails
+				if (attempt < maxAttempts - 1) {
+					await new Promise(resolve => setTimeout(resolve, delayMs))
+					continue
+				}
+			} else {
+				isPollingForSubmissionUpdate.value = false
+				return // Successfully found and verified
+			}
+		}
+
+		if (attempt < maxAttempts - 1) {
+			await new Promise(resolve => setTimeout(resolve, delayMs))
+		}
+	}
+
+	console.warn('Submission update not reflected after polling, but transaction succeeded')
+}
 
 function getAvgRoyaltyLevel(submission: Submission) {
 	if (!submission.reviewCount || !submission.totalRoyaltyLevel) {
@@ -179,21 +226,27 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
 		<div class="flex justify-between items-center mb-2">
-			<Button v-if="!showUploadCard" @click="toggleUploadCard" size="sm" variant="ghost">
+			<Button
+				v-if="!showUploadCard"
+				@click="toggleUploadCard"
+				size="sm"
+				variant="ghost"
+				:disabled="isButtonDisabled"
+			>
 				<Plus :size="16" />
 				<div>Register or Update Recipient</div>
 			</Button>
 
-			<Button v-else @click="toggleUploadCard" size="sm" variant="ghost">
+			<Button v-else @click="toggleUploadCard" size="sm" variant="ghost" :disabled="isButtonDisabled">
 				<X :size="16" />
 				<div>Close</div>
 			</Button>
 
-			<RouterLink :to="{ name: 'v2-config' }">
-				<Button size="icon" variant="ghost">
+			<Button size="icon" variant="ghost" :disabled="isButtonDisabled">
+				<RouterLink :to="{ name: 'v2-config' }">
 					<Settings />
-				</Button>
-			</RouterLink>
+				</RouterLink>
+			</Button>
 		</div>
 
 		<!-- Email Upload Section -->
@@ -211,7 +264,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 							/>
 							<Button
 								@click="() => fileInputRef?.click()"
-								:disabled="isParsingEmail"
+								:disabled="isParsingEmail || isButtonDisabled"
 								variant="default"
 								size="sm"
 							>
@@ -237,41 +290,29 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 					</div>
 					<div v-if="parsedEmailData" class="space-y-2 text-xs bg-muted px-3 py-3 rounded">
 						<div class="grid gap-1.5">
-							<!-- <div>
-								<span class="text-muted-foreground">Email Sender: </span>
-								<span class="text-foreground">{{ parsedEmailData.emailSender }}</span>
-							</div> -->
 							<div>
 								<span class="text-muted-foreground">Title: </span>
 								<span class="text-foreground">{{ parsedEmailData.title }}</span>
 							</div>
-							<!-- <div>
-								<span class="text-muted-foreground">ID: </span>
-								<span class="text-foreground">{{ parsedEmailData.id }}</span>
-							</div> -->
 							<div>
 								<span class="text-muted-foreground">Recipient: </span>
 								<span class="text-foreground font-mono">{{ parsedEmailData.recipient }}</span>
 							</div>
-							<!-- <div>
-								<span class="text-muted-foreground">Type: </span>
-								<span class="text-foreground">{{ parsedEmailData.subjectType }}</span>
-							</div> -->
 						</div>
 					</div>
 					<Button
 						v-if="parsedEmailData && parsedEmailData.subjectType === 'registration'"
 						:loading="isRegisterSubmissionLoading"
-						:disabled="isRegisterSubmissionLoading || isParsingEmail"
-						@click="onClickRegisterSubmission"
+						:disabled="isRegisterSubmissionLoading || isParsingEmail || isButtonDisabled"
+						@click="onClickRegisterSubmission(parsedEmailData.title)"
 					>
 						Register Submission
 					</Button>
 					<Button
 						v-if="parsedEmailData && parsedEmailData.subjectType === 'recipient-update'"
 						:loading="isUpdateRecipientLoading"
-						:disabled="isUpdateRecipientLoading || isParsingEmail"
-						@click="onClickUpdateRecipient"
+						:disabled="isUpdateRecipientLoading || isParsingEmail || isButtonDisabled"
+						@click="onClickUpdateRecipient(parsedEmailData.title, parsedEmailData.recipient)"
 					>
 						Update Recipient
 					</Button>
@@ -281,7 +322,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 
 		<!-- Submissions Section -->
 		<div class="space-y-4">
-			<div v-if="royaltyAutoClaimStore.isLoading" class="flex justify-center">
+			<div v-if="royaltyAutoClaimStore.isLoading || isPollingForSubmissionUpdate" class="flex justify-center">
 				<Loader2 :size="20" class="animate-spin" />
 			</div>
 
@@ -314,7 +355,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 
 					<div v-if="submission.status === 'registered'" class="flex flex-wrap items-center gap-4 pt-4">
 						<div class="w-[200px]">
-							<Select v-model="selectedRoyaltyLevel">
+							<Select v-model="selectedRoyaltyLevel" :disabled="isButtonDisabled">
 								<SelectTrigger>
 									<SelectValue placeholder="Select royalty level" />
 								</SelectTrigger>

@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { useBlockchainStore } from '@/stores/useBlockchain'
-import pkg from '../../package.json'
 import { shortenAddress } from '@vue-dapp/core'
-import CopyButton from './CopyButton.vue'
 import { ExternalLink } from 'lucide-vue-next'
+import pkg from '../../../package.json'
 
 const blockchainStore = useBlockchainStore()
 
@@ -23,7 +22,9 @@ const contractLink = computed(() => {
 			<div>{{ shortenAddress(blockchainStore.royaltyAutoClaimProxyAddress) }}</div>
 			<CopyButton size="xxs" :address="blockchainStore.royaltyAutoClaimProxyAddress" />
 			<a v-if="contractLink" :href="contractLink" target="_blank">
-				<div class="w-3 h-3 text-black flex items-center justify-center hover:cursor-pointer rounded-full bg-gray-100 hover:bg-gray-50">
+				<div
+					class="w-3 h-3 text-black flex items-center justify-center hover:cursor-pointer rounded-full bg-gray-100 hover:bg-gray-50"
+				>
 					<ExternalLink class="w-1.5" />
 				</div>
 			</a>

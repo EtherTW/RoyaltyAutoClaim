@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useBlockchainStore } from '@/stores/useBlockchain'
+import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 
 const blockchainStore = useBlockchainStore()
 
@@ -15,10 +16,12 @@ watch(selected, () => {
 	}
 	window.location.reload()
 })
+
+const isDisabled = computed(() => useGlobalLoaderStore().isGlobalLoading)
 </script>
 
 <template>
-	<Select v-model="selected">
+	<Select v-model="selected" :disabled="isDisabled">
 		<SelectTrigger class="w-[120px]">
 			<SelectValue />
 		</SelectTrigger>
