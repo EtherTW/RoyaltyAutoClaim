@@ -24,7 +24,6 @@ declare module 'vue' {
     Input: typeof import('./components/ui/input/Input.vue')['default']
     Label: typeof import('./components/ui/label/Label.vue')['default']
     NetworkSelector: typeof import('./components/NetworkSelector.vue')['default']
-    Notifications: typeof import('@kyvg/vue3-notification')['Notifications']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Select: typeof import('./components/ui/select/Select.vue')['default']

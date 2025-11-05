@@ -1,11 +1,11 @@
 {
 	"name": "frontend",
 	"private": true,
-	"version": "0.2.4",
+	"version": "0.3.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
-		"build": "vue-tsc --noEmit && vite build",
+		"build": "bun run check && vite build",
 		"preview": "vite preview",
 		"test": "vitest --run",
 		"generate-types": "rm -rf src/typechain-types && typechain --target ethers-v6 --out-dir 'src/typechain-types' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json'",
