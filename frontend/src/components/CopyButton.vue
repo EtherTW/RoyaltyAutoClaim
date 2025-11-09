@@ -8,7 +8,7 @@ defineOptions({
 const props = withDefaults(
 	defineProps<{
 		address?: string
-		size?: 'xxs' | 'xs' | 'sm'
+		size?: 'xs' | 'sm'
 		isRound?: boolean
 	}>(),
 	{
@@ -32,10 +32,6 @@ function onClickCopyAddress(event: Event) {
 }
 
 const SIZES = {
-	xxs: {
-		button: 'w-3 h-3',
-		icon: 'w-1.5',
-	},
 	xs: {
 		button: 'w-4 h-4',
 		icon: 'w-2',

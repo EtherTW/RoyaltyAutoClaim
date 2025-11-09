@@ -20,12 +20,12 @@ const contractLink = computed(() => {
 	>
 		<div class="flex items-center gap-1">
 			<div>{{ shortenAddress(blockchainStore.royaltyAutoClaimProxyAddress) }}</div>
-			<CopyButton size="xxs" :address="blockchainStore.royaltyAutoClaimProxyAddress" />
+			<CopyButton size="xs" :address="blockchainStore.royaltyAutoClaimProxyAddress" />
 			<a v-if="contractLink" :href="contractLink" target="_blank">
 				<div
-					class="w-3 h-3 text-black flex items-center justify-center hover:cursor-pointer rounded-full bg-gray-100 hover:bg-gray-50"
+					class="w-4 h-4 text-black flex items-center justify-center hover:cursor-pointer rounded-full bg-gray-100 hover:bg-gray-50"
 				>
-					<ExternalLink class="w-1.5" />
+					<ExternalLink class="w-2" />
 				</div>
 			</a>
 		</div>
