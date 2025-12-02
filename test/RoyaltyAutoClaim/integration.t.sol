@@ -91,10 +91,14 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
     function test_validateUserOp_admin_functions() public {
         // Test Admin Functions
-        bytes[] memory adminCalls = new bytes[](3);
-        adminCalls[0] = abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (new address[](0), new bool[](0)));
-        adminCalls[1] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, (testSubmissionTitle));
-        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.updateRegistrationVerifier, (newRegistrationVerifier));
+        bytes[] memory adminCalls = new bytes[](5);
+        adminCalls[0] = abi.encodeCall(RoyaltyAutoClaim.adminRegisterSubmission, (testSubmissionTitle, recipient));
+        adminCalls[1] = abi.encodeCall(
+            RoyaltyAutoClaim.adminUpdateRoyaltyRecipient, (testSubmissionTitle, makeAddr("newRecipient"))
+        );
+        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (new address[](0), new bool[](0)));
+        adminCalls[3] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, (testSubmissionTitle));
+        adminCalls[4] = abi.encodeCall(RoyaltyAutoClaim.updateRegistrationVerifier, (newRegistrationVerifier));
 
         // Should fail for non-admin
         for (uint256 i = 0; i < adminCalls.length; i++) {

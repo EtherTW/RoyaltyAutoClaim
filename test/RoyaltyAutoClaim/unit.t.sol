@@ -11,7 +11,7 @@ forge test test/RoyaltyAutoClaim/unit.t.sol -vvvv --skip test/RoyaltyAutoClaim/i
 Test case order
 (Find following keywords to quickly navigate)
 
-Registration Functions
+ZK Email Functions
 Owner Functions
 Admin Functions
 Reviewer Functions
@@ -76,7 +76,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         );
     }
 
-    // ======================================== Registration Functions ========================================
+    // ======================================== ZK Email Functions ========================================
 
     // ======================================== registerSubmission ========================================
 
@@ -388,6 +388,170 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     }
 
     // ======================================== Admin Functions ========================================
+
+    // ======================================== adminRegisterSubmission ========================================
+
+    function test_adminRegisterSubmission() public {
+        // Admin can register directly
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
+        assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should be the recipient");
+        assertEq(submission.reviewCount, 0, "Review count should be 0");
+        assertEq(submission.totalRoyaltyLevel, 0, "Total royalty level should be 0");
+        assertEq(
+            uint256(submission.status),
+            uint256(IRoyaltyAutoClaim.SubmissionStatus.Registered),
+            "Submission status should be Registered"
+        );
+    }
+
+    function testCannot_adminRegisterSubmission_if_not_admin() public {
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+    }
+
+    function testCannot_adminRegisterSubmission_with_empty_title() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmptyString.selector));
+        royaltyAutoClaim.adminRegisterSubmission("", recipient);
+    }
+
+    function testCannot_adminRegisterSubmission_with_zero_address() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        royaltyAutoClaim.adminRegisterSubmission("test", address(0));
+    }
+
+    function testCannot_adminRegisterSubmission_if_already_registered() public {
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyRegistered.selector));
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+    }
+
+    function test_adminRegisterSubmission_multiple_unique_titles(uint8 count) public {
+        // Constrain count to reasonable range [1, 10]
+        vm.assume(count > 0 && count <= 10);
+
+        // Admin can register multiple submissions with unique titles
+        for (uint256 i = 0; i < count; i++) {
+            string memory title = string(abi.encodePacked("test", vm.toString(i)));
+
+            vm.prank(admin);
+            royaltyAutoClaim.adminRegisterSubmission(title, recipient);
+
+            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions(title);
+            assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should match");
+            assertEq(
+                uint256(submission.status),
+                uint256(IRoyaltyAutoClaim.SubmissionStatus.Registered),
+                "Submission status should be Registered"
+            );
+        }
+    }
+
+    // ======================================== adminUpdateRoyaltyRecipient ========================================
+
+    function test_adminUpdateRoyaltyRecipient() public {
+        // First register a submission
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        // Create a new recipient address
+        address newRecipient = makeAddr("newRecipient");
+
+        // Admin can update the recipient
+        vm.prank(admin);
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
+
+        RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
+        assertEq(submission.royaltyRecipient, newRecipient, "Royalty recipient should be updated");
+    }
+
+    function testCannot_adminUpdateRoyaltyRecipient_if_not_admin() public {
+        // First register a submission
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        address newRecipient = makeAddr("newRecipient");
+
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
+    }
+
+    function testCannot_adminUpdateRoyaltyRecipient_if_not_registered() public {
+        address newRecipient = makeAddr("newRecipient");
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
+    }
+
+    function testCannot_adminUpdateRoyaltyRecipient_with_zero_address() public {
+        // First register a submission
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", address(0));
+    }
+
+    function testCannot_adminUpdateRoyaltyRecipient_with_same_address() public {
+        // First register a submission
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", recipient);
+    }
+
+    function test_adminUpdateRoyaltyRecipient_multiple_times() public {
+        // First register a submission
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        // Update recipient multiple times
+        for (uint256 i = 1; i <= 5; i++) {
+            address newRecipient = makeAddr(string(abi.encodePacked("recipient", vm.toString(i))));
+
+            vm.prank(admin);
+            royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
+
+            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
+            assertEq(submission.royaltyRecipient, newRecipient, "Royalty recipient should be updated");
+        }
+    }
+
+    function testCannot_adminUpdateRoyaltyRecipient_after_claimed() public {
+        // Register and setup for claiming
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        // Add reviews
+        vm.prank(reviewer1);
+        royaltyAutoClaim.reviewSubmission("test", 60);
+
+        vm.prank(reviewer2);
+        royaltyAutoClaim.reviewSubmission("test", 80);
+
+        // Claim the royalty
+        vm.prank(recipient);
+        royaltyAutoClaim.claimRoyalty("test");
+
+        // Try to update recipient after claim
+        address newRecipient = makeAddr("newRecipient");
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
+    }
 
     // ================================== updateReviewers ==================================
 

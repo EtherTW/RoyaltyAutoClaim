@@ -21,14 +21,16 @@ interface IRoyaltyAutoClaim {
     function changeRoyaltyToken(address _token) external;
     function emergencyWithdraw(address _token, uint256 _amount) external;
 
+    // ZK Email Registration & Recipient Update
+    function registerSubmission(string memory title, address royaltyRecipient, bytes32 emailHeaderHash) external;
+    function updateRoyaltyRecipient(string memory title, address newRecipient, bytes32 emailHeaderHash) external;
+
     // Admin
+    function adminRegisterSubmission(string memory title, address royaltyRecipient) external;
+    function adminUpdateRoyaltyRecipient(string memory title, address newRecipient) external;
     function updateReviewers(address[] memory _reviewers, bool[] memory _status) external;
     function revokeSubmission(string memory title) external;
     function updateRegistrationVerifier(IRegistrationVerifier _verifier) external;
-
-    // Registration & Recipient Update
-    function registerSubmission(string memory title, address royaltyRecipient, bytes32 emailHeaderHash) external;
-    function updateRoyaltyRecipient(string memory title, address newRecipient, bytes32 emailHeaderHash) external;
 
     // Reviewer
     function reviewSubmission(string memory title, uint16 royaltyLevel) external;
@@ -247,6 +249,28 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     // ========================= Admin =========================
 
+    function adminRegisterSubmission(string memory title, address royaltyRecipient) public onlyAdminOrEntryPoint {
+        require(bytes(title).length > 0, EmptyString());
+        require(royaltyRecipient != address(0), ZeroAddress());
+        require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
+
+        MainStorage storage $ = _getMainStorage();
+        $.submissions[title].royaltyRecipient = royaltyRecipient;
+        $.submissions[title].status = SubmissionStatus.Registered;
+        emit SubmissionRegistered(title, royaltyRecipient, title);
+    }
+
+    function adminUpdateRoyaltyRecipient(string memory title, address newRecipient) public onlyAdminOrEntryPoint {
+        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
+        require(newRecipient != address(0), ZeroAddress());
+        require(newRecipient != submissions(title).royaltyRecipient, SameAddress());
+
+        MainStorage storage $ = _getMainStorage();
+        address oldRecipient = $.submissions[title].royaltyRecipient;
+        $.submissions[title].royaltyRecipient = newRecipient;
+        emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRecipient, title);
+    }
+
     function updateReviewers(address[] memory _reviewers, bool[] memory _status) public onlyAdminOrEntryPoint {
         require(_reviewers.length == _status.length, InvalidArrayLength());
         require(_reviewers.length > 0, InvalidArrayLength());
@@ -270,7 +294,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         emit RegistrationVerifierUpdated(address(_verifier));
     }
 
-    // ========================= Registration & Recipient Update =========================
+    // ========================= ZK Email Registration & Recipient Update =========================
 
     /// @dev call directly
     function registerSubmission(
@@ -490,7 +514,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             return 0;
         } else if (
             // ========================= Admin =========================
-            selector == this.updateReviewers.selector || selector == this.revokeSubmission.selector
+            selector == this.adminRegisterSubmission.selector || selector == this.adminUpdateRoyaltyRecipient.selector
+                || selector == this.updateReviewers.selector || selector == this.revokeSubmission.selector
                 || selector == this.updateRegistrationVerifier.selector
         ) {
             require(appendedSigner == admin(), Unauthorized(appendedSigner));
