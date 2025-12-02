@@ -274,7 +274,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 								Upload Email (.eml)
 							</Button>
 							<span v-if="uploadedFile" class="text-sm text-muted-foreground truncate">
-								{{ uploadedFile.name }}
+								Filename: {{ uploadedFile.name }}
 							</span>
 						</div>
 					</div>
