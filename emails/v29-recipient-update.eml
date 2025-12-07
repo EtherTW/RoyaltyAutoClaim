@@ -1,0 +1,102 @@
+Delivered-To: chnejohnson@gmail.com
+Received: by 2002:a05:7022:e990:b0:117:f74:fb6d with SMTP id py16csp4821960dlb;
+        Mon, 1 Dec 2025 23:11:16 -0800 (PST)
+X-Received: by 2002:a05:6512:a92:b0:594:27c6:a03 with SMTP id 2adb3069b0e04-596a3ea7b89mr14491222e87.13.1764659475778;
+        Mon, 01 Dec 2025 23:11:15 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1764659475; cv=none;
+        d=google.com; s=arc-20240605;
+        b=GS8NYvQa1Fp1sEAsouCo2rvSikC1Z/1YN1qezu758SfXP1C2T1i4ciMy/6diicWLvt
+         XZJhT0N/uvegr6j9Y2kYkLeHDB9nPCuOq70/38YPet/SnPO+9JBS6plO69vcRMaQmTAq
+         vvZmqHntpSfW8IPhv6guUPjD4M+QyQqQAy8eEx7UYYOGcpHZJI/a26vblMTFiD1OtvHo
+         F3dEmg1q45t7UZLn4npHtJuJNZWcQOJrBrSiWWoS7rKkdQV18bYlDxYRj24uwjUnKTRS
+         XWFEP6a6MMWXTR7LMXBGzApqL+/D7LMqNLl7er+YJrHh9FK+QCqFuKA4e+3d6Ew9mc6x
+         QpbA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=k7SD2fIm4ArZcv7O8HX89lpfuVRxCdOQHEvZxMTA1XQ=;
+        fh=T7nKoZxbjFeqY0YU6esvoK9zrDLdOlSPtvjkKN1NpMs=;
+        b=b972ypMNU3mbF6Piktm4OA2WLLoizWA5MqCtNVV4y7JMX1PFYeskMdkV1CpoO20lqt
+         k/jfS6yeboRf0I5uEM6lYc5mVqibGAPBWh2Y0LnvTwCUTMmQn4cvdHCiEuWMqZFU/xUQ
+         N+LOQ+kipqmyWmO4H6j6BfaujcZu+J2qHiegIazxS8QyUW8pZBbTafw8kj8GpcXbNQw+
+         cuGMdfHHVtxmrFdZStfBgIbhXECxEgBqwhLKRFquAOMHDini5FGAWsGiz+C/MC2VAKEg
+         V6PYmawloj5NJptO8RgsML0zmEcHnQg8sJWmWeK9UEwUTTvYS31gm5x9X4ZPC5JupeFa
+         zZcQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=jxUoBB+5;
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <johnson86tw@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 2adb3069b0e04-597ca84fdc8sor699560e87.8.2025.12.01.23.11.15
+        for <chnejohnson@gmail.com>
+        (Google Transport Security);
+        Mon, 01 Dec 2025 23:11:15 -0800 (PST)
+Received-SPF: pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=jxUoBB+5;
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1764659475; x=1765264275; dara=google.com;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=k7SD2fIm4ArZcv7O8HX89lpfuVRxCdOQHEvZxMTA1XQ=;
+        b=jxUoBB+5KVeWeHUvt+cfnUpyIkQYQKCaVN4siUfH+BPMxDzmxh5lLeEgTSeuAxBOoe
+         aPm43ILIrtX3MDVTM8rDMuL+lFM+XP5DqlwrFwc+VjFeiOG5/tmrr8ce/VYLwWTfZjw/
+         nOzkh0EJ2zq1/k/tC4YL7O4uVXFGNFOGm7MObUa2HkgmDYFwWvOpdpNu3KQdg0UzIE2K
+         5SFCv06XY11SWxCkI2DKPOi/jztgURS4A9TAK23qAj0HlqyX0nWmXRP4v+h52t1M9cli
+         0XDppWNIa+d2/9T0ka9GEhiAQnNh0XdG54uNb90SGmPaem9VapS0+I+drrBB83bjQ2SF
+         A//Q==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1764659475; x=1765264275;
+        h=to:subject:message-id:date:from:mime-version:x-gm-gg
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=k7SD2fIm4ArZcv7O8HX89lpfuVRxCdOQHEvZxMTA1XQ=;
+        b=OSUXtfFsKAjkuRQWbW5j7cBD90FPjeQZgkt1Ng+XlpKeS1VoaRwtBPZrUt4UagkOK3
+         TOMFgNOn+FkUc119BSYVE+Bjtr+kPm7/qMmGKoTfVj0xJEJQgJ8TtlnPOn5W2B0UHxmd
+         tZ/MpFXRKgVR/DjVkt1gxX1FE52FWqt883GR75g/1qXzijgikKW/2T6EeEXPpfUJUne6
+         jUjBHKeQttUV0IvrjypjcFDwxm/9i9PPgFeML219BkHLYfmMMvmV8ejfPpL1BNqKLuOy
+         WQRWf/KaEieBymb1Q6zFC4+oJAiA5B1lERfUsaAq3M0sEAFc5xHfhOGCxba0cUwp3tQp
+         F2Ew==
+X-Gm-Message-State: AOJu0YxmI46SyRXgBhnOtWjrVgjGnczWRWXr18pjeo+czU0WgUsDK82Y
+	+ssvvoM8amnqeLdqfJBV6urE2mtXRPYZC/nnsKEZOFODKqdmBj9n/mU/enf4z3uDLEp0pXcRJC4
+	99D9OJ5WcpQBDZ3KHmEdpMSbbSf7ianIS6ZHo
+X-Gm-Gg: ASbGnctMbzqDyEIo51weskP9Y9r2ElubqDBpyhQYm/sqbPscoAW3pDfM8Sq793AARu5
+	QKLrxTtXlDxfr2G8DCbZdTLTrRYMSww5r7yZeR5fNW9l75u5sNM3PrER9Usx23q82HmrsjhIKLf
+	giQpgyBR3uOkdh5B33L+ZgtmxRzWVZ9LLl2BNXWBw928+K92elurS1MJ+SBPpoqGKrnrl05r/3p
+	/94D7JU6vMtfoO6tjnN4xtdyzY/u/oU/n3yWadOVW1HE8sDYC/LQVPg1l3G1zyUyXdx22hk
+X-Google-Smtp-Source: AGHT+IHqJSaajSCML7s9paeRWwgQwHy/+faAOlID2zWEAeSSyunQ9Sql3rmc+iD8XFToIDD8QwUUeJ1vibkjdCLjwUA=
+X-Received: by 2002:a05:6512:10c6:b0:594:4b3e:2815 with SMTP id
+ 2adb3069b0e04-596a3e9fde5mr13763344e87.2.1764659474756; Mon, 01 Dec 2025
+ 23:11:14 -0800 (PST)
+MIME-Version: 1.0
+From: Johnson <johnson86tw@gmail.com>
+Date: Tue, 2 Dec 2025 15:11:03 +0800
+X-Gm-Features: AWmQ_bl-0M3SpNGR5_jaA5e2Qg4qEbQt-ZT21c8G47htZIHwydTzYmyikrtr3fA
+Message-ID: <CAAcMZv9u0RHft5HgmvG-0P-DoTHArkus4JJmYs93YKvXk2wa=Q@mail.gmail.com>
+Subject: =?UTF-8?B?56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOiDpmrHnp4HmsaA=?=
+	=?UTF-8?B?55qE6Kit6KiIIGJ5IGNjIGxpYW5n?=
+To: chnejohnson@gmail.com
+Content-Type: multipart/alternative; boundary="00000000000024760f0644f2cd80"
+
+--00000000000024760f0644f2cd80
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+No: 2
+ID: 0xe62e4f74f79eb4f6df45e327a174d995efc52fd300c2d6c2593da87a7874bf7c
+Recipient: 0x0F0356aE7f7e1c0e812f5fB672B9D5557aB0Bf86
+Memo: =E7=84=A1
+
+--00000000000024760f0644f2cd80
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">No: 2<div>ID:=C2=A00xe62e4f74f79eb4f6df45e327a174d995efc52=
+fd300c2d6c2593da87a7874bf7c =C2=A0<br>Recipient: 0x0F0356aE7f7e1c0e812f5fB6=
+72B9D5557aB0Bf86=C2=A0=C2=A0<br>Memo:=C2=A0=E7=84=A1</div></div>
+
+--00000000000024760f0644f2cd80--
