@@ -11,6 +11,12 @@
   "lib/openzeppelin-contracts-upgradeable": {
     "rev": "fa525310e45f91eb20a6d3baa2644be8e0adba31"
   },
+  "lib/semaphore": {
+    "tag": {
+      "name": "v4.14.0",
+      "rev": "1dc597a17528e521a6eef4287741e2a893c2efc5"
+    }
+  },
   "lib/solady": {
     "rev": "cc133a9d0b1660a27afc1a3b25cf8209e7b8d9e9"
   },

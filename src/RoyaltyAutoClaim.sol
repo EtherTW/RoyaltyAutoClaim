@@ -12,6 +12,7 @@ import {ReentrancyGuard} from "solady/utils/ReentrancyGuard.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IRegistrationVerifier} from "./RegistrationVerifier.sol";
+import {ISemaphore} from "@semaphore/interfaces/ISemaphore.sol";
 
 interface IRoyaltyAutoClaim {
     // Owner
@@ -28,12 +29,17 @@ interface IRoyaltyAutoClaim {
     // Admin
     function adminRegisterSubmission(string memory title, address royaltyRecipient) external;
     function adminUpdateRoyaltyRecipient(string memory title, address newRecipient) external;
-    function updateReviewers(address[] memory _reviewers, bool[] memory _status) external;
     function revokeSubmission(string memory title) external;
     function updateRegistrationVerifier(IRegistrationVerifier _verifier) external;
 
     // Reviewer
-    function reviewSubmission(string memory title, uint16 royaltyLevel) external;
+    function reviewSubmission(
+        string memory title,
+        uint16 royaltyLevel,
+        uint256 merkleTreeRoot,
+        uint256 nullifierHash,
+        uint256[8] calldata proof
+    ) external;
 
     // Claim (Recipient or Admin)
     function claimRoyalty(string memory title) external;
@@ -42,7 +48,6 @@ interface IRoyaltyAutoClaim {
     event AdminChanged(address indexed oldAdmin, address indexed newAdmin);
     event RoyaltyTokenChanged(address indexed oldToken, address indexed newToken);
     event EmergencyWithdraw(address indexed token, uint256 amount);
-    event ReviewerStatusUpdated(address indexed reviewer, bool status);
     event RegistrationVerifierUpdated(address indexed registrationVerifier);
 
     event SubmissionRegistered(string indexed titleHash, address indexed royaltyRecipient, string title);
@@ -50,15 +55,18 @@ interface IRoyaltyAutoClaim {
         string indexed titleHash, address indexed oldRecipient, address indexed newRecipient, string title
     );
     event SubmissionRevoked(string indexed titleHash, string title);
-    event SubmissionReviewed(string indexed titleHash, address indexed reviewer, uint16 royaltyLevel, string title);
+    event SubmissionReviewed(
+        string indexed titleHash, uint256 indexed nullifierHash, uint16 royaltyLevel, string title
+    );
     event RoyaltyClaimed(address indexed recipient, uint256 amount, string title);
 
     // View
     function admin() external view returns (address);
     function token() external view returns (address);
     function submissions(string memory title) external view returns (Submission memory);
-    function isReviewer(address reviewer) external view returns (bool);
-    function hasReviewed(string memory title, address reviewer) external view returns (bool);
+    function hasReviewed(string memory title, uint256 nullifier) external view returns (bool);
+    function reviewerGroupId() external view returns (uint256);
+    function semaphore() external view returns (ISemaphore);
     function isSubmissionClaimable(string memory title) external view returns (bool);
     function getRoyalty(string memory title) external view returns (uint256 royalty);
     function entryPoint() external pure returns (address);
@@ -80,15 +88,18 @@ interface IRoyaltyAutoClaim {
     error AlreadyReviewed();
     error InvalidSignatureLength();
     error SameAddress();
-    error SameStatus();
     error ZeroAmount();
     error InvalidProof();
+    error InvalidSemaphoreProof();
+    error NullifierMismatch();
+    error ZeroNullifier();
 
     // Structs
     struct Configs {
         address admin;
         address token;
-        mapping(address => bool) reviewers;
+        ISemaphore semaphore; // Semaphore verifier contract reference
+        uint256 reviewerGroupId; // Semaphore group ID for authorized reviewers
         IRegistrationVerifier registrationVerifier;
     }
 
@@ -109,7 +120,7 @@ interface IRoyaltyAutoClaim {
     struct MainStorage {
         Configs configs;
         mapping(string => Submission) submissions;
-        mapping(string => mapping(address => bool)) hasReviewed;
+        mapping(string => mapping(uint256 => bool)) hasReviewed; // Track nullifiers per submission
         mapping(bytes32 => bool) emailNullifierHashes;
     }
 }
@@ -128,8 +139,9 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     /// @dev cast index-erc7201 royaltyautoclaim.storage.main
     bytes32 private constant MAIN_STORAGE_SLOT = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
-    /// @dev cast index-erc7201 royaltyautoclaim.storage.signer
-    bytes32 private constant TRANSIENT_SIGNER_SLOT = 0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
+    /// @dev cast index-erc7201 royaltyautoclaim.storage.nullifier
+    bytes32 private constant TRANSIENT_REVIEWER_NULLIFIER_SLOT =
+        0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
 
     function _getMainStorage() private pure returns (MainStorage storage $) {
         assembly {
@@ -147,23 +159,32 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         address _owner,
         address _admin,
         address _token,
-        address[] memory _reviewers,
+        ISemaphore _semaphore,
+        uint256[] memory _initialReviewerCommitments,
         IRegistrationVerifier _verifier
     ) public initializer {
         require(_owner != address(0), ZeroAddress());
         require(_admin != address(0), ZeroAddress());
         require(_token != address(0), ZeroAddress());
+        require(address(_semaphore) != address(0), ZeroAddress());
         require(address(_verifier) != address(0), ZeroAddress());
 
         __Ownable_init(_owner);
         MainStorage storage $ = _getMainStorage();
         $.configs.admin = _admin;
         $.configs.token = _token;
-        for (uint256 i = 0; i < _reviewers.length; i++) {
-            require(_reviewers[i] != address(0), ZeroAddress());
-            $.configs.reviewers[_reviewers[i]] = true;
-        }
         $.configs.registrationVerifier = _verifier;
+        $.configs.semaphore = _semaphore;
+
+        // Create a new Semaphore group for reviewers with _admin as group admin
+        uint256 groupId = _semaphore.createGroup(_admin);
+        $.configs.reviewerGroupId = groupId;
+
+        // Add initial reviewers to the group (only if admin is this contract)
+        // Otherwise, admin should add members directly via Semaphore contract
+        for (uint256 i = 0; i < _initialReviewerCommitments.length; i++) {
+            _semaphore.addMember(groupId, _initialReviewerCommitments[i]);
+        }
     }
 
     // ================================ Modifier ================================
@@ -271,17 +292,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, newRecipient, title);
     }
 
-    function updateReviewers(address[] memory _reviewers, bool[] memory _status) public onlyAdminOrEntryPoint {
-        require(_reviewers.length == _status.length, InvalidArrayLength());
-        require(_reviewers.length > 0, InvalidArrayLength());
-
-        for (uint256 i = 0; i < _reviewers.length; i++) {
-            require(_status[i] != isReviewer(_reviewers[i]), SameStatus());
-            _getMainStorage().configs.reviewers[_reviewers[i]] = _status[i];
-            emit ReviewerStatusUpdated(_reviewers[i], _status[i]);
-        }
-    }
-
     function revokeSubmission(string memory title) public onlyAdminOrEntryPoint {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         delete _getMainStorage().submissions[title];
@@ -386,32 +396,73 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     // ========================= Reviewer =========================
 
-    function reviewSubmission(string memory title, uint16 royaltyLevel) public {
+    function reviewSubmission(
+        string memory title,
+        uint16 royaltyLevel,
+        uint256 merkleTreeRoot,
+        uint256 nullifierHash,
+        uint256[8] calldata proof
+    ) public {
         if (msg.sender == entryPoint()) {
-            _reviewSubmission(title, royaltyLevel, _getUserOpSigner());
+            // ERC-4337 flow
+            uint256 storedNullifier = _getUserOpReviewerNullifier();
+            require(storedNullifier == nullifierHash, NullifierMismatch());
+            _reviewSubmission(title, royaltyLevel, nullifierHash);
         } else {
-            _requireReviewable(title, royaltyLevel, msg.sender);
-            _reviewSubmission(title, royaltyLevel, msg.sender);
+            // Direct call flow
+            require(_isReviewable(title, royaltyLevel, merkleTreeRoot, nullifierHash, proof), InvalidSemaphoreProof());
+            _reviewSubmission(title, royaltyLevel, nullifierHash);
         }
     }
 
-    function _requireReviewable(string memory title, uint16 royaltyLevel, address caller) internal view {
-        require(isReviewer(caller), Unauthorized(caller));
-        require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
+    function _isReviewable(
+        string memory title,
+        uint16 royaltyLevel,
+        uint256 merkleTreeRoot,
+        uint256 nullifierHash,
+        uint256[8] memory proof
+    ) internal view returns (bool) {
+        MainStorage storage $ = _getMainStorage();
+
+        // Check submission status
+        require($.submissions[title].status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
+
+        // Validate royalty level
         require(
             royaltyLevel == ROYALTY_LEVEL_20 || royaltyLevel == ROYALTY_LEVEL_40 || royaltyLevel == ROYALTY_LEVEL_60
                 || royaltyLevel == ROYALTY_LEVEL_80,
             InvalidRoyaltyLevel(royaltyLevel)
         );
-        require(!hasReviewed(title, caller), AlreadyReviewed());
+
+        // Check nullifier hasn't been used for this submission
+        require(!$.hasReviewed[title][nullifierHash], AlreadyReviewed());
+
+        // Compute the scope for this submission
+        uint256 scope = uint256(keccak256(abi.encodePacked($.configs.reviewerGroupId, title)));
+
+        // Verify Semaphore proof
+        // Note: The message should be hash of (title, royaltyLevel) to bind the vote
+        uint256 message = uint256(keccak256(abi.encodePacked(title, royaltyLevel)));
+
+        // Note: merkleTreeDepth is not provided by the caller, so we use 0 and rely on the Semaphore contract's default
+        ISemaphore.SemaphoreProof memory semaphoreProof = ISemaphore.SemaphoreProof({
+            merkleTreeDepth: 0,
+            merkleTreeRoot: merkleTreeRoot,
+            nullifier: nullifierHash,
+            message: message,
+            scope: scope,
+            points: proof
+        });
+
+        return $.configs.semaphore.verifyProof($.configs.reviewerGroupId, semaphoreProof);
     }
 
-    function _reviewSubmission(string memory title, uint16 royaltyLevel, address reviewer) internal {
+    function _reviewSubmission(string memory title, uint16 royaltyLevel, uint256 nullifierHash) internal {
         MainStorage storage $ = _getMainStorage();
-        $.hasReviewed[title][reviewer] = true;
+        $.hasReviewed[title][nullifierHash] = true;
         $.submissions[title].reviewCount++;
         $.submissions[title].totalRoyaltyLevel += royaltyLevel;
-        emit SubmissionReviewed(title, reviewer, royaltyLevel, title);
+        emit SubmissionReviewed(title, nullifierHash, royaltyLevel, title);
     }
 
     /// ========================= Cliam Royalty =========================
@@ -515,8 +566,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         } else if (
             // ========================= Admin =========================
             selector == this.adminRegisterSubmission.selector || selector == this.adminUpdateRoyaltyRecipient.selector
-                || selector == this.updateReviewers.selector || selector == this.revokeSubmission.selector
-                || selector == this.updateRegistrationVerifier.selector
+                || selector == this.revokeSubmission.selector || selector == this.updateRegistrationVerifier.selector
         ) {
             require(appendedSigner == admin(), Unauthorized(appendedSigner));
             if (signer != appendedSigner) {
@@ -526,16 +576,22 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         } else if ( // ========================= Reviewer =========================
             selector == this.reviewSubmission.selector
         ) {
-            (string memory title, uint16 royaltyLevel) = abi.decode(userOp.callData[4:], (string, uint16));
-            _requireReviewable(title, royaltyLevel, appendedSigner);
+            (
+                string memory title,
+                uint16 royaltyLevel,
+                uint256 merkleTreeRoot,
+                uint256 nullifierHash,
+                uint256[8] memory proof
+            ) = abi.decode(userOp.callData[4:], (string, uint16, uint256, uint256, uint256[8]));
 
-            // Because `_reviewSubmission` needs to store the reviewers who have already reviewed,
-            // it must temporarily save the caller’s address here.
+            bool isValidProof = _isReviewable(title, royaltyLevel, merkleTreeRoot, nullifierHash, proof);
+
+            // Store nullifier in transient storage for use in reviewSubmission
             assembly {
-                tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
+                tstore(TRANSIENT_REVIEWER_NULLIFIER_SLOT, nullifierHash)
             }
 
-            if (signer != appendedSigner) {
+            if (!isValidProof) {
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
@@ -554,17 +610,13 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         revert UnsupportSelector(selector);
     }
 
-    function _getUserOpSigner() internal view returns (address) {
-        address signer;
+    function _getUserOpReviewerNullifier() internal view returns (uint256) {
+        uint256 nullifierHash;
         assembly {
-            signer := tload(TRANSIENT_SIGNER_SLOT)
+            nullifierHash := tload(TRANSIENT_REVIEWER_NULLIFIER_SLOT)
         }
-
-        if (signer == address(0)) {
-            revert ZeroAddress();
-        }
-
-        return signer;
+        require(nullifierHash != 0, ZeroNullifier());
+        return nullifierHash;
     }
 
     // ================================ View ================================
@@ -575,6 +627,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function token() public view returns (address) {
         return _getMainStorage().configs.token;
+    }
+
+    function semaphore() public view returns (ISemaphore) {
+        return _getMainStorage().configs.semaphore;
+    }
+
+    function reviewerGroupId() public view returns (uint256) {
+        return _getMainStorage().configs.reviewerGroupId;
     }
 
     function submissions(string memory title) public view returns (Submission memory) {
@@ -589,10 +649,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         return _getMainStorage().configs.admin == caller;
     }
 
-    function isReviewer(address reviewer) public view returns (bool) {
-        return _getMainStorage().configs.reviewers[reviewer];
-    }
-
     function isRecipient(string memory title, address recipient) public view returns (bool) {
         return _getMainStorage().submissions[title].royaltyRecipient == recipient;
     }
@@ -601,8 +657,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         return _getMainStorage().emailNullifierHashes[emailHeaderHash];
     }
 
-    function hasReviewed(string memory title, address reviewer) public view returns (bool) {
-        return _getMainStorage().hasReviewed[title][reviewer];
+    function hasReviewed(string memory title, uint256 nullifier) public view returns (bool) {
+        return _getMainStorage().hasReviewed[title][nullifier];
     }
 
     function isSubmissionClaimable(string memory title) public view returns (bool) {
