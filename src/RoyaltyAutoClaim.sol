@@ -382,19 +382,19 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     // ========================= Reviewer =========================
 
     /// @dev call directly
+    /// @notice Direct calls have access to the full proof, so nullifier can be extracted from it
     function reviewSubmission(
         string memory title,
         uint16 royaltyLevel,
         ISemaphore.SemaphoreProof calldata semaphoreProof
     ) public {
-        require(
-            _verifyReviewEligibility(title, royaltyLevel, semaphoreProof.nullifier, semaphoreProof),
-            InvalidSemaphoreProof()
-        );
+        require(_verifyReviewEligibility(title, royaltyLevel, semaphoreProof), InvalidSemaphoreProof());
         _reviewSubmission(title, royaltyLevel, semaphoreProof.nullifier);
     }
 
     /// @dev call via ERC-4337
+    /// @notice ERC-4337 flow requires nullifier as a separate parameter because the proof
+    ///         is only available in the validation phase (validateUserOp), not in execution phase
     function reviewSubmission(string memory title, uint16 royaltyLevel, uint256 nullifier) public onlyEntryPoint {
         _reviewSubmission(title, royaltyLevel, nullifier);
     }
@@ -402,7 +402,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     function _verifyReviewEligibility(
         string memory title,
         uint16 royaltyLevel,
-        uint256 nullifier,
         ISemaphore.SemaphoreProof memory semaphoreProof
     ) internal view returns (bool) {
         MainStorage storage $ = _getMainStorage();
@@ -419,9 +418,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
         // Verify the message matches the royaltyLevel
         require(semaphoreProof.message == uint256(royaltyLevel), MessageMismatch());
-
-        // Verify the nullifier in callData matches the proof
-        require(semaphoreProof.nullifier == nullifier, NullifierMismatch());
 
         // Check nullifier hasn't been used
         require(!$.hasReviewed[title][semaphoreProof.nullifier], AlreadyReviewed());
@@ -524,7 +520,12 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
             ISemaphore.SemaphoreProof memory semaphoreProof = abi.decode(userOp.signature, (ISemaphore.SemaphoreProof));
 
-            bool isValidProof = _verifyReviewEligibility(title, royaltyLevel, nullifier, semaphoreProof);
+            // Verify the nullifier in callData matches the proof
+            // This is necessary because the proof is only available in the validation phase,
+            // while the execution phase only has access to the nullifier from callData
+            require(semaphoreProof.nullifier == nullifier, NullifierMismatch());
+
+            bool isValidProof = _verifyReviewEligibility(title, royaltyLevel, semaphoreProof);
 
             if (!isValidProof) {
                 return SIG_VALIDATION_FAILED;
