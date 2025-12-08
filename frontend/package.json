@@ -9,7 +9,7 @@
 		"preview": "vite preview",
 		"test": "vitest --run",
 		"generate-types": "rm -rf src/typechain-types && typechain --target ethers-v6 --out-dir 'src/typechain-types' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json'",
-		"gen-types-v2": "rm -rf src/typechain-v2 && typechain --target ethers-v6 --out-dir 'src/typechain-v2' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json' '../out/**/RegistrationVerifier.sol/*.json' '../out/**/StringUtils.sol/*.json'",
+		"gen-types-v2": "rm -rf src/typechain-v2 && typechain --target ethers-v6 --out-dir 'src/typechain-v2' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json' '../out/**/RegistrationVerifier.sol/*.json' '../out/**/StringUtils.sol/*.json' '../out/**/ISemaphore.sol/*.json' '../out/**/ISemaphoreGroups.sol/*.json'",
 		"deploy": "bun run scripts/deploy.ts",
 		"typecheck": "vue-tsc --noEmit",
 		"lint": "eslint .",
@@ -17,6 +17,10 @@
 		"check": "bun run typecheck && bun run lint"
 	},
 	"dependencies": {
+		"@semaphore-protocol/data": "^4.14.0",
+		"@semaphore-protocol/group": "^4.14.0",
+		"@semaphore-protocol/identity": "^4.14.0",
+		"@semaphore-protocol/proof": "^4.14.0",
 		"@vue-dapp/core": "^1.5.9",
 		"@vue-dapp/modal": "^1.5.9",
 		"@vueuse/core": "^14.0.0",
@@ -28,6 +32,7 @@
 		"clsx": "^2.1.1",
 		"ethers": "^6.15.0",
 		"evm-providers": "^0.5.8",
+		"ffjavascript": "^0.3.1",
 		"lucide-vue-next": "^0.473.0",
 		"pinia": "^2.3.0",
 		"pinia-plugin-persistedstate": "^4.2.0",

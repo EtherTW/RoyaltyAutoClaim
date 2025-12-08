@@ -13,17 +13,12 @@ if (!VITE_TEST_PRIVATE_KEY) {
 	throw new Error('VITE_TEST_PRIVATE_KEY is not set')
 }
 
-const VITE_TEST_PRIVATE_KEY_2 = import.meta.env.VITE_TEST_PRIVATE_KEY_2
-if (!VITE_TEST_PRIVATE_KEY_2) {
-	throw new Error('VITE_TEST_PRIVATE_KEY_2 is not set')
-}
-
 const CHAIN_ID = '84532'
 const DKIM_REGISTRY_ADDRESS = '0x3D3935B3C030893f118a84C92C66dF1B9E4169d6'
+const SEMAPHORE_ADDRESS = '0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D'
 
 const client = new JsonRpcProvider(RPC_URL[CHAIN_ID])
-const dev = new Wallet(VITE_TEST_PRIVATE_KEY, client) // owner, admin, reviewer
-const dev2 = new Wallet(VITE_TEST_PRIVATE_KEY_2, client) // reviewer
+const dev = new Wallet(VITE_TEST_PRIVATE_KEY, client) // owner, admin
 
 // Deploy MockToken
 console.log('Deploying MockToken...')
@@ -85,8 +80,8 @@ const initData = impl.interface.encodeFunctionData('initialize', [
 	dev.address,
 	dev.address,
 	tokenAddress,
-	[dev.address, dev2.address],
 	registrationVerifierAddress,
+	SEMAPHORE_ADDRESS,
 ])
 const RoyaltyAutoClaimProxyFactory = new RoyaltyAutoClaimProxy__factory(dev)
 const proxy = await RoyaltyAutoClaimProxyFactory.deploy(implAddress, initData)

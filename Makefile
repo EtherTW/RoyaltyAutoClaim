@@ -1,5 +1,11 @@
 build:
-	forge build && cd frontend && bun run generate-types
+	forge build && cd frontend && bun run gen-types-v2
+
+build-src:
+	forge build src/*
+
+gen-types:
+	cd frontend && bun run gen-types-v2
 
 deploy:
 	cd frontend && bun run deploy

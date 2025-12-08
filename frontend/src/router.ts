@@ -13,6 +13,11 @@ const router = createRouter({
 			name: 'v2-config',
 			component: () => import('@/views/ConfigPage.vue'),
 		},
+		{
+			path: '/identity',
+			name: 'identity',
+			component: () => import('@/views/IdentityPage.vue'),
+		},
 
 		{
 			path: '/v1',

@@ -33,13 +33,7 @@ interface IRoyaltyAutoClaim {
     function updateRegistrationVerifier(IRegistrationVerifier _verifier) external;
 
     // Reviewer
-    function reviewSubmission(
-        string memory title,
-        uint16 royaltyLevel,
-        uint256 merkleTreeRoot,
-        uint256 nullifierHash,
-        uint256[8] calldata proof
-    ) external;
+    function reviewSubmission(string memory title, uint16 royaltyLevel, uint256 nullifier) external;
 
     // Claim (Recipient or Admin)
     function claimRoyalty(string memory title) external;
@@ -92,7 +86,8 @@ interface IRoyaltyAutoClaim {
     error InvalidProof();
     error InvalidSemaphoreProof();
     error NullifierMismatch();
-    error ZeroNullifier();
+    error MessageMismatch();
+    error ScopeMismatch();
 
     // Structs
     struct Configs {
@@ -139,9 +134,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     /// @dev cast index-erc7201 royaltyautoclaim.storage.main
     bytes32 private constant MAIN_STORAGE_SLOT = 0x41a2efc794119f946ab405955f96dacdfa298d25a3ae81c9a8cc1dea5771a900;
-    /// @dev cast index-erc7201 royaltyautoclaim.storage.nullifier
-    bytes32 private constant TRANSIENT_REVIEWER_NULLIFIER_SLOT =
-        0xbbc49793e8d16b6166d591f0a7a95f88efe9e6a08bf1603701d7f0fe05d7d600;
 
     function _getMainStorage() private pure returns (MainStorage storage $) {
         assembly {
@@ -159,15 +151,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         address _owner,
         address _admin,
         address _token,
-        ISemaphore _semaphore,
-        uint256[] memory _initialReviewerCommitments,
-        IRegistrationVerifier _verifier
+        IRegistrationVerifier _verifier,
+        ISemaphore _semaphore
     ) public initializer {
         require(_owner != address(0), ZeroAddress());
         require(_admin != address(0), ZeroAddress());
         require(_token != address(0), ZeroAddress());
-        require(address(_semaphore) != address(0), ZeroAddress());
         require(address(_verifier) != address(0), ZeroAddress());
+        require(address(_semaphore) != address(0), ZeroAddress());
 
         __Ownable_init(_owner);
         MainStorage storage $ = _getMainStorage();
@@ -179,12 +170,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         // Create a new Semaphore group for reviewers with _admin as group admin
         uint256 groupId = _semaphore.createGroup(_admin);
         $.configs.reviewerGroupId = groupId;
-
-        // Add initial reviewers to the group (only if admin is this contract)
-        // Otherwise, admin should add members directly via Semaphore contract
-        for (uint256 i = 0; i < _initialReviewerCommitments.length; i++) {
-            _semaphore.addMember(groupId, _initialReviewerCommitments[i]);
-        }
     }
 
     // ================================ Modifier ================================
@@ -396,31 +381,29 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     // ========================= Reviewer =========================
 
+    /// @dev call directly
     function reviewSubmission(
         string memory title,
         uint16 royaltyLevel,
-        uint256 merkleTreeRoot,
-        uint256 nullifierHash,
-        uint256[8] calldata proof
+        ISemaphore.SemaphoreProof calldata semaphoreProof
     ) public {
-        if (msg.sender == entryPoint()) {
-            // ERC-4337 flow
-            uint256 storedNullifier = _getUserOpReviewerNullifier();
-            require(storedNullifier == nullifierHash, NullifierMismatch());
-            _reviewSubmission(title, royaltyLevel, nullifierHash);
-        } else {
-            // Direct call flow
-            require(_isReviewable(title, royaltyLevel, merkleTreeRoot, nullifierHash, proof), InvalidSemaphoreProof());
-            _reviewSubmission(title, royaltyLevel, nullifierHash);
-        }
+        require(
+            _verifyReviewEligibility(title, royaltyLevel, semaphoreProof.nullifier, semaphoreProof),
+            InvalidSemaphoreProof()
+        );
+        _reviewSubmission(title, royaltyLevel, semaphoreProof.nullifier);
     }
 
-    function _isReviewable(
+    /// @dev call via ERC-4337
+    function reviewSubmission(string memory title, uint16 royaltyLevel, uint256 nullifier) public onlyEntryPoint {
+        _reviewSubmission(title, royaltyLevel, nullifier);
+    }
+
+    function _verifyReviewEligibility(
         string memory title,
         uint16 royaltyLevel,
-        uint256 merkleTreeRoot,
-        uint256 nullifierHash,
-        uint256[8] memory proof
+        uint256 nullifier,
+        ISemaphore.SemaphoreProof memory semaphoreProof
     ) internal view returns (bool) {
         MainStorage storage $ = _getMainStorage();
 
@@ -434,26 +417,20 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             InvalidRoyaltyLevel(royaltyLevel)
         );
 
-        // Check nullifier hasn't been used for this submission
-        require(!$.hasReviewed[title][nullifierHash], AlreadyReviewed());
+        // Verify the message matches the royaltyLevel
+        require(semaphoreProof.message == uint256(royaltyLevel), MessageMismatch());
 
-        // Compute the scope for this submission
-        uint256 scope = uint256(keccak256(abi.encodePacked($.configs.reviewerGroupId, title)));
+        // Verify the nullifier in callData matches the proof
+        require(semaphoreProof.nullifier == nullifier, NullifierMismatch());
 
-        // Verify Semaphore proof
-        // Note: The message should be hash of (title, royaltyLevel) to bind the vote
-        uint256 message = uint256(keccak256(abi.encodePacked(title, royaltyLevel)));
+        // Check nullifier hasn't been used
+        require(!$.hasReviewed[title][semaphoreProof.nullifier], AlreadyReviewed());
 
-        // Note: merkleTreeDepth is not provided by the caller, so we use 0 and rely on the Semaphore contract's default
-        ISemaphore.SemaphoreProof memory semaphoreProof = ISemaphore.SemaphoreProof({
-            merkleTreeDepth: 0,
-            merkleTreeRoot: merkleTreeRoot,
-            nullifier: nullifierHash,
-            message: message,
-            scope: scope,
-            points: proof
-        });
+        // Compute and verify scope
+        uint256 scope = uint256(keccak256(abi.encodePacked(title)));
+        require(semaphoreProof.scope == scope, ScopeMismatch());
 
+        // Verify proof
         return $.configs.semaphore.verifyProof($.configs.reviewerGroupId, semaphoreProof);
     }
 
@@ -539,6 +516,22 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             return 0;
         }
 
+        /// ========================= Semaphore-based operations =========================
+        /// @dev userOp.signature equals to the encoded SemaphoreProof
+        if (selector == IRoyaltyAutoClaim.reviewSubmission.selector) {
+            (string memory title, uint16 royaltyLevel, uint256 nullifier) =
+                abi.decode(userOp.callData[4:], (string, uint16, uint256));
+
+            ISemaphore.SemaphoreProof memory semaphoreProof = abi.decode(userOp.signature, (ISemaphore.SemaphoreProof));
+
+            bool isValidProof = _verifyReviewEligibility(title, royaltyLevel, nullifier, semaphoreProof);
+
+            if (!isValidProof) {
+                return SIG_VALIDATION_FAILED;
+            }
+            return 0;
+        }
+
         /// ========================= Other operations =========================
         /// @dev userOp.signature[0:65]: actual signature
         /// @dev userOp.signature[65:85]: appended signer address
@@ -573,28 +566,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
                 return SIG_VALIDATION_FAILED;
             }
             return 0;
-        } else if ( // ========================= Reviewer =========================
-            selector == this.reviewSubmission.selector
-        ) {
-            (
-                string memory title,
-                uint16 royaltyLevel,
-                uint256 merkleTreeRoot,
-                uint256 nullifierHash,
-                uint256[8] memory proof
-            ) = abi.decode(userOp.callData[4:], (string, uint16, uint256, uint256, uint256[8]));
-
-            bool isValidProof = _isReviewable(title, royaltyLevel, merkleTreeRoot, nullifierHash, proof);
-
-            // Store nullifier in transient storage for use in reviewSubmission
-            assembly {
-                tstore(TRANSIENT_REVIEWER_NULLIFIER_SLOT, nullifierHash)
-            }
-
-            if (!isValidProof) {
-                return SIG_VALIDATION_FAILED;
-            }
-            return 0;
         } else if ( // ========================= Claim (Recipient or Admin) =========================
             selector == this.claimRoyalty.selector
         ) {
@@ -608,15 +579,6 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         }
 
         revert UnsupportSelector(selector);
-    }
-
-    function _getUserOpReviewerNullifier() internal view returns (uint256) {
-        uint256 nullifierHash;
-        assembly {
-            nullifierHash := tload(TRANSIENT_REVIEWER_NULLIFIER_SLOT)
-        }
-        require(nullifierHash != 0, ZeroNullifier());
-        return nullifierHash;
     }
 
     // ================================ View ================================

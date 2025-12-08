@@ -24,6 +24,42 @@ const _abi = [
   },
   {
     type: "function",
+    name: "adminRegisterSubmission",
+    inputs: [
+      {
+        name: "title",
+        type: "string",
+        internalType: "string",
+      },
+      {
+        name: "royaltyRecipient",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "adminUpdateRoyaltyRecipient",
+    inputs: [
+      {
+        name: "title",
+        type: "string",
+        internalType: "string",
+      },
+      {
+        name: "newRecipient",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "changeAdmin",
     inputs: [
       {
@@ -121,28 +157,9 @@ const _abi = [
         internalType: "string",
       },
       {
-        name: "reviewer",
-        type: "address",
-        internalType: "address",
-      },
-    ],
-    outputs: [
-      {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
-    ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "isReviewer",
-    inputs: [
-      {
-        name: "reviewer",
-        type: "address",
-        internalType: "address",
+        name: "nullifier",
+        type: "uint256",
+        internalType: "uint256",
       },
     ],
     outputs: [
@@ -210,9 +227,27 @@ const _abi = [
         type: "uint16",
         internalType: "uint16",
       },
+      {
+        name: "nullifier",
+        type: "uint256",
+        internalType: "uint256",
+      },
     ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "reviewerGroupId",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    stateMutability: "view",
   },
   {
     type: "function",
@@ -226,6 +261,19 @@ const _abi = [
     ],
     outputs: [],
     stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "semaphore",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "contract ISemaphore",
+      },
+    ],
+    stateMutability: "view",
   },
   {
     type: "function",
@@ -309,24 +357,6 @@ const _abi = [
   },
   {
     type: "function",
-    name: "updateReviewers",
-    inputs: [
-      {
-        name: "_reviewers",
-        type: "address[]",
-        internalType: "address[]",
-      },
-      {
-        name: "_status",
-        type: "bool[]",
-        internalType: "bool[]",
-      },
-    ],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
     name: "updateRoyaltyRecipient",
     inputs: [
       {
@@ -395,25 +425,6 @@ const _abi = [
         type: "address",
         indexed: true,
         internalType: "address",
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "ReviewerStatusUpdated",
-    inputs: [
-      {
-        name: "reviewer",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
-      {
-        name: "status",
-        type: "bool",
-        indexed: false,
-        internalType: "bool",
       },
     ],
     anonymous: false,
@@ -498,10 +509,10 @@ const _abi = [
         internalType: "string",
       },
       {
-        name: "reviewer",
-        type: "address",
+        name: "nullifierHash",
+        type: "uint256",
         indexed: true,
-        internalType: "address",
+        internalType: "uint256",
       },
       {
         name: "royaltyLevel",
@@ -616,12 +627,27 @@ const _abi = [
   },
   {
     type: "error",
+    name: "InvalidSemaphoreProof",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "InvalidSignatureLength",
     inputs: [],
   },
   {
     type: "error",
+    name: "MessageMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "NotFromEntryPoint",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "NullifierMismatch",
     inputs: [],
   },
   {
@@ -636,7 +662,7 @@ const _abi = [
   },
   {
     type: "error",
-    name: "SameStatus",
+    name: "ScopeMismatch",
     inputs: [],
   },
   {

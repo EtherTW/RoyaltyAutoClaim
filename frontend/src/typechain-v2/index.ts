@@ -5,6 +5,8 @@ import type * as registrationVerifierSol from "./RegistrationVerifier.sol";
 export type { registrationVerifierSol };
 import type * as royaltyAutoClaimSol from "./RoyaltyAutoClaim.sol";
 export type { royaltyAutoClaimSol };
+export type { ISemaphore } from "./ISemaphore";
+export type { ISemaphoreGroups } from "./ISemaphoreGroups";
 export type { MockToken } from "./MockToken";
 export type { RoyaltyAutoClaimProxy } from "./RoyaltyAutoClaimProxy";
 export type { StringUtils } from "./StringUtils";
@@ -20,3 +22,5 @@ export { IRegistrationVerifier__factory } from "./factories/RegistrationVerifier
 export type { RegistrationVerifier } from "./RegistrationVerifier.sol/RegistrationVerifier";
 export { RegistrationVerifier__factory } from "./factories/RegistrationVerifier.sol/RegistrationVerifier__factory";
 export { StringUtils__factory } from "./factories/StringUtils__factory";
+export { ISemaphore__factory } from "./factories/ISemaphore__factory";
+export { ISemaphoreGroups__factory } from "./factories/ISemaphoreGroups__factory";

@@ -57,6 +57,54 @@ export type PackedUserOperationStructOutput = [
   signature: string;
 };
 
+export declare namespace IRegistrationVerifier {
+  export type ZkEmailProofStruct = {
+    a: [BigNumberish, BigNumberish];
+    b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]];
+    c: [BigNumberish, BigNumberish];
+    signals: BigNumberish[];
+  };
+
+  export type ZkEmailProofStructOutput = [
+    a: [bigint, bigint],
+    b: [[bigint, bigint], [bigint, bigint]],
+    c: [bigint, bigint],
+    signals: bigint[]
+  ] & {
+    a: [bigint, bigint];
+    b: [[bigint, bigint], [bigint, bigint]];
+    c: [bigint, bigint];
+    signals: bigint[];
+  };
+}
+
+export declare namespace ISemaphore {
+  export type SemaphoreProofStruct = {
+    merkleTreeDepth: BigNumberish;
+    merkleTreeRoot: BigNumberish;
+    nullifier: BigNumberish;
+    message: BigNumberish;
+    scope: BigNumberish;
+    points: BigNumberish[];
+  };
+
+  export type SemaphoreProofStructOutput = [
+    merkleTreeDepth: bigint,
+    merkleTreeRoot: bigint,
+    nullifier: bigint,
+    message: bigint,
+    scope: bigint,
+    points: bigint[]
+  ] & {
+    merkleTreeDepth: bigint;
+    merkleTreeRoot: bigint;
+    nullifier: bigint;
+    message: bigint;
+    scope: bigint;
+    points: bigint[];
+  };
+}
+
 export declare namespace IRoyaltyAutoClaim {
   export type SubmissionStruct = {
     royaltyRecipient: AddressLike;
@@ -89,6 +137,8 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "SIG_VALIDATION_FAILED"
       | "UPGRADE_INTERFACE_VERSION"
       | "admin"
+      | "adminRegisterSubmission"
+      | "adminUpdateRoyaltyRecipient"
       | "changeAdmin"
       | "changeRoyaltyToken"
       | "claimRoyalty"
@@ -97,20 +147,26 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "getRoyalty"
       | "hasReviewed"
       | "initialize"
+      | "isAdmin"
+      | "isEmailProofUsed"
       | "isRecipient"
-      | "isReviewer"
       | "isSubmissionClaimable"
       | "owner"
       | "proxiableUUID"
-      | "registerSubmission"
+      | "registerSubmission(string,address,bytes32)"
+      | "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
+      | "registrationVerifier"
       | "renounceOwnership"
       | "reviewSubmission"
+      | "reviewerGroupId"
       | "revokeSubmission"
+      | "semaphore"
       | "submissions"
       | "token"
       | "transferOwnership"
-      | "updateReviewers"
-      | "updateRoyaltyRecipient"
+      | "updateRegistrationVerifier"
+      | "updateRoyaltyRecipient(string,address,bytes32)"
+      | "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
       | "upgradeToAndCall"
       | "validateUserOp"
   ): FunctionFragment;
@@ -121,7 +177,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "EmergencyWithdraw"
       | "Initialized"
       | "OwnershipTransferred"
-      | "ReviewerStatusUpdated"
+      | "RegistrationVerifierUpdated"
       | "RoyaltyClaimed"
       | "RoyaltyTokenChanged"
       | "SubmissionRegistered"
@@ -161,6 +217,14 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   ): string;
   encodeFunctionData(functionFragment: "admin", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "adminRegisterSubmission",
+    values: [string, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "adminUpdateRoyaltyRecipient",
+    values: [string, AddressLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "changeAdmin",
     values: [AddressLike]
   ): string;
@@ -183,19 +247,23 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   encodeFunctionData(functionFragment: "getRoyalty", values: [string]): string;
   encodeFunctionData(
     functionFragment: "hasReviewed",
-    values: [string, AddressLike]
+    values: [string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "initialize",
-    values: [AddressLike, AddressLike, AddressLike, AddressLike[]]
+    values: [AddressLike, AddressLike, AddressLike, AddressLike, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isAdmin",
+    values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isEmailProofUsed",
+    values: [BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "isRecipient",
     values: [string, AddressLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "isReviewer",
-    values: [AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "isSubmissionClaimable",
@@ -207,8 +275,21 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "registerSubmission",
-    values: [string, AddressLike]
+    functionFragment: "registerSubmission(string,address,bytes32)",
+    values: [string, AddressLike, BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))",
+    values: [
+      string,
+      AddressLike,
+      BytesLike,
+      IRegistrationVerifier.ZkEmailProofStruct
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "registrationVerifier",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -216,12 +297,17 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "reviewSubmission",
-    values: [string, BigNumberish]
+    values: [string, BigNumberish, ISemaphore.SemaphoreProofStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "reviewerGroupId",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "revokeSubmission",
     values: [string]
   ): string;
+  encodeFunctionData(functionFragment: "semaphore", values?: undefined): string;
   encodeFunctionData(functionFragment: "submissions", values: [string]): string;
   encodeFunctionData(functionFragment: "token", values?: undefined): string;
   encodeFunctionData(
@@ -229,12 +315,21 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateReviewers",
-    values: [AddressLike[], boolean[]]
+    functionFragment: "updateRegistrationVerifier",
+    values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateRoyaltyRecipient",
-    values: [string, AddressLike]
+    functionFragment: "updateRoyaltyRecipient(string,address,bytes32)",
+    values: [string, AddressLike, BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))",
+    values: [
+      string,
+      AddressLike,
+      BytesLike,
+      IRegistrationVerifier.ZkEmailProofStruct
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "upgradeToAndCall",
@@ -275,6 +370,14 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "admin", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "adminRegisterSubmission",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "adminUpdateRoyaltyRecipient",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "changeAdmin",
     data: BytesLike
   ): Result;
@@ -297,11 +400,15 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "isAdmin", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "isEmailProofUsed",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "isRecipient",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "isReviewer", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "isSubmissionClaimable",
     data: BytesLike
@@ -312,7 +419,15 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "registerSubmission",
+    functionFragment: "registerSubmission(string,address,bytes32)",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "registrationVerifier",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -324,9 +439,14 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "reviewerGroupId",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "revokeSubmission",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "semaphore", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "submissions",
     data: BytesLike
@@ -337,11 +457,15 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateReviewers",
+    functionFragment: "updateRegistrationVerifier",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateRoyaltyRecipient",
+    functionFragment: "updateRoyaltyRecipient(string,address,bytes32)",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -405,12 +529,11 @@ export namespace OwnershipTransferredEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace ReviewerStatusUpdatedEvent {
-  export type InputTuple = [reviewer: AddressLike, status: boolean];
-  export type OutputTuple = [reviewer: string, status: boolean];
+export namespace RegistrationVerifierUpdatedEvent {
+  export type InputTuple = [registrationVerifier: AddressLike];
+  export type OutputTuple = [registrationVerifier: string];
   export interface OutputObject {
-    reviewer: string;
-    status: boolean;
+    registrationVerifier: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -474,19 +597,19 @@ export namespace SubmissionRegisteredEvent {
 export namespace SubmissionReviewedEvent {
   export type InputTuple = [
     titleHash: string,
-    reviewer: AddressLike,
+    nullifierHash: BigNumberish,
     royaltyLevel: BigNumberish,
     title: string
   ];
   export type OutputTuple = [
     titleHash: string,
-    reviewer: string,
+    nullifierHash: bigint,
     royaltyLevel: bigint,
     title: string
   ];
   export interface OutputObject {
     titleHash: string;
-    reviewer: string;
+    nullifierHash: bigint;
     royaltyLevel: bigint;
     title: string;
   }
@@ -605,6 +728,18 @@ export interface RoyaltyAutoClaim extends BaseContract {
 
   admin: TypedContractMethod<[], [string], "view">;
 
+  adminRegisterSubmission: TypedContractMethod<
+    [title: string, royaltyRecipient: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  adminUpdateRoyaltyRecipient: TypedContractMethod<
+    [title: string, newRecipient: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
   changeAdmin: TypedContractMethod<[_admin: AddressLike], [void], "nonpayable">;
 
   changeRoyaltyToken: TypedContractMethod<
@@ -626,7 +761,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
   getRoyalty: TypedContractMethod<[title: string], [bigint], "view">;
 
   hasReviewed: TypedContractMethod<
-    [title: string, reviewer: AddressLike],
+    [title: string, nullifier: BigNumberish],
     [boolean],
     "view"
   >;
@@ -636,10 +771,19 @@ export interface RoyaltyAutoClaim extends BaseContract {
       _owner: AddressLike,
       _admin: AddressLike,
       _token: AddressLike,
-      _reviewers: AddressLike[]
+      _verifier: AddressLike,
+      _semaphore: AddressLike
     ],
     [void],
     "nonpayable"
+  >;
+
+  isAdmin: TypedContractMethod<[caller: AddressLike], [boolean], "view">;
+
+  isEmailProofUsed: TypedContractMethod<
+    [emailHeaderHash: BytesLike],
+    [boolean],
+    "view"
   >;
 
   isRecipient: TypedContractMethod<
@@ -647,8 +791,6 @@ export interface RoyaltyAutoClaim extends BaseContract {
     [boolean],
     "view"
   >;
-
-  isReviewer: TypedContractMethod<[reviewer: AddressLike], [boolean], "view">;
 
   isSubmissionClaimable: TypedContractMethod<
     [title: string],
@@ -660,21 +802,42 @@ export interface RoyaltyAutoClaim extends BaseContract {
 
   proxiableUUID: TypedContractMethod<[], [string], "view">;
 
-  registerSubmission: TypedContractMethod<
-    [title: string, royaltyRecipient: AddressLike],
+  "registerSubmission(string,address,bytes32)": TypedContractMethod<
+    [title: string, royaltyRecipient: AddressLike, emailHeaderHash: BytesLike],
     [void],
     "nonpayable"
   >;
+
+  "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))": TypedContractMethod<
+    [
+      title: string,
+      royaltyRecipient: AddressLike,
+      emailHeaderHash: BytesLike,
+      proof: IRegistrationVerifier.ZkEmailProofStruct
+    ],
+    [void],
+    "nonpayable"
+  >;
+
+  registrationVerifier: TypedContractMethod<[], [string], "view">;
 
   renounceOwnership: TypedContractMethod<[], [void], "view">;
 
   reviewSubmission: TypedContractMethod<
-    [title: string, royaltyLevel: BigNumberish],
+    [
+      title: string,
+      royaltyLevel: BigNumberish,
+      semaphoreProof: ISemaphore.SemaphoreProofStruct
+    ],
     [void],
     "nonpayable"
   >;
 
+  reviewerGroupId: TypedContractMethod<[], [bigint], "view">;
+
   revokeSubmission: TypedContractMethod<[title: string], [void], "nonpayable">;
+
+  semaphore: TypedContractMethod<[], [string], "view">;
 
   submissions: TypedContractMethod<
     [title: string],
@@ -690,14 +853,25 @@ export interface RoyaltyAutoClaim extends BaseContract {
     "nonpayable"
   >;
 
-  updateReviewers: TypedContractMethod<
-    [_reviewers: AddressLike[], _status: boolean[]],
+  updateRegistrationVerifier: TypedContractMethod<
+    [_verifier: AddressLike],
     [void],
     "nonpayable"
   >;
 
-  updateRoyaltyRecipient: TypedContractMethod<
-    [title: string, newRoyaltyRecipient: AddressLike],
+  "updateRoyaltyRecipient(string,address,bytes32)": TypedContractMethod<
+    [title: string, newRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [void],
+    "nonpayable"
+  >;
+
+  "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))": TypedContractMethod<
+    [
+      title: string,
+      newRecipient: AddressLike,
+      emailHeaderHash: BytesLike,
+      proof: IRegistrationVerifier.ZkEmailProofStruct
+    ],
     [void],
     "nonpayable"
   >;
@@ -747,6 +921,20 @@ export interface RoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "admin"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
+    nameOrSignature: "adminRegisterSubmission"
+  ): TypedContractMethod<
+    [title: string, royaltyRecipient: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "adminUpdateRoyaltyRecipient"
+  ): TypedContractMethod<
+    [title: string, newRecipient: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "changeAdmin"
   ): TypedContractMethod<[_admin: AddressLike], [void], "nonpayable">;
   getFunction(
@@ -771,7 +959,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
   getFunction(
     nameOrSignature: "hasReviewed"
   ): TypedContractMethod<
-    [title: string, reviewer: AddressLike],
+    [title: string, nullifier: BigNumberish],
     [boolean],
     "view"
   >;
@@ -782,11 +970,18 @@ export interface RoyaltyAutoClaim extends BaseContract {
       _owner: AddressLike,
       _admin: AddressLike,
       _token: AddressLike,
-      _reviewers: AddressLike[]
+      _verifier: AddressLike,
+      _semaphore: AddressLike
     ],
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "isAdmin"
+  ): TypedContractMethod<[caller: AddressLike], [boolean], "view">;
+  getFunction(
+    nameOrSignature: "isEmailProofUsed"
+  ): TypedContractMethod<[emailHeaderHash: BytesLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "isRecipient"
   ): TypedContractMethod<
@@ -794,9 +989,6 @@ export interface RoyaltyAutoClaim extends BaseContract {
     [boolean],
     "view"
   >;
-  getFunction(
-    nameOrSignature: "isReviewer"
-  ): TypedContractMethod<[reviewer: AddressLike], [boolean], "view">;
   getFunction(
     nameOrSignature: "isSubmissionClaimable"
   ): TypedContractMethod<[title: string], [boolean], "view">;
@@ -807,25 +999,50 @@ export interface RoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "proxiableUUID"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: "registerSubmission"
+    nameOrSignature: "registerSubmission(string,address,bytes32)"
   ): TypedContractMethod<
-    [title: string, royaltyRecipient: AddressLike],
+    [title: string, royaltyRecipient: AddressLike, emailHeaderHash: BytesLike],
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
+  ): TypedContractMethod<
+    [
+      title: string,
+      royaltyRecipient: AddressLike,
+      emailHeaderHash: BytesLike,
+      proof: IRegistrationVerifier.ZkEmailProofStruct
+    ],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "registrationVerifier"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "view">;
   getFunction(
     nameOrSignature: "reviewSubmission"
   ): TypedContractMethod<
-    [title: string, royaltyLevel: BigNumberish],
+    [
+      title: string,
+      royaltyLevel: BigNumberish,
+      semaphoreProof: ISemaphore.SemaphoreProofStruct
+    ],
     [void],
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "reviewerGroupId"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "revokeSubmission"
   ): TypedContractMethod<[title: string], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "semaphore"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "submissions"
   ): TypedContractMethod<
@@ -840,16 +1057,24 @@ export interface RoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "updateReviewers"
+    nameOrSignature: "updateRegistrationVerifier"
+  ): TypedContractMethod<[_verifier: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "updateRoyaltyRecipient(string,address,bytes32)"
   ): TypedContractMethod<
-    [_reviewers: AddressLike[], _status: boolean[]],
+    [title: string, newRecipient: AddressLike, emailHeaderHash: BytesLike],
     [void],
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "updateRoyaltyRecipient"
+    nameOrSignature: "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
   ): TypedContractMethod<
-    [title: string, newRoyaltyRecipient: AddressLike],
+    [
+      title: string,
+      newRecipient: AddressLike,
+      emailHeaderHash: BytesLike,
+      proof: IRegistrationVerifier.ZkEmailProofStruct
+    ],
     [void],
     "nonpayable"
   >;
@@ -901,11 +1126,11 @@ export interface RoyaltyAutoClaim extends BaseContract {
     OwnershipTransferredEvent.OutputObject
   >;
   getEvent(
-    key: "ReviewerStatusUpdated"
+    key: "RegistrationVerifierUpdated"
   ): TypedContractEvent<
-    ReviewerStatusUpdatedEvent.InputTuple,
-    ReviewerStatusUpdatedEvent.OutputTuple,
-    ReviewerStatusUpdatedEvent.OutputObject
+    RegistrationVerifierUpdatedEvent.InputTuple,
+    RegistrationVerifierUpdatedEvent.OutputTuple,
+    RegistrationVerifierUpdatedEvent.OutputObject
   >;
   getEvent(
     key: "RoyaltyClaimed"
@@ -1002,15 +1227,15 @@ export interface RoyaltyAutoClaim extends BaseContract {
       OwnershipTransferredEvent.OutputObject
     >;
 
-    "ReviewerStatusUpdated(address,bool)": TypedContractEvent<
-      ReviewerStatusUpdatedEvent.InputTuple,
-      ReviewerStatusUpdatedEvent.OutputTuple,
-      ReviewerStatusUpdatedEvent.OutputObject
+    "RegistrationVerifierUpdated(address)": TypedContractEvent<
+      RegistrationVerifierUpdatedEvent.InputTuple,
+      RegistrationVerifierUpdatedEvent.OutputTuple,
+      RegistrationVerifierUpdatedEvent.OutputObject
     >;
-    ReviewerStatusUpdated: TypedContractEvent<
-      ReviewerStatusUpdatedEvent.InputTuple,
-      ReviewerStatusUpdatedEvent.OutputTuple,
-      ReviewerStatusUpdatedEvent.OutputObject
+    RegistrationVerifierUpdated: TypedContractEvent<
+      RegistrationVerifierUpdatedEvent.InputTuple,
+      RegistrationVerifierUpdatedEvent.OutputTuple,
+      RegistrationVerifierUpdatedEvent.OutputObject
     >;
 
     "RoyaltyClaimed(address,uint256,string)": TypedContractEvent<
@@ -1046,7 +1271,7 @@ export interface RoyaltyAutoClaim extends BaseContract {
       SubmissionRegisteredEvent.OutputObject
     >;
 
-    "SubmissionReviewed(string,address,uint16,string)": TypedContractEvent<
+    "SubmissionReviewed(string,uint256,uint16,string)": TypedContractEvent<
       SubmissionReviewedEvent.InputTuple,
       SubmissionReviewedEvent.OutputTuple,
       SubmissionReviewedEvent.OutputObject
