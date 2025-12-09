@@ -1,6 +1,6 @@
 # Workflow
 
--   Be sure to run `bun run check` whenever you modify files under the frontend directory.
+-   Be sure to run `cd frontend && bun run check` whenever you modify files under the frontend directory.
 -   Be sure to run `forge fmt --check` whenever you modify Solidity contracts or tests.
 
 # Frontend Notes

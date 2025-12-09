@@ -91,14 +91,13 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
     function test_validateUserOp_admin_functions() public {
         // Test Admin Functions
-        bytes[] memory adminCalls = new bytes[](5);
+        bytes[] memory adminCalls = new bytes[](4);
         adminCalls[0] = abi.encodeCall(RoyaltyAutoClaim.adminRegisterSubmission, (testSubmissionTitle, recipient));
         adminCalls[1] = abi.encodeCall(
             RoyaltyAutoClaim.adminUpdateRoyaltyRecipient, (testSubmissionTitle, makeAddr("newRecipient"))
         );
-        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (new address[](0), new bool[](0)));
-        adminCalls[3] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, (testSubmissionTitle));
-        adminCalls[4] = abi.encodeCall(RoyaltyAutoClaim.updateRegistrationVerifier, (newRegistrationVerifier));
+        adminCalls[2] = abi.encodeCall(RoyaltyAutoClaim.revokeSubmission, (testSubmissionTitle));
+        adminCalls[3] = abi.encodeCall(RoyaltyAutoClaim.updateRegistrationVerifier, (newRegistrationVerifier));
 
         // Should fail for non-admin
         for (uint256 i = 0; i < adminCalls.length; i++) {
@@ -132,41 +131,48 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     function test_validateUserOp_reviewer_functions() public {
         _registerSubmission(testSubmissionTitle, recipient);
 
-        bytes memory reviewerCall = abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, (testSubmissionTitle, 20));
+        uint256 nullifier = reviewer1Nullifier1;
+        bytes memory reviewerCall =
+            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission, (testSubmissionTitle, 20, nullifier));
 
-        // Should fail for non-reviewer
-        PackedUserOperation memory userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), reviewerCall);
+        // Create proof
+        ISemaphore.SemaphoreProof memory semaphoreProof = _createSemaphoreProof(nullifier, 20, testSubmissionTitle);
+
+        // Should fail for invalid proof
+        MockSemaphore(address(mockSemaphore)).setMockVerifyResult(false);
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(address(royaltyAutoClaim), reviewerCall);
+        userOp.signature = abi.encode(semaphoreProof);
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+        _handleUserOp(userOp);
+        MockSemaphore(address(mockSemaphore)).setMockVerifyResult(true);
+
+        // Should fail for nullifier mismatch
+        userOp = _buildUserOpWithoutSignature(address(royaltyAutoClaim), reviewerCall);
+        ISemaphore.SemaphoreProof memory wrongProof = semaphoreProof;
+        wrongProof.nullifier = reviewer2Nullifier1; // Different nullifier
+        userOp.signature = abi.encode(wrongProof);
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
                 0,
                 "AA23 reverted",
-                abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake)
+                abi.encodeWithSelector(IRoyaltyAutoClaim.NullifierMismatch.selector)
             )
         );
         _handleUserOp(userOp);
 
-        // Should fail for invalid signature
-        userOp = _buildUserOp(fakeKey, address(royaltyAutoClaim), reviewerCall);
-        // Put reviewer1 address but signed with fakeKey
-        userOp.signature = _signUserOp(fakeKey, userOp, reviewer1);
-        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
-        _handleUserOp(userOp);
+        // Should succeed with valid proof
+        _reviewSubmission4337(reviewer1Nullifier1, testSubmissionTitle, 20);
 
-        // Should succeed for reviewer1
-        userOp = _buildUserOp(reviewer1Key, address(royaltyAutoClaim), reviewerCall);
-        _handleUserOp(userOp);
-
-        // Should succeed for reviewer2
-        userOp = _buildUserOp(reviewer2Key, address(royaltyAutoClaim), reviewerCall);
-        _handleUserOp(userOp);
+        // Should succeed with different nullifier (second reviewer)
+        _reviewSubmission4337(reviewer2Nullifier1, testSubmissionTitle, 40);
     }
 
     function test_validateUserOp_recipient_functions() public {
         _registerSubmission(testSubmissionTitle, recipient);
 
-        _reviewSubmission(reviewer1Key, testSubmissionTitle, 20);
-        _reviewSubmission(reviewer2Key, testSubmissionTitle, 40);
+        _reviewSubmission4337(reviewer1Nullifier1, testSubmissionTitle, 20);
+        _reviewSubmission4337(reviewer2Nullifier1, testSubmissionTitle, 40);
 
         // Should fail if not recipient
         PackedUserOperation memory userOp = _buildUserOp(
@@ -429,73 +435,20 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
     /// ========================= Other operations =========================
 
-    function test_reviewSubmission() public {
-        _registerSubmission(testSubmissionTitle, recipient);
-
-        // Add more reviewers for testing
-        uint256 numAddedReviewers = vm.randomUint(1, 10);
-        address[] memory testReviewers = new address[](numAddedReviewers);
-        uint256 randomUint = vm.randomUint();
-        bool[] memory status = new bool[](numAddedReviewers);
-        for (uint256 i = 0; i < numAddedReviewers; i++) {
-            testReviewers[i] = vm.addr(randomUint + i);
-            status[i] = true;
-        }
-
-        _handleUserOp(
-            _buildUserOp(
-                adminKey,
-                address(royaltyAutoClaim),
-                abi.encodeCall(RoyaltyAutoClaim.updateReviewers, (testReviewers, status))
-            )
-        );
-
-        // Test all valid royalty levels with different reviewers
-        uint16[] memory validLevels = new uint16[](4);
-        validLevels[0] = royaltyAutoClaim.ROYALTY_LEVEL_20();
-        validLevels[1] = royaltyAutoClaim.ROYALTY_LEVEL_40();
-        validLevels[2] = royaltyAutoClaim.ROYALTY_LEVEL_60();
-        validLevels[3] = royaltyAutoClaim.ROYALTY_LEVEL_80();
-
-        uint256 numReviewed = 0;
-        uint256 expectedTotalLevel = 0;
-        for (uint256 i = 0; i < numAddedReviewers; i++) {
-            bool willReview = vm.randomBool();
-            if (!willReview) {
-                continue;
-            }
-
-            // reviewSubmission
-            uint16 reviewLevel = validLevels[vm.randomUint(0, 3)];
-            _reviewSubmission(randomUint + i, testSubmissionTitle, reviewLevel);
-
-            numReviewed++;
-            expectedTotalLevel += reviewLevel;
-
-            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions(testSubmissionTitle);
-            assertEq(submission.reviewCount, numReviewed, "Review count should increment");
-            assertEq(submission.totalRoyaltyLevel, expectedTotalLevel, "Total royalty level should be cumulative");
-
-            // Verify hasReviewed is set to true for the reviewer
-            assertTrue(
-                royaltyAutoClaim.hasReviewed(testSubmissionTitle, testReviewers[i]),
-                "hasReviewed should be true for reviewer"
-            );
-        }
-    }
-
     function testCannot_reviewSubmission_multiple_times() public {
         _registerSubmission(testSubmissionTitle, recipient);
 
         // First review should succeed via UserOperation
-        _reviewSubmission(reviewer1Key, testSubmissionTitle, 20);
+        _reviewSubmission4337(reviewer1Nullifier1, testSubmissionTitle, 20);
 
-        // Second review from same reviewer should fail
-        PackedUserOperation memory userOp = _buildUserOp(
-            reviewer1Key,
+        // Second review from same nullifier should fail
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
             address(royaltyAutoClaim),
-            abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, (testSubmissionTitle, 40))
+            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission, (testSubmissionTitle, 40, reviewer1Nullifier1))
         );
+        ISemaphore.SemaphoreProof memory proof = _createSemaphoreProof(reviewer1Nullifier1, 40, testSubmissionTitle);
+        userOp.signature = abi.encode(proof);
+
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -509,8 +462,8 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
     function testCannot_claimRoyalty_if_already_claimed() public {
         _registerSubmission(testSubmissionTitle, recipient);
-        _reviewSubmission(reviewer1Key, testSubmissionTitle, 20);
-        _reviewSubmission(reviewer2Key, testSubmissionTitle, 40);
+        _reviewSubmission4337(reviewer1Nullifier1, testSubmissionTitle, 20);
+        _reviewSubmission4337(reviewer2Nullifier1, testSubmissionTitle, 40);
 
         // First claim should succeed
         _handleUserOp(
@@ -538,12 +491,16 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         _handleUserOp(userOp);
     }
 
-    function _reviewSubmission(uint256 reviewerKey, string memory title, uint16 royaltyLevel) public {
-        PackedUserOperation memory userOp = _buildUserOp(
-            reviewerKey,
+    function _reviewSubmission4337(uint256 nullifier, string memory title, uint16 royaltyLevel) internal {
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
             address(royaltyAutoClaim),
-            abi.encodeCall(RoyaltyAutoClaim.reviewSubmission, (title, royaltyLevel))
+            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission, (title, royaltyLevel, nullifier))
         );
+
+        ISemaphore.SemaphoreProof memory semaphoreProof = _createSemaphoreProof(nullifier, royaltyLevel, title);
+
+        userOp.signature = abi.encode(semaphoreProof);
+
         _handleUserOp(userOp);
     }
 }
