@@ -64,3 +64,9 @@ export const GITHUB_REPO_NAME = 'RoyaltyAutoClaim'
 
 export const SEMAPHORE_IDENTITY_MESSAGE =
 	'Sign this message to generate your Semaphore identity for https://ethertw.github.io/RoyaltyAutoClaim\n\nThis signature creates a deterministic private key for anonymous proof generation.\n\nIMPORTANT: Never sign this exact message on other websites, as doing so would allow them to generate the same identity and compromise your privacy across platforms.'
+
+// Semaphore Subgraph Network Names
+export const SEMAPHORE_NETWORK: { [key: string]: string } = {
+	[CHAIN_ID.BASE_SEPOLIA]: 'base-sepolia',
+	[CHAIN_ID.BASE]: 'base',
+}

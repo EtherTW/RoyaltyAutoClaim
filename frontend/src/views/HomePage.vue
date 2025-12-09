@@ -22,6 +22,7 @@ onMounted(async () => {
 	}
 
 	await royaltyAutoClaimStore.fetchSubmissions()
+	await royaltyAutoClaimStore.fetchReviewerMembers()
 })
 
 // ===================================== email-based operations =====================================
@@ -126,11 +127,10 @@ const submissionBeingOperated = ref<string | null>(null)
 
 // Submit Review
 const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContractCallV2({
-	getCalldata: (submissionTitle: string) =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', [
-			submissionTitle,
-			selectedRoyaltyLevel.value,
-		]),
+	getSemaphoreOperation: (submissionTitle: string) => ({
+		title: submissionTitle,
+		royaltyLevel: Number(selectedRoyaltyLevel.value),
+	}),
 	successTitle: 'Successfully Submitted Review',
 	errorTitle: 'Error Submitting Review',
 	onBeforeCall: async (submissionTitle: string) => {

@@ -1,6 +1,8 @@
 import { useEOAStore } from '@/stores/useEOA'
 import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
+import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { IRoyaltyAutoClaim__factory, RegistrationVerifier__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
+import { Group } from '@semaphore-protocol/group'
 import { useVueDapp } from '@vue-dapp/core'
 import { concat } from 'ethers'
 import {
@@ -18,6 +20,12 @@ import { toast } from 'vue-sonner'
 import { useBlockchainStore } from '../stores/useBlockchain'
 import { getNonceV08, setFixedVerificationGasLimitForZkProof } from './erc4337-utils'
 import { extractAndParseRevert, isUserRejectedError, normalizeError } from './error'
+import {
+	createSemaphoreIdentity,
+	encodeSemaphoreProof,
+	generateSemaphoreProof,
+	makeDummySemaphoreProof,
+} from './semaphore-utils'
 import { EmailSubjectType, genProof, makeDummyProof, ParsedEmailData } from './zkemail-utils'
 
 export function useContractCallV2<T extends unknown[] = []>(options: {
@@ -26,6 +34,10 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 		type: EmailSubjectType
 		eml: string
 		parsedEmailData: ParsedEmailData | null
+	}
+	getSemaphoreOperation?: (...args: T) => {
+		title: string
+		royaltyLevel: number
 	}
 	getUseLocalProof?: () => boolean
 	successTitle: string
@@ -116,6 +128,91 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				op.setSignature(encodedProof)
 
 				toast.dismiss(genProofToast)
+
+				// send
+				await sendAndWaitForUserOp(op, options.successTitle)
+			} else if (options.getSemaphoreOperation) {
+				// Semaphore ZK proof flow
+				const semaphoreOperation = options.getSemaphoreOperation(...args)
+
+				if (!eoaStore.signer) {
+					throw new Error('Please connect your EOA wallet first')
+				}
+
+				// Create Semaphore identity from signer
+				const genIdentityToast = toast.info('Creating Semaphore identity...', {
+					duration: Infinity,
+				})
+				const identity = await createSemaphoreIdentity(eoaStore.signer)
+				toast.dismiss(genIdentityToast)
+
+				// Fetch reviewer members from store
+				const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
+				await royaltyAutoClaimStore.fetchReviewerMembers()
+				const members = royaltyAutoClaimStore.reviewerMembers
+
+				// Create off-chain group from subgraph members
+				const group = new Group(members)
+
+				// Verify identity is in the group
+				const isMember = members.some((member: string) => BigInt(member) === identity.commitment)
+				if (!isMember) {
+					throw new Error(
+						'Your identity is not a member of the reviewer group. Please contact the admin to be added.',
+					)
+				}
+
+				// Generate real Semaphore proof first
+				const genProofToast = toast.info('Generating Semaphore proof...', {
+					duration: Infinity,
+				})
+
+				const semaphoreProof = await generateSemaphoreProof({
+					identity,
+					group,
+					title: semaphoreOperation.title,
+					royaltyLevel: semaphoreOperation.royaltyLevel,
+				})
+
+				toast.dismiss(genProofToast)
+
+				// Create dummy proof for gas estimation
+				const dummyProofEncoded = makeDummySemaphoreProof(
+					semaphoreProof.merkleTreeDepth,
+					semaphoreProof.merkleTreeRoot,
+					semaphoreProof.nullifier,
+					semaphoreProof.message,
+					semaphoreProof.scope,
+				)
+
+				const callData = IRoyaltyAutoClaim__factory.createInterface().encodeFunctionData('reviewSubmission', [
+					semaphoreOperation.title,
+					semaphoreOperation.royaltyLevel,
+					semaphoreProof.nullifier,
+				])
+
+				const op = new UserOpBuilder({
+					chainId,
+					bundler,
+					entryPointAddress,
+				})
+					.setSender(senderAddress)
+					.setNonce(await getNonceV08(senderAddress, client))
+					.setCallData(callData)
+					.setGasPrice(await fetchGasPricePimlico(pimlicoUrl))
+					.setSignature(dummyProofEncoded)
+
+				// Estimate gas
+				try {
+					await op.estimateGas()
+				} catch (e) {
+					console.info('handleOps', op.encodeHandleOpsDataWithDefaultGas())
+					throw e
+				}
+
+				// Replace dummy proof with real proof
+				const proofEncoded = encodeSemaphoreProof(semaphoreProof)
+				op.setSignature(proofEncoded)
 
 				// send
 				await sendAndWaitForUserOp(op, options.successTitle)

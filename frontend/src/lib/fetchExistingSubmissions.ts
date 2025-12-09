@@ -1,4 +1,4 @@
-import { RoyaltyAutoClaim } from '../typechain-types'
+import { RoyaltyAutoClaim } from '../typechain-v2'
 
 export async function fetchExistingSubmissions(royaltyAutoClaim: RoyaltyAutoClaim) {
 	const submissions = new Map<string, { title: string; recipient: string }>()

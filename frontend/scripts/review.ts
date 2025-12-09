@@ -20,14 +20,16 @@
  * REVIEWER_INDEX: Optional, defaults to 0 (first reviewer). Use 1 for second reviewer.
  */
 
-import { JsonRpcProvider, Wallet, keccak256, toBeHex, randomBytes, toUtf8Bytes } from 'ethers'
-import { ERC4337Bundler } from 'sendop'
-import { Identity } from '@semaphore-protocol/identity'
+import { SemaphoreSubgraph } from '@semaphore-protocol/data'
 import { Group } from '@semaphore-protocol/group'
+import { Identity } from '@semaphore-protocol/identity'
 import { generateProof } from '@semaphore-protocol/proof'
+import { JsonRpcProvider, Wallet, keccak256, randomBytes, toBeHex, toUtf8Bytes } from 'ethers'
+import { ERC4337Bundler } from 'sendop'
 import { BUNDLER_URL, RPC_URL, SEMAPHORE_IDENTITY_MESSAGE } from '../src/config'
 import { buildUserOp } from '../src/lib/erc4337-utils'
 import { handleUserOpError } from '../src/lib/error'
+import { encodeSemaphoreProof, makeDummySemaphoreProof } from '../src/lib/semaphore-utils'
 import { IRoyaltyAutoClaim__factory, RoyaltyAutoClaim__factory } from '../src/typechain-v2'
 
 // Parse command line arguments
@@ -106,9 +108,9 @@ const royaltyAutoClaim = RoyaltyAutoClaim__factory.connect(racAddress, client)
 // Get the Semaphore address and reviewer group ID
 console.log('\nFetching contract information...')
 const semaphoreAddress = await royaltyAutoClaim.semaphore()
-const reviewerGroupId = await royaltyAutoClaim.reviewerGroupId()
+const groupId = await royaltyAutoClaim.reviewerGroupId()
 console.log('Semaphore address:', semaphoreAddress)
-console.log('Reviewer Group ID:', reviewerGroupId.toString())
+console.log('Reviewer Group ID:', groupId.toString())
 
 // Create deterministic identities for both reviewers
 console.log('\nCreating deterministic Semaphore identities for both reviewers...')
@@ -123,20 +125,15 @@ const signature2 = await reviewer2Wallet.signMessage(SEMAPHORE_IDENTITY_MESSAGE)
 const identity2 = new Identity(signature2)
 console.log('Reviewer 2 commitment:', identity2.commitment.toString())
 
-// Create off-chain group with both reviewers
-const identityCommitments = [identity1.commitment, identity2.commitment]
-const group = new Group(identityCommitments)
-console.log('Off-chain group created with', group.size, 'members')
+// Create off-chain group with members from subgraph
+const semaphoreSubgraph = new SemaphoreSubgraph('base-sepolia')
+const { members } = await semaphoreSubgraph.getGroup(groupId.toString(), { members: true })
+const group = new Group(members)
 
-// Verify our identity is in the group
-const isMember = identityCommitments.some(commitment => commitment === identity.commitment)
+const isMember = await semaphoreSubgraph.isGroupMember(groupId.toString(), identity.commitment.toString())
 if (!isMember) {
-	console.error('\nError: Your identity is not a member of the reviewer group!')
-	console.error('This should not happen. Please check your private keys.')
-	console.error('Your commitment:', identity.commitment.toString())
-	process.exit(1)
+	throw new Error('Reviewer is not the group member')
 }
-console.log('Identity verified as group member')
 
 // Step 1: Calculate message and scope for the proof
 const message = BigInt(royaltyLevel)
@@ -148,12 +145,9 @@ console.log('Scope (hash of title):', scope.toString())
 // Step 2: Create dummy proof for gas estimation
 console.log('\nBuilding user operation with dummy proof for gas estimation...')
 
-const leafIndex = group.indexOf(identity.commitment)
-const merkleProof = group.generateMerkleProof(leafIndex)
-const merkleProofLength = merkleProof.siblings.length
-const merkleTreeDepth = merkleProofLength !== 0 ? merkleProofLength : 1
-const merkleTreeRoot = merkleProof.root.toString()
-const randomNullifier = keccak256(randomBytes(32))
+const merkleTreeDepth = BigInt(group.depth)
+const merkleTreeRoot = group.root
+const randomNullifier = BigInt(keccak256(randomBytes(32)))
 
 const dummyProofEncoded = makeDummySemaphoreProof(merkleTreeDepth, merkleTreeRoot, randomNullifier, message, scope)
 
@@ -236,60 +230,3 @@ console.log('\nTransaction successful:', receipt.success)
 console.log('Transaction hash:', receipt.receipt.transactionHash)
 
 console.log('\nReview submitted successfully!')
-
-/**
- * Encodes a Semaphore proof for use as a signature in user operations
- * @param proof - The Semaphore proof object to encode
- * @returns Encoded proof bytes
- */
-function encodeSemaphoreProof(proof: {
-	merkleTreeDepth: number | bigint
-	merkleTreeRoot: string | bigint
-	nullifier: string | bigint
-	message: string | bigint
-	scope: string | bigint
-	points: (string | bigint)[]
-}) {
-	return IRoyaltyAutoClaim__factory.createInterface()
-		.getAbiCoder()
-		.encode(
-			[
-				'tuple(uint256 merkleTreeDepth, uint256 merkleTreeRoot, uint256 nullifier, uint256 message, uint256 scope, uint256[8] points)',
-			],
-			[proof],
-		)
-}
-
-/**
- * Creates a dummy Semaphore proof with zero values for gas estimation and encodes it
- * @param message - The message value (royalty level)
- * @param scope - The scope value (hash of title)
- * @returns Encoded dummy proof for use as signature
- */
-function makeDummySemaphoreProof(
-	merkleTreeDepth: number,
-	merkleTreeRoot: string,
-	nullifier: string,
-	message: bigint,
-	scope: bigint,
-) {
-	const dummyProof = {
-		merkleTreeDepth,
-		merkleTreeRoot,
-		nullifier,
-		message: toBeHex(message, 32),
-		scope: toBeHex(scope, 32),
-		points: [
-			toBeHex(0, 32),
-			toBeHex(0, 32),
-			toBeHex(0, 32),
-			toBeHex(0, 32),
-			toBeHex(0, 32),
-			toBeHex(0, 32),
-			toBeHex(0, 32),
-			toBeHex(0, 32),
-		],
-	}
-
-	return encodeSemaphoreProof(dummyProof)
-}
