@@ -7,6 +7,8 @@ import {
 	StringUtils__factory,
 } from '../src/typechain-v2'
 import { ethers, JsonRpcProvider, Wallet } from 'ethers'
+import { DKIM_REGISTRY_ADDRESS } from '../src/lib/zkemail-utils'
+import { SEMAPHORE_ADDRESS } from '../src/lib/semaphore-utils'
 
 const VITE_TEST_PRIVATE_KEY = import.meta.env.VITE_TEST_PRIVATE_KEY
 if (!VITE_TEST_PRIVATE_KEY) {
@@ -14,8 +16,6 @@ if (!VITE_TEST_PRIVATE_KEY) {
 }
 
 const CHAIN_ID = '84532'
-const DKIM_REGISTRY_ADDRESS = '0x3D3935B3C030893f118a84C92C66dF1B9E4169d6'
-const SEMAPHORE_ADDRESS = '0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D'
 
 const client = new JsonRpcProvider(RPC_URL[CHAIN_ID])
 const dev = new Wallet(VITE_TEST_PRIVATE_KEY, client) // owner, admin
@@ -66,7 +66,7 @@ while (codeCheckAttempts < 10) {
 		break
 	}
 	console.log('Waiting for implementation code to be available...')
-	await new Promise((resolve) => setTimeout(resolve, 2000))
+	await new Promise(resolve => setTimeout(resolve, 2000))
 	codeCheckAttempts++
 }
 

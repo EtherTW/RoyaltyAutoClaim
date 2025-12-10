@@ -8,6 +8,7 @@ import {
 	StringUtils__factory,
 } from '../src/typechain-v2'
 import { DKIM_REGISTRY_ADDRESS } from '../src/lib/zkemail-utils'
+import { SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
 
 export const ACCOUNT_0_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
 export const ACCOUNT_1_PRIVATE_KEY = '0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d'
@@ -72,8 +73,8 @@ export async function deployContracts({
 		dev.address,
 		dev.address,
 		tokenAddress,
-		[dev.address, dev2.address],
 		registrationVerifierAddress,
+		SEMAPHORE_ADDRESS,
 	])
 	const RoyaltyAutoClaimProxyFactory = new RoyaltyAutoClaimProxy__factory(dev)
 	const proxy = await RoyaltyAutoClaimProxyFactory.deploy(implAddress, initData)

@@ -6,6 +6,8 @@ import { Identity } from '@semaphore-protocol/identity'
 import { generateProof } from '@semaphore-protocol/proof'
 import { keccak256, Signer, toBeHex, toUtf8Bytes } from 'ethers'
 
+export const SEMAPHORE_ADDRESS = '0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D'
+
 /**
  * Creates a deterministic Semaphore identity from a signer's signature
  */

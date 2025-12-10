@@ -34,6 +34,7 @@ const submissionBeingOperated = ref<string | null>(null)
 // Submit Review
 const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContractCall({
 	getCalldata: (submissionTitle: string) =>
+		// @ts-ignore
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', [
 			submissionTitle,
 			selectedRoyaltyLevel.value,

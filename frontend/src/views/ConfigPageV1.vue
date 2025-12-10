@@ -43,6 +43,7 @@ const recipient = ref('')
 // Register Submission
 const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useContractCall({
 	getCalldata: () =>
+		// @ts-ignore
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('registerSubmission', [
 			title.value,
 			recipient.value,
@@ -55,6 +56,7 @@ const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useCon
 // Update Recipient
 const { isLoading: isUpdateLoading, send: onClickUpdateRecipient } = useContractCall({
 	getCalldata: () =>
+		// @ts-ignore
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateRoyaltyRecipient', [
 			title.value,
 			recipient.value,
@@ -80,6 +82,7 @@ const reviewer = ref('')
 // Add Reviewer
 const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContractCall({
 	getCalldata: () =>
+		// @ts-ignore
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateReviewers', [
 			[reviewer.value],
 			[true],
@@ -88,6 +91,7 @@ const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContrac
 	waitingTitle: 'Waiting to Add Reviewer',
 	errorTitle: 'Error Adding Reviewer',
 	onBeforeCall: async () => {
+		// @ts-ignore
 		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
 		if (isReviewer) {
 			throw new Error('Reviewer already exists')
@@ -98,6 +102,7 @@ const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContrac
 // Remove Reviewer
 const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useContractCall({
 	getCalldata: () =>
+		// @ts-ignore
 		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateReviewers', [
 			[reviewer.value],
 			[false],
@@ -106,6 +111,7 @@ const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useC
 	waitingTitle: 'Waiting to Remove Reviewer',
 	errorTitle: 'Error Removing Reviewer',
 	onBeforeCall: async () => {
+		// @ts-ignore
 		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
 		if (!isReviewer) {
 			throw new Error('Reviewer does not exist')
