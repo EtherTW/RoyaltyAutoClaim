@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { Loader2, Settings } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useContractCall } from '@/lib/useContractCall'
+import { RAC_V1_INTERFACE } from '@/lib/v1-interface'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
+import { Loader2, Settings } from 'lucide-vue-next'
 
 const isButtonDisabled = computed(() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value)
 
@@ -34,11 +35,7 @@ const submissionBeingOperated = ref<string | null>(null)
 // Submit Review
 const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContractCall({
 	getCalldata: (submissionTitle: string) =>
-		// @ts-ignore
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('reviewSubmission', [
-			submissionTitle,
-			selectedRoyaltyLevel.value,
-		]),
+		RAC_V1_INTERFACE.encodeFunctionData('reviewSubmission', [submissionTitle, selectedRoyaltyLevel.value]),
 	successTitle: 'Successfully Submitted Review',
 	waitingTitle: 'Waiting for Review Submission',
 	errorTitle: 'Error Submitting Review',
@@ -58,8 +55,7 @@ const { isLoading: isSubmitReviewLoading, send: onClickSubmitReview } = useContr
 
 // Claim Royalty
 const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContractCall({
-	getCalldata: (submissionTitle: string) =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('claimRoyalty', [submissionTitle]),
+	getCalldata: (submissionTitle: string) => RAC_V1_INTERFACE.encodeFunctionData('claimRoyalty', [submissionTitle]),
 	successTitle: 'Successfully Claimed Royalty',
 	waitingTitle: 'Waiting for Royalty Claim',
 	errorTitle: 'Error Claiming Royalty',

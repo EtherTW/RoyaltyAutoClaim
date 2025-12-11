@@ -89,6 +89,6 @@ bun run vitest -t <test_name>
 
 ```
 bun run check
-bun run gen-types-v2
+bun run gen-types
 bun run test test/e2e-base-sepolia.test.ts
 ```

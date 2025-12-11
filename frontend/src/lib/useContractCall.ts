@@ -14,7 +14,7 @@ import { h } from 'vue'
 import { toast } from 'vue-sonner'
 import { useBlockchainStore } from '../stores/useBlockchain'
 import { extractAndParseRevert, normalizeError, UserRejectedActionError } from './error'
-import { RoyaltyAutoClaim__factory } from '@/typechain-types'
+import { RAC_V1_INTERFACE } from './v1-interface'
 
 export function useContractCall<T extends unknown[] = []>(options: {
 	getCalldata: (...args: T) => string
@@ -117,7 +117,7 @@ export function useContractCall<T extends unknown[] = []>(options: {
 			if (err instanceof ERC4337Error) {
 				console.error(err.message, err.method, err.data)
 				revert = extractAndParseRevert(err, {
-					RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
+					RoyaltyAutoClaim: RAC_V1_INTERFACE,
 				})
 				if (revert) {
 					console.error(revert)

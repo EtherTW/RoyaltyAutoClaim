@@ -1,0 +1,31 @@
+import { Interface } from 'ethers'
+
+export const RAC_V1_INTERFACE = new Interface([
+	'function reviewSubmission(string title, uint16 royaltyLevel)',
+	'function claimRoyalty(string title)',
+	'function registerSubmission(string title, address royaltyRecipient)',
+	'function updateRoyaltyRecipient(string title, address newRoyaltyRecipient)',
+	'function revokeSubmission(string title)',
+	'function updateReviewers(address[] _reviewers, bool[] _status)',
+	'function changeAdmin(address _admin)',
+	'function changeRoyaltyToken(address _token)',
+	'function emergencyWithdraw(address _token, uint256 _amount)',
+
+	'error ZeroAddress()',
+	'error Unauthorized(address caller)',
+	'error InvalidArrayLength()',
+	'error EmptyTitle()',
+	'error InvalidRoyaltyLevel(uint16 royaltyLevel)',
+	'error SubmissionNotClaimable()',
+	'error RenounceOwnershipDisabled()',
+	'error AlreadyRegistered()',
+	'error SubmissionStatusNotRegistered()',
+	'error NotFromEntryPoint()',
+	'error ForbiddenPaymaster()',
+	'error UnsupportSelector(bytes4 selector)',
+	'error AlreadyReviewed()',
+	'error InvalidSignatureLength()',
+	'error SameAddress()',
+	'error SameStatus()',
+	'error ZeroAmount()',
+])

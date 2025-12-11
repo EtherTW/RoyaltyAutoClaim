@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { ArrowLeft } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { formatErrMsg, normalizeError } from '@/lib/error'
 import { useContractCall } from '@/lib/useContractCall'
+import { RAC_V1_INTERFACE } from '@/lib/v1-interface'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { useThrottleFn } from '@vueuse/core'
 import { Contract, formatEther, parseEther } from 'ethers'
+import { ArrowLeft } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
@@ -41,12 +42,7 @@ const recipient = ref('')
 
 // Register Submission
 const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useContractCall({
-	getCalldata: () =>
-		// @ts-ignore
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('registerSubmission', [
-			title.value,
-			recipient.value,
-		]),
+	getCalldata: () => RAC_V1_INTERFACE.encodeFunctionData('registerSubmission', [title.value, recipient.value]),
 	successTitle: 'Successfully Registered Submission',
 	waitingTitle: 'Waiting for Register Submission',
 	errorTitle: 'Error Registering Submission',
@@ -54,12 +50,7 @@ const { isLoading: isRegisterLoading, send: onClickRegisterSubmission } = useCon
 
 // Update Recipient
 const { isLoading: isUpdateLoading, send: onClickUpdateRecipient } = useContractCall({
-	getCalldata: () =>
-		// @ts-ignore
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateRoyaltyRecipient', [
-			title.value,
-			recipient.value,
-		]),
+	getCalldata: () => RAC_V1_INTERFACE.encodeFunctionData('updateRoyaltyRecipient', [title.value, recipient.value]),
 	successTitle: 'Successfully Updated Recipient',
 	waitingTitle: 'Waiting for Update Recipient',
 	errorTitle: 'Error Updating Recipient',
@@ -67,8 +58,7 @@ const { isLoading: isUpdateLoading, send: onClickUpdateRecipient } = useContract
 
 // Revoke Submission
 const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('revokeSubmission', [title.value]),
+	getCalldata: () => RAC_V1_INTERFACE.encodeFunctionData('revokeSubmission', [title.value]),
 	successTitle: 'Successfully Revoked Submission',
 	waitingTitle: 'Waiting for Revoke Submission',
 	errorTitle: 'Error Revoking Submission',
@@ -80,17 +70,12 @@ const reviewer = ref('')
 
 // Add Reviewer
 const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContractCall({
-	getCalldata: () =>
-		// @ts-ignore
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateReviewers', [
-			[reviewer.value],
-			[true],
-		]),
+	getCalldata: () => RAC_V1_INTERFACE.encodeFunctionData('updateReviewers', [[reviewer.value], [true]]),
 	successTitle: 'Successfully Added Reviewer',
 	waitingTitle: 'Waiting to Add Reviewer',
 	errorTitle: 'Error Adding Reviewer',
 	onBeforeCall: async () => {
-		// @ts-ignore
+		// @ts-ignore - v1 contract method not in v2 types
 		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
 		if (isReviewer) {
 			throw new Error('Reviewer already exists')
@@ -100,17 +85,12 @@ const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContrac
 
 // Remove Reviewer
 const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useContractCall({
-	getCalldata: () =>
-		// @ts-ignore
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('updateReviewers', [
-			[reviewer.value],
-			[false],
-		]),
+	getCalldata: () => RAC_V1_INTERFACE.encodeFunctionData('updateReviewers', [[reviewer.value], [false]]),
 	successTitle: 'Successfully Removed Reviewer',
 	waitingTitle: 'Waiting to Remove Reviewer',
 	errorTitle: 'Error Removing Reviewer',
 	onBeforeCall: async () => {
-		// @ts-ignore
+		// @ts-ignore - v1 contract method not in v2 types
 		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
 		if (!isReviewer) {
 			throw new Error('Reviewer does not exist')
@@ -125,8 +105,7 @@ const newToken = ref('')
 
 // Change Admin
 const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('changeAdmin', [newAdmin.value]),
+	getCalldata: () => RAC_V1_INTERFACE.encodeFunctionData('changeAdmin', [newAdmin.value]),
 	successTitle: 'Successfully Changed Admin',
 	waitingTitle: 'Waiting to Change Admin',
 	errorTitle: 'Error Changing Admin',
@@ -142,8 +121,7 @@ const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContrac
 
 // Change Token
 const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContractCall({
-	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('changeRoyaltyToken', [newToken.value]),
+	getCalldata: () => RAC_V1_INTERFACE.encodeFunctionData('changeRoyaltyToken', [newToken.value]),
 	successTitle: 'Successfully Changed Token',
 	waitingTitle: 'Waiting to Change Token',
 	errorTitle: 'Error Changing Token',
@@ -166,7 +144,7 @@ const withdrawAmount = ref<string>('0')
 // Emergency Withdraw
 const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCall({
 	getCalldata: () =>
-		royaltyAutoClaimStore.royaltyAutoClaim.interface.encodeFunctionData('emergencyWithdraw', [
+		RAC_V1_INTERFACE.encodeFunctionData('emergencyWithdraw', [
 			withdrawToken.value,
 			withdrawAmount.value.toString(),
 		]),

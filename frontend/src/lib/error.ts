@@ -1,8 +1,7 @@
 import type { ethers } from 'ethers'
 import { ErrorCode, Interface, isError } from 'ethers'
 import { ERC4337Error, extractHexString } from 'sendop'
-import { MockToken__factory, RoyaltyAutoClaim__factory } from '../typechain-types'
-import { RegistrationVerifier__factory } from '../typechain-v2'
+import { MockToken__factory, RegistrationVerifier__factory, RoyaltyAutoClaim__factory } from '../typechain-v2'
 
 /**
  * Checks if an error indicates a user rejection from browser wallet or passkey.
