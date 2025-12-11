@@ -58,8 +58,6 @@ export const BUNDLER_URL: { [key: string]: string } = {
 	[CHAIN_ID.BASE]: 'https://api.pimlico.io/v2/8453/rpc?apikey=pim_nDodV8Xhz7bXSEoeL9UbGh',
 }
 
-// Duration of error notification in ms, -1 means it will not disappear automatically
-export const ERROR_NOTIFICATION_DURATION = -1
 export const GITHUB_REPO_NAME = 'RoyaltyAutoClaim'
 
 export const SEMAPHORE_IDENTITY_MESSAGE =

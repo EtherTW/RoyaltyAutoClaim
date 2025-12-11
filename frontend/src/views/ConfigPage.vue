@@ -1,25 +1,69 @@
 <script setup lang="ts">
-import { ERROR_NOTIFICATION_DURATION } from '@/config'
-import { formatErrMsg, normalizeError } from '@/lib/error'
+import { SEMAPHORE_NETWORK } from '@/config'
+import { formatErrMsg, isUserRejectedError, normalizeError, parseContractRevert } from '@/lib/error'
+import { SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { useBlockchainStore } from '@/stores/useBlockchain'
+import { useEOAStore } from '@/stores/useEOA'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { RoyaltyAutoClaim__factory } from '@/typechain-v2'
-import { Contract, formatEther, parseEther } from 'ethers'
-import { ArrowLeft } from 'lucide-vue-next'
+import { ISemaphore__factory, ISemaphoreGroups__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
+import { SemaphoreSubgraph } from '@semaphore-protocol/data'
+import { Group } from '@semaphore-protocol/group'
+import { useVueDapp } from '@vue-dapp/core'
+import { Contract, ContractTransactionResponse, formatEther, Interface, parseEther } from 'ethers'
+import { ArrowLeft, UserCircle } from 'lucide-vue-next'
+import { h } from 'vue'
 import { toast } from 'vue-sonner'
 
 const iface = RoyaltyAutoClaim__factory.createInterface()
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
+const blockchainStore = useBlockchainStore()
+const eoaStore = useEOAStore()
+const { chainId: walletChainId, connector } = useVueDapp()
+
+// Semaphore contract instance
+const semaphoreContract = computed(() => {
+	if (!eoaStore.signer) {
+		return ISemaphore__factory.connect(SEMAPHORE_ADDRESS, blockchainStore.client)
+	}
+	return ISemaphore__factory.connect(SEMAPHORE_ADDRESS, eoaStore.signer)
+})
+
+// Reviewer group ID
+const reviewerGroupId = ref<bigint | null>(null)
+
+// Input refs for reviewer management
+const singleCommitment = ref('')
+const batchCommitments = ref('')
+const oldCommitment = ref('')
+const newCommitment = ref('')
+const removeCommitment = ref('')
+
+// Loading states for reviewer operations
+const isAddMemberLoading = ref(false)
+const isAddMembersLoading = ref(false)
+const isUpdateMemberLoading = ref(false)
+const isRemoveMemberLoading = ref(false)
+
+// Members list management
+const membersList = ref<bigint[]>([])
+const isFetchingMembers = ref(false)
+
+const isAnyReviewerLoading = computed(
+	() =>
+		isAddMemberLoading.value ||
+		isAddMembersLoading.value ||
+		isUpdateMemberLoading.value ||
+		isRemoveMemberLoading.value,
+)
 
 const isBtnDisabled = computed(
 	() =>
 		isRevokeLoading.value ||
-		isAddReviewerLoading.value ||
-		isRemoveReviewerLoading.value ||
 		isChangeAdminLoading.value ||
 		isChangeTokenLoading.value ||
-		isEmergencyWithdrawLoading.value,
+		isEmergencyWithdrawLoading.value ||
+		isAnyReviewerLoading.value,
 )
 
 const currentAdmin = ref('')
@@ -28,6 +72,22 @@ const currentToken = ref('')
 onMounted(async () => {
 	currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
 	currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
+	reviewerGroupId.value = await royaltyAutoClaimStore.royaltyAutoClaim.reviewerGroupId()
+
+	// Load members list
+	try {
+		isFetchingMembers.value = true
+		membersList.value = await fetchMembers()
+	} catch (e: unknown) {
+		const err = normalizeError(e)
+		console.error('Error loading members:', err)
+		toast.error('Error Loading Members', {
+			description: formatErrMsg(err),
+			duration: Infinity,
+		})
+	} finally {
+		isFetchingMembers.value = false
+	}
 })
 
 // ===================================== Submission Management =====================================
@@ -43,33 +103,339 @@ const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContrac
 
 // ===================================== Reviewer Management =====================================
 
-const reviewer = ref('')
-
-// Add Reviewer
-const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContractCallV2({
-	getCalldata: () => iface.encodeFunctionData('updateReviewers', [[reviewer.value], [true]]),
-	successTitle: 'Successfully Added Reviewer',
-	errorTitle: 'Error Adding Reviewer',
-	onBeforeCall: async () => {
-		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
-		if (isReviewer) {
-			throw new Error('Reviewer already exists')
+// Validation functions
+function validateIdentityCommitment(input: string): bigint {
+	const trimmed = input.trim()
+	if (!trimmed.startsWith('0x')) {
+		throw new Error('Identity commitment must be a hex string starting with 0x')
+	}
+	try {
+		const value = BigInt(trimmed)
+		if (value < 0n || value > 2n ** 256n - 1n) {
+			throw new Error('Identity commitment must be a valid uint256')
 		}
-	},
-})
+		return value
+	} catch {
+		throw new Error('Invalid identity commitment format. Must be a valid hex string.')
+	}
+}
 
-// Remove Reviewer
-const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useContractCallV2({
-	getCalldata: () => iface.encodeFunctionData('updateReviewers', [[reviewer.value], [false]]),
-	successTitle: 'Successfully Removed Reviewer',
-	errorTitle: 'Error Removing Reviewer',
-	onBeforeCall: async () => {
-		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
-		if (!isReviewer) {
-			throw new Error('Reviewer does not exist')
+function validateIdentityCommitments(input: string): bigint[] {
+	const lines = input
+		.split('\n')
+		.map(line => line.trim())
+		.filter(line => line.length > 0)
+	if (lines.length === 0) {
+		throw new Error('Please enter at least one identity commitment')
+	}
+	return lines.map((line, index) => {
+		try {
+			return validateIdentityCommitment(line)
+		} catch (e) {
+			throw new Error(`Line ${index + 1}: ${(e as Error).message}`)
 		}
-	},
-})
+	})
+}
+
+// Fetch all members from subgraph
+async function fetchMembers(): Promise<bigint[]> {
+	if (!reviewerGroupId.value) {
+		throw new Error('Reviewer group ID not loaded')
+	}
+
+	const network = SEMAPHORE_NETWORK[blockchainStore.chainId]
+	if (!network) {
+		throw new Error(`Semaphore network not configured for chain ${blockchainStore.chainId}`)
+	}
+
+	// Fetch members using Semaphore subgraph
+	const subgraph = new SemaphoreSubgraph(network)
+	const { members } = await subgraph.getGroup(reviewerGroupId.value.toString(), { members: true })
+
+	if (!members) {
+		throw new Error('Failed to fetch group members from subgraph')
+	}
+
+	return members.map(m => BigInt(m))
+}
+
+// Reload members list
+async function reloadMembers() {
+	try {
+		membersList.value = await fetchMembers()
+	} catch (e: unknown) {
+		const err = normalizeError(e)
+		console.error('Error reloading members:', err)
+	}
+}
+
+// Merkle proof generation
+async function generateMerkleProofSiblings(identityCommitment: bigint): Promise<bigint[]> {
+	membersList.value = await fetchMembers()
+
+	// Create off-chain group for merkle proof generation
+	const group = new Group(membersList.value)
+
+	// Find member index
+	const index = group.indexOf(identityCommitment)
+	if (index === -1) {
+		throw new Error('Identity commitment not found in reviewer group')
+	}
+
+	// Generate merkle proof using Semaphore library
+	const proof = group.generateMerkleProof(index)
+	return proof.siblings.map(s => BigInt(s))
+}
+
+// Direct contract call helper
+async function executeDirectContractCall(options: {
+	operation: () => Promise<ContractTransactionResponse>
+	successTitle: string
+	errorTitle: string
+	onAfterCall?: () => void
+}) {
+	const { operation, successTitle, errorTitle, onAfterCall } = options
+
+	try {
+		if (!eoaStore.signer) {
+			throw new Error('Please connect your admin wallet first')
+		}
+
+		// Switch chain if needed
+		if (walletChainId.value !== Number(blockchainStore.chainId)) {
+			await connector.value?.switchChain?.(Number(blockchainStore.chainId))
+		}
+
+		const tx = await operation()
+
+		const waitingToast = toast.info('Waiting for transaction confirmation...', {
+			duration: Infinity,
+		})
+
+		const receipt = await tx.wait()
+		toast.dismiss(waitingToast)
+
+		if (!receipt) {
+			throw new Error('Transaction receipt not found')
+		}
+
+		const txLink = `${blockchainStore.explorerUrl}/tx/${receipt.hash}`
+		toast.success(successTitle, {
+			description: h(
+				'a',
+				{ class: 'text-blue-700 hover:underline cursor-pointer', href: txLink, target: '_blank' },
+				'View on Explorer',
+			),
+			duration: Infinity,
+		})
+
+		onAfterCall?.()
+	} catch (e: unknown) {
+		console.error('Error in executeDirectContractCall:', e)
+		const err = normalizeError(e)
+
+		if (isUserRejectedError(e)) {
+			console.log('User rejected the transaction')
+			return
+		}
+
+		// Try to extract and parse Semaphore contract revert
+		let errorDescription = err.message || 'An unknown error occurred'
+		try {
+			// Extract revert data from error.data or error message
+			let revertData = ''
+
+			// First check if error object has a data property
+			if (typeof e === 'object' && e !== null && 'data' in e) {
+				const errorData = (e as Record<string, unknown>).data
+				console.log('errorData', errorData)
+				if (typeof errorData === 'string' && errorData.startsWith('0x')) {
+					revertData = errorData
+				}
+			}
+
+			// Fallback to extracting hex string from error message
+			if (!revertData) {
+				const hexMatch = err.message.match(/(0x[a-fA-F0-9]+)/)
+				revertData = hexMatch?.[1] || ''
+			}
+
+			if (revertData) {
+				const parsedError = parseContractRevert(revertData, {
+					ISemaphore: ISemaphore__factory.createInterface(),
+					ISemaphoreGroups__factory: ISemaphoreGroups__factory.createInterface(),
+					InternalLeanIMT: new Interface([
+						'error WrongSiblingNodes()',
+						'error LeafGreaterThanSnarkScalarField()',
+						'error LeafCannotBeZero()',
+						'error LeafAlreadyExists()',
+						'error LeafDoesNotExist()',
+					]),
+				})
+				if (parsedError) {
+					errorDescription = parsedError
+					console.info({
+						[revertData]: parsedError,
+					})
+				}
+			}
+		} catch (parseError) {
+			console.warn('Failed to parse contract revert:', parseError)
+		}
+
+		toast.error(errorTitle, {
+			description: errorDescription,
+			duration: Infinity,
+		})
+	}
+}
+
+// Add single member
+async function onClickAddMember() {
+	if (!reviewerGroupId.value) {
+		toast.error('Error', { description: 'Reviewer group ID not loaded' })
+		return
+	}
+
+	isAddMemberLoading.value = true
+	try {
+		await executeDirectContractCall({
+			operation: async () => {
+				const commitment = validateIdentityCommitment(singleCommitment.value)
+
+				// Validate off-chain: check if commitment already exists
+				const members = await fetchMembers()
+				if (members.some(m => m === commitment)) {
+					throw new Error('Identity commitment already exists in the reviewer group')
+				}
+
+				return await semaphoreContract.value.addMember(reviewerGroupId.value!, commitment)
+			},
+			successTitle: 'Successfully Added Reviewer',
+			errorTitle: 'Error Adding Reviewer',
+			onAfterCall: () => {
+				singleCommitment.value = ''
+				reloadMembers()
+			},
+		})
+	} finally {
+		isAddMemberLoading.value = false
+	}
+}
+
+// Add multiple members (batch)
+async function onClickAddMembers() {
+	if (!reviewerGroupId.value) {
+		toast.error('Error', { description: 'Reviewer group ID not loaded' })
+		return
+	}
+
+	isAddMembersLoading.value = true
+	try {
+		await executeDirectContractCall({
+			operation: async () => {
+				const commitments = validateIdentityCommitments(batchCommitments.value)
+
+				// Validate off-chain: check if any commitment already exists
+				const members = await fetchMembers()
+				const existingCommitments = commitments.filter(c => members.some(m => m === c))
+				if (existingCommitments.length > 0) {
+					throw new Error(`${existingCommitments.length} commitment(s) already exist in the reviewer group`)
+				}
+
+				return await semaphoreContract.value.addMembers(reviewerGroupId.value!, commitments)
+			},
+			successTitle: `Successfully Added Reviewers`,
+			errorTitle: 'Error Adding Reviewers',
+			onAfterCall: () => {
+				batchCommitments.value = ''
+				reloadMembers()
+			},
+		})
+	} finally {
+		isAddMembersLoading.value = false
+	}
+}
+
+// Update member
+async function onClickUpdateMember() {
+	if (!reviewerGroupId.value) {
+		toast.error('Error', { description: 'Reviewer group ID not loaded' })
+		return
+	}
+
+	isUpdateMemberLoading.value = true
+	try {
+		await executeDirectContractCall({
+			operation: async () => {
+				const oldCommitmentValue = validateIdentityCommitment(oldCommitment.value)
+				const newCommitmentValue = validateIdentityCommitment(newCommitment.value)
+
+				// Validate off-chain
+				const members = await fetchMembers()
+				if (!members.some(m => m === oldCommitmentValue)) {
+					throw new Error('Old identity commitment not found in the reviewer group')
+				}
+				if (members.some(m => m === newCommitmentValue)) {
+					throw new Error('New identity commitment already exists in the reviewer group')
+				}
+
+				const siblings = await generateMerkleProofSiblings(oldCommitmentValue)
+
+				return await semaphoreContract.value.updateMember(
+					reviewerGroupId.value!,
+					oldCommitmentValue,
+					newCommitmentValue,
+					siblings,
+				)
+			},
+			successTitle: 'Successfully Updated Reviewer',
+			errorTitle: 'Error Updating Reviewer',
+			onAfterCall: () => {
+				oldCommitment.value = ''
+				newCommitment.value = ''
+				reloadMembers()
+			},
+		})
+	} finally {
+		isUpdateMemberLoading.value = false
+	}
+}
+
+// Remove member
+async function onClickRemoveMember() {
+	if (!reviewerGroupId.value) {
+		toast.error('Error', { description: 'Reviewer group ID not loaded' })
+		return
+	}
+
+	isRemoveMemberLoading.value = true
+	try {
+		await executeDirectContractCall({
+			operation: async () => {
+				const commitment = validateIdentityCommitment(removeCommitment.value)
+
+				// Validate off-chain: check if commitment exists
+				const members = await fetchMembers()
+				if (!members.some(m => m === commitment)) {
+					throw new Error('Identity commitment not found in the reviewer group')
+				}
+
+				const siblings = await generateMerkleProofSiblings(commitment)
+
+				return await semaphoreContract.value.removeMember(reviewerGroupId.value!, commitment, siblings)
+			},
+			successTitle: 'Successfully Removed Reviewer',
+			errorTitle: 'Error Removing Reviewer',
+			onAfterCall: () => {
+				removeCommitment.value = ''
+				reloadMembers()
+			},
+		})
+	} finally {
+		isRemoveMemberLoading.value = false
+	}
+}
 
 // ===================================== Admin Management =====================================
 
@@ -156,7 +522,7 @@ const onClickMax = useThrottleFn(async () => {
 		console.error(err)
 		toast.error('Error Fetching Balance', {
 			description: formatErrMsg(err),
-			duration: ERROR_NOTIFICATION_DURATION,
+			duration: Infinity,
 		})
 	} finally {
 		isMaxBtnDisabled.value = false
@@ -174,7 +540,7 @@ const displayTokenAmount = computed(() => {
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
-		<div class="flex justify-start mb-2">
+		<div class="flex justify-between items-center mb-2">
 			<RouterLink
 				:to="{
 					name: 'v2',
@@ -184,6 +550,12 @@ const displayTokenAmount = computed(() => {
 					<ArrowLeft />
 				</Button>
 			</RouterLink>
+
+			<Button size="icon" variant="ghost">
+				<RouterLink :to="{ name: 'identity' }">
+					<UserCircle />
+				</RouterLink>
+			</Button>
 		</div>
 
 		<Card class="mb-8">
@@ -216,30 +588,116 @@ const displayTokenAmount = computed(() => {
 		<Card class="mb-8">
 			<CardHeader>
 				<div class="flex items-center justify-between">
-					<CardTitle>Reviewer Management</CardTitle>
+					<CardTitle>Reviewer Management (Semaphore)</CardTitle>
 				</div>
 				<CardDescription>onlyAdmin</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<div class="grid w-full items-center gap-4">
-					<div class="flex flex-col space-y-1.5">
-						<Label for="reviewer">Reviewer Address</Label>
-						<Input id="reviewer" v-model="reviewer" placeholder="0x..." />
+				<div class="grid w-full items-center gap-6">
+					<!-- Members List -->
+					<div class="space-y-2">
+						<div class="p-4 border rounded-md bg-muted/50">
+							<div class="flex items-center justify-between mb-2">
+								<Label class="text-base font-semibold">Current Members</Label>
+								<span class="text-sm text-muted-foreground">
+									{{ isFetchingMembers ? 'Loading...' : `${membersList.length} member(s)` }}
+								</span>
+							</div>
+							<div v-if="isFetchingMembers" class="text-sm text-muted-foreground">Loading members...</div>
+							<div v-else-if="membersList.length === 0" class="text-sm text-muted-foreground">
+								No members found
+							</div>
+							<div v-else class="space-y-1 max-h-60 overflow-y-auto">
+								<div
+									v-for="(member, index) in membersList"
+									:key="index"
+									class="text-sm font-mono break-all p-2 bg-background rounded border"
+								>
+									{{ '0x' + member.toString(16).padStart(64, '0') }}
+								</div>
+							</div>
+						</div>
 					</div>
-					<div class="flex gap-4">
+
+					<hr class="border-border" />
+
+					<!-- Add Single Member -->
+					<div class="space-y-2">
+						<Label class="text-base font-semibold">Add Single Reviewer</Label>
+						<div class="flex flex-col space-y-1.5">
+							<Label for="singleCommitment">Identity Commitment (uint256)</Label>
+							<Input id="singleCommitment" v-model="singleCommitment" placeholder="0x..." />
+						</div>
 						<Button
 							variant="default"
-							:loading="isAddReviewerLoading"
-							:disabled="isBtnDisabled"
-							@click="onClickAddReviewer"
+							:loading="isAddMemberLoading"
+							:disabled="!singleCommitment || isBtnDisabled"
+							@click="onClickAddMember"
 						>
 							Add Reviewer
 						</Button>
+					</div>
+
+					<hr class="border-border" />
+
+					<!-- Add Multiple Members (Batch) -->
+					<div class="space-y-2">
+						<Label class="text-base font-semibold">Add Multiple Reviewers (Batch)</Label>
+						<div class="flex flex-col space-y-1.5">
+							<Label for="batchCommitments">Identity Commitments (one per line)</Label>
+							<textarea
+								id="batchCommitments"
+								v-model="batchCommitments"
+								placeholder="0x...&#10;0x...&#10;..."
+								rows="4"
+								class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							/>
+						</div>
+						<Button
+							variant="default"
+							:loading="isAddMembersLoading"
+							:disabled="!batchCommitments || isBtnDisabled"
+							@click="onClickAddMembers"
+						>
+							Add Reviewers (Batch)
+						</Button>
+					</div>
+
+					<hr class="border-border" />
+
+					<!-- Update Member -->
+					<div class="space-y-2">
+						<Label class="text-base font-semibold">Update Reviewer</Label>
+						<div class="flex flex-col space-y-1.5">
+							<Label for="oldCommitment">Old Identity Commitment</Label>
+							<Input id="oldCommitment" v-model="oldCommitment" placeholder="0x..." />
+							<Label for="newCommitment" class="mt-2">New Identity Commitment</Label>
+							<Input id="newCommitment" v-model="newCommitment" placeholder="0x..." />
+						</div>
+						<Button
+							variant="default"
+							:loading="isUpdateMemberLoading"
+							:disabled="!oldCommitment || !newCommitment || isBtnDisabled"
+							@click="onClickUpdateMember"
+						>
+							Update Reviewer
+						</Button>
+					</div>
+
+					<hr class="border-border" />
+
+					<!-- Remove Member -->
+					<div class="space-y-2">
+						<Label class="text-base font-semibold">Remove Reviewer</Label>
+						<div class="flex flex-col space-y-1.5">
+							<Label for="removeCommitment">Identity Commitment</Label>
+							<Input id="removeCommitment" v-model="removeCommitment" placeholder="0x..." />
+						</div>
 						<Button
 							variant="destructive"
-							:loading="isRemoveReviewerLoading"
-							:disabled="isBtnDisabled"
-							@click="onClickRemoveReviewer"
+							:loading="isRemoveMemberLoading"
+							:disabled="!removeCommitment || isBtnDisabled"
+							@click="onClickRemoveMember"
 						>
 							Remove Reviewer
 						</Button>

@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ERROR_NOTIFICATION_DURATION } from '@/config'
 import { formatErrMsg, normalizeError } from '@/lib/error'
 import { useContractCall } from '@/lib/useContractCall'
 import { useBlockchainStore } from '@/stores/useBlockchain'
@@ -212,7 +211,7 @@ const onClickMax = useThrottleFn(async () => {
 		console.error(err)
 		toast.error('Error Fetching Balance', {
 			description: formatErrMsg(err),
-			duration: ERROR_NOTIFICATION_DURATION,
+			duration: Infinity,
 		})
 	} finally {
 		isMaxBtnDisabled.value = false

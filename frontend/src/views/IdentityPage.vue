@@ -3,7 +3,8 @@ import { SEMAPHORE_IDENTITY_MESSAGE } from '@/config'
 import { useEOAStore } from '@/stores/useEOA'
 import { Identity } from '@semaphore-protocol/identity'
 import { useVueDapp } from '@vue-dapp/core'
-import { Copy, Check } from 'lucide-vue-next'
+import { toBeHex } from 'ethers'
+import { ArrowLeft, Copy, Check } from 'lucide-vue-next'
 
 const eoaStore = useEOAStore()
 
@@ -27,7 +28,7 @@ async function signAndGenerateIdentity() {
 		isSigning.value = true
 		const signature = await eoaStore.signer.signMessage(SEMAPHORE_IDENTITY_MESSAGE)
 		const identity = new Identity(signature)
-		identityCommitment.value = identity.commitment.toString()
+		identityCommitment.value = toBeHex(identity.commitment)
 	} catch (error) {
 		console.error('Error signing message:', error)
 	} finally {
@@ -52,6 +53,18 @@ async function copyToClipboard() {
 
 <template>
 	<div class="container mx-auto p-8 max-w-2xl">
+		<div class="flex justify-start mb-2">
+			<RouterLink
+				:to="{
+					name: 'v2-config',
+				}"
+			>
+				<Button size="icon" variant="ghost">
+					<ArrowLeft />
+				</Button>
+			</RouterLink>
+		</div>
+
 		<Card>
 			<CardHeader>
 				<CardTitle>Generate Reviewer Identity</CardTitle>
