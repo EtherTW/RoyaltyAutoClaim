@@ -1,6 +1,6 @@
 import { SEMAPHORE_IDENTITY_MESSAGE } from '@/config'
 import { IRoyaltyAutoClaim__factory, ISemaphore } from '@/typechain-v2'
-import { SemaphoreSubgraph } from '@semaphore-protocol/data'
+import { SemaphoreEthers } from '@semaphore-protocol/data'
 import { Group } from '@semaphore-protocol/group'
 import { Identity } from '@semaphore-protocol/identity'
 import { generateProof } from '@semaphore-protocol/proof'
@@ -108,30 +108,18 @@ export function makeDummySemaphoreProof(
 }
 
 /**
- * Fetches reviewer group members from the Semaphore subgraph
+ * Fetches reviewer group members from the Semaphore contract using SemaphoreEthers
  */
 export async function fetchReviewerGroupMembers(params: {
-	network: string // e.g., 'base-sepolia', 'sepolia', etc.
+	rpcUrl: string
+	semaphoreAddress: string
 	groupId: string
 }): Promise<string[]> {
-	const { network, groupId } = params
+	const { rpcUrl, semaphoreAddress, groupId } = params
 
-	const semaphoreSubgraph = new SemaphoreSubgraph(network)
-	const { members } = await semaphoreSubgraph.getGroup(groupId, { members: true })
+	const semaphoreEthers = new SemaphoreEthers(rpcUrl, {
+		address: semaphoreAddress,
+	})
 
-	return members || []
-}
-
-/**
- * Verifies if an identity commitment is a member of the group using the subgraph
- */
-export async function verifyGroupMembership(params: {
-	network: string
-	groupId: string
-	identityCommitment: string
-}): Promise<boolean> {
-	const { network, groupId, identityCommitment } = params
-
-	const semaphoreSubgraph = new SemaphoreSubgraph(network)
-	return await semaphoreSubgraph.isGroupMember(groupId, identityCommitment)
+	return await semaphoreEthers.getGroupMembers(groupId)
 }

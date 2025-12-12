@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { SEMAPHORE_NETWORK } from '@/config'
+import { TENDERLY_RPC_URL } from '@/config'
 import { formatErrMsg, isUserRejectedError, normalizeError, parseContractRevert } from '@/lib/error'
-import { SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
+import { fetchReviewerGroupMembers, SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useEOAStore } from '@/stores/useEOA'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { ISemaphore__factory, ISemaphoreGroups__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
-import { SemaphoreSubgraph } from '@semaphore-protocol/data'
 import { Group } from '@semaphore-protocol/group'
 import { useVueDapp } from '@vue-dapp/core'
 import { Contract, ContractTransactionResponse, formatEther, Interface, parseEther } from 'ethers'
@@ -106,8 +105,8 @@ const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContrac
 // Validation functions
 function validateIdentityCommitment(input: string): bigint {
 	const trimmed = input.trim()
-	if (!trimmed.startsWith('0x')) {
-		throw new Error('Identity commitment must be a hex string starting with 0x')
+	if (!trimmed) {
+		throw new Error('Identity commitment cannot be empty')
 	}
 	try {
 		const value = BigInt(trimmed)
@@ -116,7 +115,7 @@ function validateIdentityCommitment(input: string): bigint {
 		}
 		return value
 	} catch {
-		throw new Error('Invalid identity commitment format. Must be a valid hex string.')
+		throw new Error('Invalid identity commitment format. Must be a valid decimal string.')
 	}
 }
 
@@ -137,23 +136,26 @@ function validateIdentityCommitments(input: string): bigint[] {
 	})
 }
 
-// Fetch all members from subgraph
+// Fetch all members using SemaphoreEthers
 async function fetchMembers(): Promise<bigint[]> {
 	if (!reviewerGroupId.value) {
 		throw new Error('Reviewer group ID not loaded')
 	}
 
-	const network = SEMAPHORE_NETWORK[blockchainStore.chainId]
-	if (!network) {
-		throw new Error(`Semaphore network not configured for chain ${blockchainStore.chainId}`)
+	const rpcUrl = TENDERLY_RPC_URL[blockchainStore.chainId]
+	if (!rpcUrl) {
+		throw new Error(`RPC URL not configured for chain ${blockchainStore.chainId}`)
 	}
 
-	// Fetch members using Semaphore subgraph
-	const subgraph = new SemaphoreSubgraph(network)
-	const { members } = await subgraph.getGroup(reviewerGroupId.value.toString(), { members: true })
+	// Fetch members using SemaphoreEthers
+	const members = await fetchReviewerGroupMembers({
+		rpcUrl,
+		semaphoreAddress: SEMAPHORE_ADDRESS,
+		groupId: reviewerGroupId.value.toString(),
+	})
 
 	if (!members) {
-		throw new Error('Failed to fetch group members from subgraph')
+		throw new Error('Failed to fetch group members')
 	}
 
 	return members.map(m => BigInt(m))
@@ -613,7 +615,7 @@ const displayTokenAmount = computed(() => {
 									:key="index"
 									class="text-sm font-mono break-all p-2 bg-background rounded border"
 								>
-									{{ '0x' + member.toString(16).padStart(64, '0') }}
+									{{ member.toString() }}
 								</div>
 							</div>
 						</div>
@@ -626,7 +628,7 @@ const displayTokenAmount = computed(() => {
 						<Label class="text-base font-semibold">Add Single Reviewer</Label>
 						<div class="flex flex-col space-y-1.5">
 							<Label for="singleCommitment">Identity Commitment (uint256)</Label>
-							<Input id="singleCommitment" v-model="singleCommitment" placeholder="0x..." />
+							<Input id="singleCommitment" v-model="singleCommitment" placeholder="1234567890..." />
 						</div>
 						<Button
 							variant="default"
@@ -648,7 +650,7 @@ const displayTokenAmount = computed(() => {
 							<textarea
 								id="batchCommitments"
 								v-model="batchCommitments"
-								placeholder="0x...&#10;0x...&#10;..."
+								placeholder="1234567890...&#10;9876543210...&#10;..."
 								rows="4"
 								class="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							/>
@@ -670,9 +672,9 @@ const displayTokenAmount = computed(() => {
 						<Label class="text-base font-semibold">Update Reviewer</Label>
 						<div class="flex flex-col space-y-1.5">
 							<Label for="oldCommitment">Old Identity Commitment</Label>
-							<Input id="oldCommitment" v-model="oldCommitment" placeholder="0x..." />
+							<Input id="oldCommitment" v-model="oldCommitment" placeholder="1234567890..." />
 							<Label for="newCommitment" class="mt-2">New Identity Commitment</Label>
-							<Input id="newCommitment" v-model="newCommitment" placeholder="0x..." />
+							<Input id="newCommitment" v-model="newCommitment" placeholder="1234567890..." />
 						</div>
 						<Button
 							variant="default"
@@ -691,7 +693,7 @@ const displayTokenAmount = computed(() => {
 						<Label class="text-base font-semibold">Remove Reviewer</Label>
 						<div class="flex flex-col space-y-1.5">
 							<Label for="removeCommitment">Identity Commitment</Label>
-							<Input id="removeCommitment" v-model="removeCommitment" placeholder="0x..." />
+							<Input id="removeCommitment" v-model="removeCommitment" placeholder="1234567890..." />
 						</div>
 						<Button
 							variant="destructive"

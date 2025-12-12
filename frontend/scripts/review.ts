@@ -20,16 +20,15 @@
  * REVIEWER_INDEX: Optional, defaults to 0 (first reviewer). Use 1 for second reviewer.
  */
 
-import { SemaphoreSubgraph } from '@semaphore-protocol/data'
 import { Group } from '@semaphore-protocol/group'
 import { Identity } from '@semaphore-protocol/identity'
 import { generateProof } from '@semaphore-protocol/proof'
 import { JsonRpcProvider, Wallet, keccak256, randomBytes, toBeHex, toUtf8Bytes } from 'ethers'
 import { ERC4337Bundler } from 'sendop'
-import { BUNDLER_URL, RPC_URL, SEMAPHORE_IDENTITY_MESSAGE } from '../src/config'
+import { BUNDLER_URL, RPC_URL, SEMAPHORE_IDENTITY_MESSAGE, TENDERLY_RPC_URL } from '../src/config'
 import { buildUserOp } from '../src/lib/erc4337-utils'
 import { handleUserOpError } from '../src/lib/error'
-import { encodeSemaphoreProof, makeDummySemaphoreProof } from '../src/lib/semaphore-utils'
+import { encodeSemaphoreProof, fetchReviewerGroupMembers, makeDummySemaphoreProof } from '../src/lib/semaphore-utils'
 import { IRoyaltyAutoClaim__factory, RoyaltyAutoClaim__factory } from '../src/typechain-v2'
 
 // Parse command line arguments
@@ -125,12 +124,15 @@ const signature2 = await reviewer2Wallet.signMessage(SEMAPHORE_IDENTITY_MESSAGE)
 const identity2 = new Identity(signature2)
 console.log('Reviewer 2 commitment:', identity2.commitment.toString())
 
-// Create off-chain group with members from subgraph
-const semaphoreSubgraph = new SemaphoreSubgraph('base-sepolia')
-const { members } = await semaphoreSubgraph.getGroup(groupId.toString(), { members: true })
+// Create off-chain group with members using SemaphoreEthers
+const members = await fetchReviewerGroupMembers({
+	rpcUrl: TENDERLY_RPC_URL[CHAIN_ID],
+	semaphoreAddress,
+	groupId: groupId.toString(),
+})
 const group = new Group(members)
 
-const isMember = await semaphoreSubgraph.isGroupMember(groupId.toString(), identity.commitment.toString())
+const isMember = members.some(m => m === identity.commitment.toString())
 if (!isMember) {
 	throw new Error('Reviewer is not the group member')
 }

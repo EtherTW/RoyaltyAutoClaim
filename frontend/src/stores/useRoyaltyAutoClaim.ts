@@ -1,8 +1,8 @@
 import { normalizeError } from '@/lib/error'
 import { fetchExistingSubmissions } from '@/lib/fetchExistingSubmissions'
-import { fetchReviewerGroupMembers } from '@/lib/semaphore-utils'
+import { fetchReviewerGroupMembers, SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
 import { RoyaltyAutoClaim__factory } from '@/typechain-v2'
-import { SEMAPHORE_NETWORK } from '@/config'
+import { TENDERLY_RPC_URL } from '@/config'
 import { defineStore } from 'pinia'
 import { useBlockchainStore } from './useBlockchain'
 
@@ -86,15 +86,16 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 			semaphoreAddress.value = await royaltyAutoClaim.value.semaphore()
 			reviewerGroupId.value = await royaltyAutoClaim.value.reviewerGroupId()
 
-			// Get the network name for the subgraph
-			const network = SEMAPHORE_NETWORK[blockchainStore.chainId]
-			if (!network) {
-				throw new Error(`Semaphore subgraph network not configured for chain ID: ${blockchainStore.chainId}`)
+			// Get the RPC URL for SemaphoreEthers
+			const rpcUrl = TENDERLY_RPC_URL[blockchainStore.chainId]
+			if (!rpcUrl) {
+				throw new Error(`RPC URL not configured for chain ID: ${blockchainStore.chainId}`)
 			}
 
-			// Fetch reviewer members from Semaphore subgraph
+			// Fetch reviewer members using SemaphoreEthers
 			reviewerMembers.value = await fetchReviewerGroupMembers({
-				network,
+				rpcUrl,
+				semaphoreAddress: SEMAPHORE_ADDRESS,
 				groupId: reviewerGroupId.value.toString(),
 			})
 		} catch (err: unknown) {
