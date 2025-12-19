@@ -12,7 +12,12 @@ global DIGIT_CHAR_TABLE: [u8; 128] = [
 
 // Recipient field constants
 global RECIPIENT_FIELD_NAME_LENGTH: u32 = 9; // "Recipient"
-global MAX_RECIPIENT_FIELD_LENGTH: u32 = 54; // "Recipient: 0x" + 40 hex + "\r\n"
+global MAX_RECIPIENT_FIELD_LENGTH: u32 = 53; // "Recipient: 0x" + 40 hex
+
+// ID field constants
+global ID_FIELD_NAME_LENGTH: u32 = 2; // "ID"
+global MAX_ID_FIELD_LENGTH: u32 = 70; // "ID: 0x" + 64 hex
+
 global HEX_CHAR_TABLE: [u8; 128] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
@@ -118,4 +123,60 @@ fn parse_hex_char(c: u8) -> u8 {
         // 'a'-'f': ASCII 97-102 -> 10-15
         c - 97 + 10
     }
+}
+
+pub fn get_id_hash<let MAX_EMAIL_BODY_LENGTH: u32>(
+    body: BoundedVec<u8, MAX_EMAIL_BODY_LENGTH>,
+    id_field_seq: Sequence,
+    id_seq: Sequence,
+) -> [Field; 2] {
+    // Step 1: Validate the "ID" field exists
+    let id_field_name = comptime { "ID".as_bytes() };
+    constrain_header_field::<MAX_EMAIL_BODY_LENGTH, MAX_ID_FIELD_LENGTH, ID_FIELD_NAME_LENGTH>(
+        body,
+        id_field_seq,
+        id_field_name,
+    );
+
+    // Step 2: Validate id_seq is within id_field_seq bounds
+    assert(
+        id_seq.index >= id_field_seq.index & id_seq.end_index() <= id_field_seq.end_index(),
+        "id_seq out of bounds",
+    );
+
+    // Step 3: Validate "0x" prefix
+    let first_char = body.get_unchecked(id_seq.index);
+    let second_char = body.get_unchecked(id_seq.index + 1);
+    assert(first_char == 48, "ID hash must start with '0'"); // '0' = ASCII 48
+    assert(second_char == 120, "ID hash must have 'x' after '0'"); // 'x' = ASCII 120
+
+    // Step 4: Parse 64 hex characters into 32 bytes
+    let mut hash_bytes: [u8; 32] = [0; 32];
+
+    // Start after "0x" prefix
+    let hex_start = id_seq.index + 2;
+
+    for i in 0..32 {
+        // Each byte is formed from 2 hex characters
+        let high_char = body.get_unchecked(hex_start + i * 2);
+        let low_char = body.get_unchecked(hex_start + i * 2 + 1);
+
+        // Parse hex chars to nibbles and combine
+        let high_nibble = parse_hex_char(high_char);
+        let low_nibble = parse_hex_char(low_char);
+
+        // Combine: high nibble is upper 4 bits
+        hash_bytes[i] = (high_nibble * 16) + low_nibble;
+    }
+
+    // Step 5: Split 32 bytes into two 16-byte chunks and convert to Fields
+    let mut upper_bytes: [u8; 16] = [0; 16];
+    let mut lower_bytes: [u8; 16] = [0; 16];
+
+    for i in 0..16 {
+        upper_bytes[i] = hash_bytes[i];
+        lower_bytes[i] = hash_bytes[i + 16];
+    }
+
+    [Field::from_be_bytes::<16>(upper_bytes), Field::from_be_bytes::<16>(lower_bytes)]
 }
