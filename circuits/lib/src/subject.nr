@@ -64,42 +64,16 @@ pub fn extract_subject<let MAX_EMAIL_HEADER_LENGTH: u32, let MAX_DECODED_SUBJECT
     /*                               Base64 decoding                              */
     /* -------------------------------------------------------------------------- */
 
-    // Decode each encoded-word separately and concatenate the decoded bytes
-    let mut decoded_concatenated: BoundedVec<u8, MAX_DECODED_SUBJECT_LENGTH> = BoundedVec::new();
-
-    for i in 0..MAX_ENCODED_WORDS {
-        let seq = encoded_word_seqs[i];
-
-        // If sequence has zero length, it's unused (we've reached the end)
-        if seq.length > 0 {
-            // Validate sequence is within subject_value bounds
-            assert(
-                seq.index >= subject_seq.index
-                    & seq.end_index() <= subject_seq.end_index()
-                    & seq.length <= MAX_ENCODED_WORD_LENGTH,
-                "Encoded word sequence out of bounds",
-            );
-
-            // Extract base64 bytes from this encoded-word (without padding)
-            let base64_part = extract_bytes::<MAX_EMAIL_HEADER_LENGTH, MAX_ENCODED_WORD_LENGTH>(
-                header,
-                seq.index,
-                seq.length,
-            );
-
-            // Decode this encoded-word using no-pad decoder
-            let decoded_part = BASE64_NO_PAD_DECODER::decode_var::<MAX_ENCODED_WORD_LENGTH, MAX_DECODED_LENGTH>(
-                base64_part,
-            );
-
-            // Append decoded bytes to concatenated result
-            for j in 0..MAX_DECODED_LENGTH {
-                if j < decoded_part.len() {
-                    decoded_concatenated.push(decoded_part.get_unchecked(j));
-                }
-            }
-        }
-    }
+    // Safety: Decodes base64 encoded-words from email subject.
+    // The decoded result is immediately constrained by asserting it matches
+    // the provided decoded_subject input, ensuring correctness.
+    let decoded_concatenated = unsafe {
+        decode_encoded_words::<MAX_EMAIL_HEADER_LENGTH, MAX_DECODED_SUBJECT_LENGTH, MAX_ENCODED_WORDS>(
+            header,
+            subject_seq,
+            encoded_word_seqs,
+        )
+    };
 
     // Constrain the concatenated decoded bytes to match the given decoded_subject
     assert(
@@ -177,6 +151,50 @@ pub fn extract_subject<let MAX_EMAIL_HEADER_LENGTH: u32, let MAX_DECODED_SUBJECT
     );
 
     (operation_type, title)
+}
+
+unconstrained fn decode_encoded_words<let MAX_EMAIL_HEADER_LENGTH: u32, let MAX_DECODED_SUBJECT_LENGTH: u32, let MAX_ENCODED_WORDS: u32>(
+    header: BoundedVec<u8, MAX_EMAIL_HEADER_LENGTH>,
+    subject_seq: Sequence,
+    encoded_word_seqs: [Sequence; MAX_ENCODED_WORDS],
+) -> BoundedVec<u8, MAX_DECODED_SUBJECT_LENGTH> {
+    let mut decoded_concatenated: BoundedVec<u8, MAX_DECODED_SUBJECT_LENGTH> = BoundedVec::new();
+
+    for i in 0..MAX_ENCODED_WORDS {
+        let seq = encoded_word_seqs[i];
+
+        // If sequence has zero length, it's unused (we've reached the end)
+        if seq.length > 0 {
+            // Validate sequence is within subject_value bounds
+            assert(
+                seq.index >= subject_seq.index
+                    & seq.end_index() <= subject_seq.end_index()
+                    & seq.length <= MAX_ENCODED_WORD_LENGTH,
+                "Encoded word sequence out of bounds",
+            );
+
+            // Extract base64 bytes from this encoded-word (without padding)
+            let base64_part = extract_bytes::<MAX_EMAIL_HEADER_LENGTH, MAX_ENCODED_WORD_LENGTH>(
+                header,
+                seq.index,
+                seq.length,
+            );
+
+            // Decode this encoded-word using no-pad decoder
+            let decoded_part = BASE64_NO_PAD_DECODER::decode_var::<MAX_ENCODED_WORD_LENGTH, MAX_DECODED_LENGTH>(
+                base64_part,
+            );
+
+            // Append decoded bytes to concatenated result
+            for j in 0..MAX_DECODED_LENGTH {
+                if j < decoded_part.len() {
+                    decoded_concatenated.push(decoded_part.get_unchecked(j));
+                }
+            }
+        }
+    }
+
+    decoded_concatenated
 }
 
 fn extract_bytes<let MAX_CONTENT_LENGTH: u32, let MAX_EXTRACTION_LENGTH: u32>(
