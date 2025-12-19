@@ -1,4 +1,7 @@
-use lib::{body::{get_id_hash, get_number, get_recipient_address}, subject::extract_subject};
+use lib::{
+    body::{get_id_hash, get_number, get_recipient_address},
+    subject_prefix::get_operation_type,
+};
 use sha256::sha256_var;
 use std::{collections::bounded_vec::BoundedVec, hash::pedersen_hash};
 use zkemail::{
@@ -11,11 +14,6 @@ use zkemail::{
 
 global MAX_EMAIL_HEADER_LENGTH: u32 = 640;
 global MAX_EMAIL_BODY_LENGTH: u32 = 1280;
-global MAX_DECODED_SUBJECT_LENGTH: u32 = 192;
-global MAX_TITLE_LENGTH: u32 = 256;
-
-// Maximum number of encoded-words in a subject (RFC 2047)
-global MAX_ENCODED_WORDS: u32 = 2;
 
 fn main(
     // dkim verification
@@ -31,10 +29,7 @@ fn main(
     from_address_seq: Sequence,
     // subject extraction
     subject_field_seq: Sequence,
-    subject_seq: Sequence,
-    encoded_word_seqs: [Sequence; MAX_ENCODED_WORDS],
-    decoded_subject: BoundedVec<u8, MAX_DECODED_SUBJECT_LENGTH>,
-    title_seq: Sequence,
+    subject_prefix_seq: Sequence,
     // body extraction
     number_field_seq: Sequence,
     number_seq: Sequence,
@@ -44,7 +39,7 @@ fn main(
     id_seq: Sequence,
     // external input
     user_op_hash: [Field; 2],
-    ) -> pub (Field, Field, BoundedVec<u8, MAX_EMAIL_ADDRESS_LENGTH>, Field, BoundedVec<u8, MAX_TITLE_LENGTH>, u16, Field, [Field; 2], [Field; 2]) {
+    ) -> pub (Field, Field, BoundedVec<u8, MAX_EMAIL_ADDRESS_LENGTH>, Field, u16, Field, [Field; 2], [Field; 2]) {
     // check the header and body lengths are within bounds
     assert(header.len() <= MAX_EMAIL_HEADER_LENGTH, "Header exceeds maximum length");
     assert(body.len() <= MAX_EMAIL_BODY_LENGTH, "Body exceeds maximum length");
@@ -78,13 +73,10 @@ fn main(
     /* -------------------------------------------------------------------------- */
     /*                           Subject Extraction                               */
     /* -------------------------------------------------------------------------- */
-    let (operation_type, title) = extract_subject::<MAX_EMAIL_HEADER_LENGTH, MAX_DECODED_SUBJECT_LENGTH, MAX_TITLE_LENGTH, MAX_ENCODED_WORDS>(
+    let operation_type = get_operation_type::<MAX_EMAIL_HEADER_LENGTH>(
         header,
         subject_field_seq,
-        subject_seq,
-        encoded_word_seqs,
-        decoded_subject,
-        title_seq,
+        subject_prefix_seq,
     );
 
     /* -------------------------------------------------------------------------- */
@@ -95,8 +87,5 @@ fn main(
         get_recipient_address::<MAX_EMAIL_BODY_LENGTH>(body, recipient_field_seq, recipient_seq);
     let id = get_id_hash::<MAX_EMAIL_BODY_LENGTH>(body, id_field_seq, id_seq);
 
-    (
-        pubkey_hash, nullifier, from_address, operation_type, title, number, recipient, id,
-        user_op_hash,
-    )
+    (pubkey_hash, nullifier, from_address, operation_type, number, recipient, id, user_op_hash)
 }
