@@ -108,7 +108,7 @@ async function main(emlPath: string) {
 
 	const decodedSubjectVec = stringToBoundedVec(decodedSubjectStr, MAX_DECODED_SUBJECT_LENGTH)
 
-	// Pad encoded_word_sequences to MAX_ENCODED_WORDS
+	// Pad encoded_word_seqs to MAX_ENCODED_WORDS
 	const paddedEncodedWordSequences = [...encodedWordSequences]
 	while (paddedEncodedWordSequences.length < MAX_ENCODED_WORDS) {
 		paddedEncodedWordSequences.push({ index: '0', length: '0' })
@@ -126,16 +126,16 @@ async function main(emlPath: string) {
 		header: emailInputs.header,
 		pubkey: emailInputs.pubkey,
 		signature: emailInputs.signature,
-		dkim_header_sequence: emailInputs.dkim_header_sequence,
+		dkim_header_seq: emailInputs.dkim_header_sequence,
 		body: emailInputs.body!,
 		body_hash_index: emailInputs.body_hash_index!,
-		from_header_sequence: emailInputs.from_header_sequence!,
-		from_address_sequence: emailInputs.from_address_sequence!,
-		subject_header_sequence: subjectHeaderSeq,
-		subject_value_sequence: subjectValueSeq,
-		encoded_word_sequences: paddedEncodedWordSequences,
+		from_header_seq: emailInputs.from_header_sequence!,
+		from_address_seq: emailInputs.from_address_sequence!,
+		subject_field_seq: subjectHeaderSeq,
+		subject_seq: subjectValueSeq,
+		encoded_word_seqs: paddedEncodedWordSequences,
 		decoded_subject: decodedSubjectVec,
-		title_sequence: titleSeq,
+		title_seq: titleSeq,
 	}
 
 	// Write circuit inputs to Prover.toml

@@ -6,20 +6,19 @@ use zkemail::{headers::constrain_header_field, Sequence};
 //
 // Example 1 (single encoded-word):
 //   subject:=?UTF-8?B?56K66KqN5bey5pS25Yiw5oqV56i/OiBUZXN0IGJ5IEFsaWNl?=
-//   encoded_word_sequences[0]: points to "56K66KqN5bey5pS25Yiw5oqV56i/OiBUZXN0IGJ5IEFsaWNl"
+//   encoded_word_seqs[0]: points to "56K66KqN5bey5pS25Yiw5oqV56i/OiBUZXN0IGJ5IEFsaWNl"
 //
 // Example 2 (multiple encoded-words per RFC 2047):
 //   subject:=?UTF-8?B?56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOiBUZXN0IGJ5IEFsaQ==?= =?UTF-8?B?Y2U=?=
-//   encoded_word_sequences[0]: points to "56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOiBUZXN0IGJ5IEFsaQ"
-//   encoded_word_sequences[1]: points to "Y2U"
+//   encoded_word_seqs[0]: points to "56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOiBUZXN0IGJ5IEFsaQ"
+//   encoded_word_seqs[1]: points to "Y2U"
 //
-// The circuit validates that concatenating base64 from encoded_word_sequences matches subject_base64_value
+// The circuit validates that concatenating base64 from encoded_word_seqs matches subject_base64_value
 
 // Constants
 global MAX_SUBJECT_FIELD_LENGTH: u32 = 256;
-global MAX_INDIVIDUAL_ENCODED_WORD_LENGTH: u32 = 128; // Each individual encoded word max length
-global MAX_INDIVIDUAL_DECODED_LENGTH: u32 = 96; // Each individual decoded word max length (base64 decode: 128 * 3/4 = 96)
-global SUBJECT_FIELD_PREFIX_LENGTH: u32 = 8; // "subject:"
+global MAX_ENCODED_WORD_LENGTH: u32 = 128; // Each individual encoded word max length
+global MAX_DECODED_LENGTH: u32 = 96; // Each individual decoded word max length (base64 decode: 128 * 3/4 = 96)
 
 // MIME encoding prefix: "=?UTF-8?B?"
 global MIME_ENCODING_PREFIX_LENGTH: u32 = 10;
@@ -29,26 +28,25 @@ global RECIPIENT_UPDATE_PREFIX_LENGTH: u32 = 41;
 
 pub fn extract_subject<let MAX_EMAIL_HEADER_LENGTH: u32, let MAX_DECODED_SUBJECT_LENGTH: u32, let MAX_TITLE_LENGTH: u32, let MAX_ENCODED_WORDS: u32>(
     header: BoundedVec<u8, MAX_EMAIL_HEADER_LENGTH>,
-    subject_header_sequence: Sequence,
-    subject_value_sequence: Sequence,
-    encoded_word_sequences: [Sequence; MAX_ENCODED_WORDS],
+    subject_field_seq: Sequence,
+    subject_seq: Sequence,
+    encoded_word_seqs: [Sequence; MAX_ENCODED_WORDS],
     decoded_subject: BoundedVec<u8, MAX_DECODED_SUBJECT_LENGTH>,
-    title_sequence: Sequence,
+    title_seq: Sequence,
 ) -> (Field, BoundedVec<u8, MAX_TITLE_LENGTH>) {
     // Validate Subject header field exists
     let subject_field_name = comptime { "subject".as_bytes() };
     constrain_header_field::<MAX_EMAIL_HEADER_LENGTH, MAX_SUBJECT_FIELD_LENGTH, 7>(
         header,
-        subject_header_sequence,
+        subject_field_seq,
         subject_field_name,
     );
 
     // Validate subject value is within subject header and has proper MIME encoding
     assert(
-        subject_value_sequence.index >= subject_header_sequence.index + SUBJECT_FIELD_PREFIX_LENGTH
-            & subject_value_sequence.end_index() <= subject_header_sequence.end_index()
-            & subject_value_sequence.length >= MIME_ENCODING_PREFIX_LENGTH,
-        "Subject value sequence invalid",
+        subject_seq.index >= subject_field_seq.index
+            & subject_seq.end_index() <= subject_field_seq.end_index(),
+        "subject_seq out of bounds",
     );
 
     // Validate MIME encoding prefix exists at the start of subject value
@@ -56,7 +54,7 @@ pub fn extract_subject<let MAX_EMAIL_HEADER_LENGTH: u32, let MAX_DECODED_SUBJECT
     let mime_prefix: [u8; MIME_ENCODING_PREFIX_LENGTH] = comptime { "=?UTF-8?B?".as_bytes() };
     let computed_mime_prefix = extract_bytes::<MAX_EMAIL_HEADER_LENGTH, MIME_ENCODING_PREFIX_LENGTH>(
         header,
-        subject_value_sequence.index,
+        subject_seq.index,
         MIME_ENCODING_PREFIX_LENGTH,
     );
 
@@ -70,32 +68,32 @@ pub fn extract_subject<let MAX_EMAIL_HEADER_LENGTH: u32, let MAX_DECODED_SUBJECT
     let mut decoded_concatenated: BoundedVec<u8, MAX_DECODED_SUBJECT_LENGTH> = BoundedVec::new();
 
     for i in 0..MAX_ENCODED_WORDS {
-        let seq = encoded_word_sequences[i];
+        let seq = encoded_word_seqs[i];
 
         // If sequence has zero length, it's unused (we've reached the end)
         if seq.length > 0 {
             // Validate sequence is within subject_value bounds
             assert(
-                seq.index >= subject_value_sequence.index
-                    & seq.end_index() <= subject_value_sequence.end_index()
-                    & seq.length <= MAX_INDIVIDUAL_ENCODED_WORD_LENGTH,
+                seq.index >= subject_seq.index
+                    & seq.end_index() <= subject_seq.end_index()
+                    & seq.length <= MAX_ENCODED_WORD_LENGTH,
                 "Encoded word sequence out of bounds",
             );
 
             // Extract base64 bytes from this encoded-word (without padding)
-            let base64_part = extract_bytes::<MAX_EMAIL_HEADER_LENGTH, MAX_INDIVIDUAL_ENCODED_WORD_LENGTH>(
+            let base64_part = extract_bytes::<MAX_EMAIL_HEADER_LENGTH, MAX_ENCODED_WORD_LENGTH>(
                 header,
                 seq.index,
                 seq.length,
             );
 
             // Decode this encoded-word using no-pad decoder
-            let decoded_part = BASE64_NO_PAD_DECODER::decode_var::<MAX_INDIVIDUAL_ENCODED_WORD_LENGTH, MAX_INDIVIDUAL_DECODED_LENGTH>(
+            let decoded_part = BASE64_NO_PAD_DECODER::decode_var::<MAX_ENCODED_WORD_LENGTH, MAX_DECODED_LENGTH>(
                 base64_part,
             );
 
             // Append decoded bytes to concatenated result
-            for j in 0..MAX_INDIVIDUAL_DECODED_LENGTH {
+            for j in 0..MAX_DECODED_LENGTH {
                 if j < decoded_part.len() {
                     decoded_concatenated.push(decoded_part.get_unchecked(j));
                 }
@@ -162,20 +160,20 @@ pub fn extract_subject<let MAX_EMAIL_HEADER_LENGTH: u32, let MAX_DECODED_SUBJECT
         REGISTRATION_PREFIX_LENGTH
     };
 
-    // Validate that title_sequence points to the title within decoded_subject
+    // Validate that title_seq points to the title within decoded_subject
     assert(
-        title_sequence.index >= prefix_length
-            & title_sequence.end_index() <= decoded_subject.len()
-            & title_sequence.length > 0
-            & title_sequence.length <= MAX_TITLE_LENGTH,
+        title_seq.index >= prefix_length
+            & title_seq.end_index() <= decoded_subject.len()
+            & title_seq.length > 0
+            & title_seq.length <= MAX_TITLE_LENGTH,
         "Title sequence invalid",
     );
 
     // Extract the title bytes from the decoded_subject
     let title: BoundedVec<u8, MAX_TITLE_LENGTH> = extract_bytes::<MAX_DECODED_SUBJECT_LENGTH, MAX_TITLE_LENGTH>(
         decoded_subject,
-        title_sequence.index,
-        title_sequence.length,
+        title_seq.index,
+        title_seq.length,
     );
 
     (operation_type, title)

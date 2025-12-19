@@ -23,7 +23,7 @@ export function parseBoundedVecToString(boundedVec: { len: string; storage: stri
  * Get the index and length of the subject header field and the encoded value
  * Supports multiple encoded-words per RFC 2047
  * @param header - the header buffer to search in
- * @returns - [subject_header_sequence, subject_value_sequence, encoded_word_sequences]
+ * @returns - [subject_field_seq, subject_seq, encoded_word_seqs]
  */
 export function getSubjectHeaderSequence(header: Buffer): [Sequence, Sequence, Sequence[]] {
 	const headerStr = header.toString()
@@ -237,19 +237,19 @@ export function writeProverToml(circuitTargetPath: string, inputs: any) {
 	tomlLines.push(formatBoundedVec(inputs.body))
 	tomlLines.push('')
 
-	// Write dkim_header_sequence section
-	tomlLines.push('[dkim_header_sequence]')
-	tomlLines.push(formatSequence(inputs.dkim_header_sequence))
+	// Write dkim_header_seq section
+	tomlLines.push('[dkim_header_seq]')
+	tomlLines.push(formatSequence(inputs.dkim_header_seq))
 	tomlLines.push('')
 
-	// Write from_address_sequence section
-	tomlLines.push('[from_address_sequence]')
-	tomlLines.push(formatSequence(inputs.from_address_sequence))
+	// Write from_address_seq section
+	tomlLines.push('[from_address_seq]')
+	tomlLines.push(formatSequence(inputs.from_address_seq))
 	tomlLines.push('')
 
-	// Write from_header_sequence section
-	tomlLines.push('[from_header_sequence]')
-	tomlLines.push(formatSequence(inputs.from_header_sequence))
+	// Write from_header_seq section
+	tomlLines.push('[from_header_seq]')
+	tomlLines.push(formatSequence(inputs.from_header_seq))
 	tomlLines.push('')
 
 	// Write header section
@@ -263,20 +263,20 @@ export function writeProverToml(circuitTargetPath: string, inputs: any) {
 	tomlLines.push(`redc = ${formatArray(inputs.pubkey.redc)}`)
 	tomlLines.push('')
 
-	// Write subject_header_sequence section
-	tomlLines.push('[subject_header_sequence]')
-	tomlLines.push(formatSequence(inputs.subject_header_sequence))
+	// Write subject_field_seq section
+	tomlLines.push('[subject_field_seq]')
+	tomlLines.push(formatSequence(inputs.subject_field_seq))
 	tomlLines.push('')
 
-	// Write subject_value_sequence section
-	tomlLines.push('[subject_value_sequence]')
-	tomlLines.push(formatSequence(inputs.subject_value_sequence))
+	// Write subject_seq section
+	tomlLines.push('[subject_seq]')
+	tomlLines.push(formatSequence(inputs.subject_seq))
 	tomlLines.push('')
 
-	// Write encoded_word_sequences as array of tables
-	for (let i = 0; i < inputs.encoded_word_sequences.length; i++) {
-		const seq = inputs.encoded_word_sequences[i]
-		tomlLines.push('[[encoded_word_sequences]]')
+	// Write encoded_word_seqs as array of tables
+	for (let i = 0; i < inputs.encoded_word_seqs.length; i++) {
+		const seq = inputs.encoded_word_seqs[i]
+		tomlLines.push('[[encoded_word_seqs]]')
 		tomlLines.push(`index = "${seq.index}"`)
 		tomlLines.push(`length = "${seq.length}"`)
 		tomlLines.push('')
@@ -287,9 +287,9 @@ export function writeProverToml(circuitTargetPath: string, inputs: any) {
 	tomlLines.push(formatBoundedVec(inputs.decoded_subject))
 	tomlLines.push('')
 
-	// Write title_sequence section
-	tomlLines.push('[title_sequence]')
-	tomlLines.push(formatSequence(inputs.title_sequence))
+	// Write title_seq section
+	tomlLines.push('[title_seq]')
+	tomlLines.push(formatSequence(inputs.title_seq))
 
 	const proverTomlPath = path.join(circuitTargetPath, '../Prover.toml')
 	fs.writeFileSync(proverTomlPath, tomlLines.join('\n') + '\n')
