@@ -11,16 +11,15 @@ import {
 	getSubjectPrefixSequence,
 	parseBoundedVecToString,
 	splitHashToFields,
-	writeProverTomlMainId,
-	type CircuitInputsMainId,
 } from './utils'
+import { writeProverTomlTitleHash, type CircuitInputsTitleHash } from './utilsTitleHash'
 
 const MAX_EMAIL_HEADER_LENGTH = 640
 const MAX_EMAIL_BODY_LENGTH = 1280
 const DUMMY_USER_OP_HASH = '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297'
 
-const CIRCUIT_TARGET_PATH = path.join(__dirname, '../main_id/target')
-const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, 'main_id.json')
+const CIRCUIT_TARGET_PATH = path.join(__dirname, '../title_hash/target')
+const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, 'title_hash.json')
 
 const emlPath = process.argv[2]
 
@@ -79,7 +78,9 @@ async function main(emlPath: string) {
 	)
 	console.log(
 		'subject_prefix_seq',
-		headerBuf.toString().substring(+subject_prefix_seq.index, +subject_prefix_seq.index + +subject_prefix_seq.length),
+		headerBuf
+			.toString()
+			.substring(+subject_prefix_seq.index, +subject_prefix_seq.index + +subject_prefix_seq.length),
 	)
 
 	/* -------------------------------------------------------------------------- */
@@ -112,7 +113,7 @@ async function main(emlPath: string) {
 	)
 	console.log('id_seq', bodyBuf.toString().substring(+id_seq.index, +id_seq.index + +id_seq.length))
 
-	const circuitInputs: CircuitInputsMainId = {
+	const circuitInputs: CircuitInputsTitleHash = {
 		header: emailInputs.header,
 		pubkey: emailInputs.pubkey,
 		signature: emailInputs.signature,
@@ -134,7 +135,7 @@ async function main(emlPath: string) {
 
 	// Write circuit inputs to Prover.toml
 	console.log(`\nWriting circuit inputs to Prover.toml...`)
-	writeProverTomlMainId(CIRCUIT_TARGET_PATH, circuitInputs)
+	writeProverTomlTitleHash(CIRCUIT_TARGET_PATH, circuitInputs)
 
 	console.log('\nInitializing Noir and UltraHonk backend...')
 	const noir = new Noir(circuit)

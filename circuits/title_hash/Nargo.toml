@@ -1,5 +1,5 @@
 [package]
-name = "main_id"
+name = "title_hash"
 type = "bin"
 authors = [""]
 
