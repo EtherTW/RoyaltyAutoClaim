@@ -4,18 +4,23 @@ import { generateEmailVerifierInputs } from '@zk-email/zkemail-nr'
 import fs from 'fs'
 import path from 'path'
 import {
+	combineFieldsToHash,
 	decodeSubject,
+	getNumberSequence,
+	getRecipientSequence,
 	getSubjectHeaderSequence,
 	getTitleSequence,
 	parseBoundedVecToString,
-	stringToBoundedVec,
+	splitHashToFields,
 	writeProverToml,
+	type CircuitInputs,
 } from './utils'
 
 const MAX_EMAIL_HEADER_LENGTH = 640
 const MAX_EMAIL_BODY_LENGTH = 1280
 const MAX_DECODED_SUBJECT_LENGTH = 192
 const MAX_ENCODED_WORDS = 2
+const DUMMY_USER_OP_HASH = '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297'
 
 const CIRCUIT_TARGET_PATH = path.join(__dirname, '../main/target')
 const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, 'main.json')
@@ -62,67 +67,73 @@ async function main(emlPath: string) {
 		extractFrom: true,
 	})
 
+	/* -------------------------------------------------------------------------- */
+	/*                              Subject Extration                             */
+	/* -------------------------------------------------------------------------- */
+
 	const headerBuf = Buffer.from(
 		emailInputs.header.storage.slice(0, Number(emailInputs.header.len)).map(b => Number(b)),
 	)
 
-	const [subjectHeaderSeq, subjectValueSeq, encodedWordSequences] = getSubjectHeaderSequence(headerBuf)
-
+	const { subject_field_seq, subject_seq, encoded_word_seqs } = getSubjectHeaderSequence(headerBuf, MAX_ENCODED_WORDS)
 	console.log(
-		'subjectHeaderSeq',
-		headerBuf
-			.slice(Number(subjectHeaderSeq.index), Number(subjectHeaderSeq.index) + Number(subjectHeaderSeq.length))
-			.toString(),
+		'subject_field_seq',
+		headerBuf.toString().substring(+subject_field_seq.index, +subject_field_seq.index + +subject_field_seq.length),
 	)
-
 	console.log(
-		'subjectValueSeq',
-		headerBuf
-			.slice(Number(subjectValueSeq.index), Number(subjectValueSeq.index) + Number(subjectValueSeq.length))
-			.toString(),
+		'subject_seq',
+		headerBuf.toString().substring(+subject_seq.index, +subject_seq.index + +subject_seq.length),
 	)
-
-	console.log(`Found ${encodedWordSequences.length} encoded-word(s) in subject`)
-	for (let i = 0; i < encodedWordSequences.length; i++) {
-		const seq = encodedWordSequences[i]!
-		const base64Part = headerBuf.slice(Number(seq.index), Number(seq.index) + Number(seq.length)).toString()
-		console.log(`  encoded-word[${i}]:`, base64Part)
+	console.log('encoded_word_seqs')
+	for (let i = 0; i < encoded_word_seqs.length; i++) {
+		const seq = encoded_word_seqs[i]!
+		if (seq.length !== '0') {
+			console.log(`  encoded-word[${i}]:`, headerBuf.toString().substring(+seq.index, +seq.index + +seq.length))
+		}
 	}
 
 	// Decode the subject
-	const decodedSubjectStr = decodeSubject(headerBuf, encodedWordSequences)
-	console.log('decodedSubjectStr', decodedSubjectStr)
+	const { decodedSubjectBuf, decoded_subject } = decodeSubject(
+		headerBuf,
+		encoded_word_seqs,
+		MAX_DECODED_SUBJECT_LENGTH,
+	)
+	console.log('Decoded subject:', decodedSubjectBuf.toString('utf-8'))
+	console.log('Decoded subject byte length', Number(decoded_subject.len))
+	console.log('Decoded subject max length', decoded_subject.storage.length)
 
-	const titleSeq = getTitleSequence(decodedSubjectStr)
+	const title_seq = getTitleSequence(decodedSubjectBuf)
+	console.log(
+		'title_seq',
+		decodedSubjectBuf.toString('utf-8', +title_seq.index, +title_seq.index + +title_seq.length),
+	)
+	console.log('Title byte length', Number(title_seq.length))
 
-	// Extract title string using byte indices
-	const decodedSubjectBuf = Buffer.from(decodedSubjectStr, 'utf-8')
-	const titleStr = decodedSubjectBuf
-		.slice(Number(titleSeq.index), Number(titleSeq.index) + Number(titleSeq.length))
-		.toString()
+	/* -------------------------------------------------------------------------- */
+	/*                               Body Extraction                              */
+	/* -------------------------------------------------------------------------- */
+
+	const bodyBuf = Buffer.from(emailInputs.body!.storage.slice(0, Number(emailInputs.body!.len)).map(b => Number(b)))
+	const { number_field_seq, number_seq } = getNumberSequence(bodyBuf)
+	const { recipient_field_seq, recipient_seq } = getRecipientSequence(bodyBuf)
 
 	console.log(
-		'titleSeq',
-		decodedSubjectBuf.slice(Number(titleSeq.index), Number(titleSeq.index) + Number(titleSeq.length)).toString(),
+		'number_field_seq',
+		bodyBuf.toString().substring(+number_field_seq.index, +number_field_seq.index + +number_field_seq.length),
+	)
+	console.log('number_seq', bodyBuf.toString().substring(+number_seq.index, +number_seq.index + +number_seq.length))
+	console.log(
+		'recipient_field_seq',
+		bodyBuf
+			.toString()
+			.substring(+recipient_field_seq.index, +recipient_field_seq.index + +recipient_field_seq.length),
+	)
+	console.log(
+		'recipient_seq',
+		bodyBuf.toString().substring(+recipient_seq.index, +recipient_seq.index + +recipient_seq.length),
 	)
 
-	const decodedSubjectVec = stringToBoundedVec(decodedSubjectStr, MAX_DECODED_SUBJECT_LENGTH)
-
-	// Pad encoded_word_seqs to MAX_ENCODED_WORDS
-	const paddedEncodedWordSequences = [...encodedWordSequences]
-	while (paddedEncodedWordSequences.length < MAX_ENCODED_WORDS) {
-		paddedEncodedWordSequences.push({ index: '0', length: '0' })
-	}
-
-	console.log('\nSubject extraction:')
-	console.log('Decoded subject:', decodedSubjectStr)
-	console.log('Decoded subject length (bytes):', Number(decodedSubjectVec.len))
-	console.log('Decoded subject max length (bytes):', decodedSubjectVec.storage.length)
-
-	console.log('Title:', titleStr)
-	console.log('Title length (bytes):', Number(titleSeq.length))
-
-	const circuitInputs = {
+	const circuitInputs: CircuitInputs = {
 		header: emailInputs.header,
 		pubkey: emailInputs.pubkey,
 		signature: emailInputs.signature,
@@ -131,11 +142,16 @@ async function main(emlPath: string) {
 		body_hash_index: emailInputs.body_hash_index!,
 		from_header_seq: emailInputs.from_header_sequence!,
 		from_address_seq: emailInputs.from_address_sequence!,
-		subject_field_seq: subjectHeaderSeq,
-		subject_seq: subjectValueSeq,
-		encoded_word_seqs: paddedEncodedWordSequences,
-		decoded_subject: decodedSubjectVec,
-		title_seq: titleSeq,
+		subject_field_seq,
+		subject_seq,
+		encoded_word_seqs,
+		decoded_subject,
+		title_seq,
+		number_field_seq,
+		number_seq,
+		recipient_field_seq,
+		recipient_seq,
+		user_op_hash: splitHashToFields(DUMMY_USER_OP_HASH),
 	}
 
 	// Write circuit inputs to Prover.toml
@@ -157,8 +173,11 @@ async function main(emlPath: string) {
 		console.log('pubkey hash', circuitOutputs[0])
 		console.log('nullifier', circuitOutputs[1])
 		console.log('email address', parseBoundedVecToString(circuitOutputs[2]))
-		console.log('operation type', circuitOutputs[3])
+		console.log('operation type', Number(circuitOutputs[3]))
 		console.log('title', parseBoundedVecToString(circuitOutputs[4]))
+		console.log('number', Number(circuitOutputs[5]))
+		console.log('recipient', circuitOutputs[6])
+		console.log('user_op_hash', combineFieldsToHash(circuitOutputs[7]))
 
 		console.log('\nGenerating UltraHonk proof...')
 		const startProve = Date.now()

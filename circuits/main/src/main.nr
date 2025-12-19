@@ -41,8 +41,8 @@ fn main(
     recipient_field_seq: Sequence,
     recipient_seq: Sequence,
     // external input
-    user_op_hash: u32,
-    ) -> pub (Field, Field, BoundedVec<u8, MAX_EMAIL_ADDRESS_LENGTH>, Field, BoundedVec<u8, MAX_TITLE_LENGTH>, u16, Field, u32) {
+    user_op_hash: [Field; 2],
+    ) -> pub (Field, Field, BoundedVec<u8, MAX_EMAIL_ADDRESS_LENGTH>, Field, BoundedVec<u8, MAX_TITLE_LENGTH>, u16, Field, [Field; 2]) {
     // check the header and body lengths are within bounds
     assert(header.len() <= MAX_EMAIL_HEADER_LENGTH, "Header exceeds maximum length");
     assert(body.len() <= MAX_EMAIL_BODY_LENGTH, "Body exceeds maximum length");
