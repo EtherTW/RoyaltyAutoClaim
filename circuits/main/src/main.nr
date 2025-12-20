@@ -33,7 +33,6 @@ fn main(
     subject_field_seq: Sequence,
     subject_seq: Sequence,
     encoded_word_seqs: [Sequence; MAX_ENCODED_WORDS],
-    decoded_subject: BoundedVec<u8, MAX_DECODED_SUBJECT_LENGTH>,
     title_seq: Sequence,
     // body extraction
     number_field_seq: Sequence,
@@ -90,7 +89,6 @@ Field, // recipient
         subject_field_seq,
         subject_seq,
         encoded_word_seqs,
-        decoded_subject,
         title_seq,
     );
 

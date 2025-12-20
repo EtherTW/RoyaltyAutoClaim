@@ -25,7 +25,6 @@ export type CircuitInputs = {
 	subject_field_seq: Sequence
 	subject_seq: Sequence
 	encoded_word_seqs: Sequence[]
-	decoded_subject: BoundedVec
 	title_seq: Sequence
 	number_field_seq: Sequence
 	number_seq: Sequence
@@ -583,11 +582,6 @@ export function writeProverToml(circuitTargetPath: string, inputs: CircuitInputs
 		tomlLines.push(`length = "${seq.length}"`)
 		tomlLines.push('')
 	}
-
-	// Write decoded_subject section
-	tomlLines.push('[decoded_subject]')
-	tomlLines.push(formatBoundedVec(inputs.decoded_subject))
-	tomlLines.push('')
 
 	// Write title_seq section
 	tomlLines.push('[title_seq]')

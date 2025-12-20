@@ -145,7 +145,6 @@ async function main(emlPath: string) {
 		subject_field_seq,
 		subject_seq,
 		encoded_word_seqs,
-		decoded_subject,
 		title_seq,
 		number_field_seq,
 		number_seq,
