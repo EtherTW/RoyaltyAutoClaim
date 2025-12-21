@@ -1,12 +1,22 @@
+import { UltraHonkBackend } from '@aztec/bb.js'
 import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
-import { UltraHonkBackend } from '@aztec/bb.js'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const CIRCUIT_TARGET_PATH = path.join(__dirname, '../main/target')
-const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, 'main.json')
-const VERIFIER_PATH = path.join(__dirname, '../../src/EmailVerifier.sol')
+const circuitName = process.argv[2]
+
+if (!circuitName) {
+	console.error('Usage: bun script/genVerifier.ts <circuitName>')
+	process.exit(1)
+}
+
+const CIRCUIT_TARGET_PATH = path.join(__dirname, `../${circuitName}/target`)
+const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, `${circuitName}.json`)
+const VERIFIER_PATH = path.join(__dirname, `../../src/verifiers/${snakeToPascal(circuitName)}Verifier.sol`)
+
+function snakeToPascal(str: string): string {
+	const camel = str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+	return camel.charAt(0).toUpperCase() + camel.slice(1)
+}
 
 async function generateVerifier() {
 	// Check circuit exists

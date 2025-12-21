@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {Script, console} from "forge-std/Script.sol";
 import {RoyaltyAutoClaim} from "../src/RoyaltyAutoClaim.sol";
 import {RoyaltyAutoClaimProxy} from "../src/RoyaltyAutoClaimProxy.sol";
-import {RegistrationVerifier} from "../src/RegistrationVerifier.sol";
+import {EmailVerifier} from "../src/EmailVerifier.sol";
 import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
 import {ISemaphore} from "@semaphore/interfaces/ISemaphore.sol";
 // import for compiling the contract used for frontend type generation
@@ -26,21 +26,23 @@ contract DeployRoyaltyAutoClaimScript is Script {
         address admin = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.admin");
         address token = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.token");
         address dkimRegistryAddr = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.dkimRegistry");
-        string memory emailSender = vm.parseJsonString(json, ".RoyaltyAutoClaim.emailSender");
+        string memory emailFromAddress = vm.parseJsonString(json, ".RoyaltyAutoClaim.emailFromAddress");
         address semaphoreAddr = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.semaphore");
 
         vm.startBroadcast(deployer);
 
+        // ZK Email
         IDKIMRegistry dkimRegistry = IDKIMRegistry(dkimRegistryAddr);
-        RegistrationVerifier registrationVerifier =
-            new RegistrationVerifier(dkimRegistry, keccak256(bytes(emailSender)));
+        EmailVerifier emailVerifier = new EmailVerifier(dkimRegistry, keccak256(abi.encodePacked(emailFromAddress)));
 
+        // Semaphore
         ISemaphore semaphore = ISemaphore(semaphoreAddr);
 
+        // RoyaltyAutoClaim
         RoyaltyAutoClaim royaltyAutoClaim = new RoyaltyAutoClaim();
         RoyaltyAutoClaimProxy proxy = new RoyaltyAutoClaimProxy(
             address(royaltyAutoClaim),
-            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, token, registrationVerifier, semaphore))
+            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, token, emailVerifier, semaphore))
         );
 
         console.log("RoyaltyAutoClaim implementation at:", address(royaltyAutoClaim));

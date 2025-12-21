@@ -125,7 +125,7 @@ fn parse_hex_char(c: u8) -> u8 {
     }
 }
 
-pub fn get_id_hash<let MAX_EMAIL_BODY_LENGTH: u32>(
+pub fn get_title_hash<let MAX_EMAIL_BODY_LENGTH: u32>(
     body: BoundedVec<u8, MAX_EMAIL_BODY_LENGTH>,
     id_field_seq: Sequence,
     id_seq: Sequence,

@@ -1,5 +1,5 @@
 use lib::{
-    body::{get_id_hash, get_number, get_recipient_address},
+    body::{get_number, get_recipient_address, get_title_hash},
     subject_prefix::get_operation_type,
 };
 use sha256::sha256_var;
@@ -39,7 +39,16 @@ fn main(
     id_seq: Sequence,
     // external input
     user_op_hash: [Field; 2],
-    ) -> pub (Field, Field, BoundedVec<u8, MAX_EMAIL_ADDRESS_LENGTH>, Field, u16, Field, [Field; 2], [Field; 2]) {
+) -> pub ( //
+Field, // pubkey_hash
+Field, // nullifier
+BoundedVec<u8, MAX_EMAIL_ADDRESS_LENGTH>, // from_address
+Field, // operation_type
+Field, // number
+Field, // recipient
+[Field; 2], // title_hash
+[Field; 2] // user_op_hash
+) {
     // check the header and body lengths are within bounds
     assert(header.len() <= MAX_EMAIL_HEADER_LENGTH, "Header exceeds maximum length");
     assert(body.len() <= MAX_EMAIL_BODY_LENGTH, "Body exceeds maximum length");
@@ -85,7 +94,10 @@ fn main(
     let number = get_number::<MAX_EMAIL_BODY_LENGTH>(body, number_field_seq, number_seq);
     let recipient =
         get_recipient_address::<MAX_EMAIL_BODY_LENGTH>(body, recipient_field_seq, recipient_seq);
-    let id = get_id_hash::<MAX_EMAIL_BODY_LENGTH>(body, id_field_seq, id_seq);
+    let title_hash = get_title_hash::<MAX_EMAIL_BODY_LENGTH>(body, id_field_seq, id_seq);
 
-    (pubkey_hash, nullifier, from_address, operation_type, number, recipient, id, user_op_hash)
+    (
+        pubkey_hash, nullifier, from_address, operation_type, number as Field, recipient,
+        title_hash, user_op_hash,
+    )
 }
