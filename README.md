@@ -33,7 +33,7 @@ forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url RPC_URL --broadcast -
 -   Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
 -   Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
 
-### Feat: Email Registration
+### ZK Email Integration
 
 -   zkemail blueprint: https://registry.zk.email/a8a89855-6453-43e2-ae0a-867c34e0e32b/versions
 -   `circuits/circuit.zip` is from the blueprint `Download Icon > circuit.zip`
@@ -51,6 +51,18 @@ cd frontend
 bun run scripts/register.ts registration 0xaCf34e475Ef850AF607ECA2563C07542F5D2F47a
 bun run scripts/update-recipient.ts recipient-update 0xaCf34e475Ef850AF607ECA2563C07542F5D2F47a
 ```
+
+**Notice**
+
+-   Remember to use the correct version when compiling and generating proofs.
+
+```
+Noir version: 1.0.0-beta.5+c651df6e2bf5db3966aa0c95abea2fc4c69d4513
+"@aztec/bb.js": "0.84.0",
+"@noir-lang/noir_js": "1.0.0-beta.5",
+```
+
+-   The frontend scripts currently only implement the title_hash circuit.
 
 ## Frontend
 

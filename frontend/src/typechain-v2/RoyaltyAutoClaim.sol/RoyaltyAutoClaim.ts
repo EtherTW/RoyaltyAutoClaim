@@ -57,25 +57,16 @@ export type PackedUserOperationStructOutput = [
   signature: string;
 };
 
-export declare namespace IRegistrationVerifier {
-  export type ZkEmailProofStruct = {
-    a: [BigNumberish, BigNumberish];
-    b: [[BigNumberish, BigNumberish], [BigNumberish, BigNumberish]];
-    c: [BigNumberish, BigNumberish];
-    signals: BigNumberish[];
+export declare namespace TitleHashVerifierLib {
+  export type EmailProofStruct = {
+    proof: BytesLike;
+    publicInputs: BytesLike[];
   };
 
-  export type ZkEmailProofStructOutput = [
-    a: [bigint, bigint],
-    b: [[bigint, bigint], [bigint, bigint]],
-    c: [bigint, bigint],
-    signals: bigint[]
-  ] & {
-    a: [bigint, bigint];
-    b: [[bigint, bigint], [bigint, bigint]];
-    c: [bigint, bigint];
-    signals: bigint[];
-  };
+  export type EmailProofStructOutput = [
+    proof: string,
+    publicInputs: string[]
+  ] & { proof: string; publicInputs: string[] };
 }
 
 export declare namespace ISemaphore {
@@ -142,6 +133,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "changeAdmin"
       | "changeRoyaltyToken"
       | "claimRoyalty"
+      | "emailVerifier"
       | "emergencyWithdraw"
       | "entryPoint"
       | "getRoyalty"
@@ -154,8 +146,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "owner"
       | "proxiableUUID"
       | "registerSubmission(string,address,bytes32)"
-      | "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
-      | "registrationVerifier"
+      | "registerSubmission(string,(bytes,bytes32[]))"
       | "renounceOwnership"
       | "reviewSubmission(string,uint16,uint256)"
       | "reviewSubmission(string,uint16,(uint256,uint256,uint256,uint256,uint256,uint256[8]))"
@@ -165,9 +156,9 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "submissions"
       | "token"
       | "transferOwnership"
-      | "updateRegistrationVerifier"
+      | "updateEmailVerifier"
       | "updateRoyaltyRecipient(string,address,bytes32)"
-      | "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
+      | "updateRoyaltyRecipient(string,(bytes,bytes32[]))"
       | "upgradeToAndCall"
       | "validateUserOp"
   ): FunctionFragment;
@@ -175,10 +166,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   getEvent(
     nameOrSignatureOrTopic:
       | "AdminChanged"
+      | "EmailVerifierUpdated"
       | "EmergencyWithdraw"
       | "Initialized"
       | "OwnershipTransferred"
-      | "RegistrationVerifierUpdated"
       | "RoyaltyClaimed"
       | "RoyaltyTokenChanged"
       | "SubmissionRegistered"
@@ -238,6 +229,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values: [string]
   ): string;
   encodeFunctionData(
+    functionFragment: "emailVerifier",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "emergencyWithdraw",
     values: [AddressLike, BigNumberish]
   ): string;
@@ -280,17 +275,8 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values: [string, AddressLike, BytesLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))",
-    values: [
-      string,
-      AddressLike,
-      BytesLike,
-      IRegistrationVerifier.ZkEmailProofStruct
-    ]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "registrationVerifier",
-    values?: undefined
+    functionFragment: "registerSubmission(string,(bytes,bytes32[]))",
+    values: [string, TitleHashVerifierLib.EmailProofStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -320,7 +306,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateRegistrationVerifier",
+    functionFragment: "updateEmailVerifier",
     values: [AddressLike]
   ): string;
   encodeFunctionData(
@@ -328,13 +314,8 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values: [string, AddressLike, BytesLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))",
-    values: [
-      string,
-      AddressLike,
-      BytesLike,
-      IRegistrationVerifier.ZkEmailProofStruct
-    ]
+    functionFragment: "updateRoyaltyRecipient(string,(bytes,bytes32[]))",
+    values: [string, TitleHashVerifierLib.EmailProofStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "upgradeToAndCall",
@@ -395,6 +376,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "emailVerifier",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "emergencyWithdraw",
     data: BytesLike
   ): Result;
@@ -428,11 +413,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "registrationVerifier",
+    functionFragment: "registerSubmission(string,(bytes,bytes32[]))",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -466,7 +447,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateRegistrationVerifier",
+    functionFragment: "updateEmailVerifier",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -474,7 +455,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))",
+    functionFragment: "updateRoyaltyRecipient(string,(bytes,bytes32[]))",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -493,6 +474,18 @@ export namespace AdminChangedEvent {
   export interface OutputObject {
     oldAdmin: string;
     newAdmin: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace EmailVerifierUpdatedEvent {
+  export type InputTuple = [emailVerifier: AddressLike];
+  export type OutputTuple = [emailVerifier: string];
+  export interface OutputObject {
+    emailVerifier: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -531,18 +524,6 @@ export namespace OwnershipTransferredEvent {
   export interface OutputObject {
     previousOwner: string;
     newOwner: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace RegistrationVerifierUpdatedEvent {
-  export type InputTuple = [registrationVerifier: AddressLike];
-  export type OutputTuple = [registrationVerifier: string];
-  export interface OutputObject {
-    registrationVerifier: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -759,6 +740,8 @@ export interface RoyaltyAutoClaim extends BaseContract {
 
   claimRoyalty: TypedContractMethod<[title: string], [void], "nonpayable">;
 
+  emailVerifier: TypedContractMethod<[], [string], "view">;
+
   emergencyWithdraw: TypedContractMethod<
     [_token: AddressLike, _amount: BigNumberish],
     [void],
@@ -812,23 +795,16 @@ export interface RoyaltyAutoClaim extends BaseContract {
   proxiableUUID: TypedContractMethod<[], [string], "view">;
 
   "registerSubmission(string,address,bytes32)": TypedContractMethod<
-    [title: string, royaltyRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
 
-  "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))": TypedContractMethod<
-    [
-      title: string,
-      royaltyRecipient: AddressLike,
-      emailHeaderHash: BytesLike,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
-    ],
+  "registerSubmission(string,(bytes,bytes32[]))": TypedContractMethod<
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
     [void],
     "nonpayable"
   >;
-
-  registrationVerifier: TypedContractMethod<[], [string], "view">;
 
   renounceOwnership: TypedContractMethod<[], [void], "view">;
 
@@ -868,25 +844,20 @@ export interface RoyaltyAutoClaim extends BaseContract {
     "nonpayable"
   >;
 
-  updateRegistrationVerifier: TypedContractMethod<
+  updateEmailVerifier: TypedContractMethod<
     [_verifier: AddressLike],
     [void],
     "nonpayable"
   >;
 
   "updateRoyaltyRecipient(string,address,bytes32)": TypedContractMethod<
-    [title: string, newRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
 
-  "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))": TypedContractMethod<
-    [
-      title: string,
-      newRecipient: AddressLike,
-      emailHeaderHash: BytesLike,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
-    ],
+  "updateRoyaltyRecipient(string,(bytes,bytes32[]))": TypedContractMethod<
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
     [void],
     "nonpayable"
   >;
@@ -959,6 +930,9 @@ export interface RoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "claimRoyalty"
   ): TypedContractMethod<[title: string], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "emailVerifier"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
     nameOrSignature: "emergencyWithdraw"
   ): TypedContractMethod<
     [_token: AddressLike, _amount: BigNumberish],
@@ -1016,25 +990,17 @@ export interface RoyaltyAutoClaim extends BaseContract {
   getFunction(
     nameOrSignature: "registerSubmission(string,address,bytes32)"
   ): TypedContractMethod<
-    [title: string, royaltyRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "registerSubmission(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
+    nameOrSignature: "registerSubmission(string,(bytes,bytes32[]))"
   ): TypedContractMethod<
-    [
-      title: string,
-      royaltyRecipient: AddressLike,
-      emailHeaderHash: BytesLike,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
-    ],
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
     [void],
     "nonpayable"
   >;
-  getFunction(
-    nameOrSignature: "registrationVerifier"
-  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "view">;
@@ -1079,24 +1045,19 @@ export interface RoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "updateRegistrationVerifier"
+    nameOrSignature: "updateEmailVerifier"
   ): TypedContractMethod<[_verifier: AddressLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "updateRoyaltyRecipient(string,address,bytes32)"
   ): TypedContractMethod<
-    [title: string, newRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "updateRoyaltyRecipient(string,address,bytes32,(uint256[2],uint256[2][2],uint256[2],uint256[15]))"
+    nameOrSignature: "updateRoyaltyRecipient(string,(bytes,bytes32[]))"
   ): TypedContractMethod<
-    [
-      title: string,
-      newRecipient: AddressLike,
-      emailHeaderHash: BytesLike,
-      proof: IRegistrationVerifier.ZkEmailProofStruct
-    ],
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
     [void],
     "nonpayable"
   >;
@@ -1127,6 +1088,13 @@ export interface RoyaltyAutoClaim extends BaseContract {
     AdminChangedEvent.OutputObject
   >;
   getEvent(
+    key: "EmailVerifierUpdated"
+  ): TypedContractEvent<
+    EmailVerifierUpdatedEvent.InputTuple,
+    EmailVerifierUpdatedEvent.OutputTuple,
+    EmailVerifierUpdatedEvent.OutputObject
+  >;
+  getEvent(
     key: "EmergencyWithdraw"
   ): TypedContractEvent<
     EmergencyWithdrawEvent.InputTuple,
@@ -1146,13 +1114,6 @@ export interface RoyaltyAutoClaim extends BaseContract {
     OwnershipTransferredEvent.InputTuple,
     OwnershipTransferredEvent.OutputTuple,
     OwnershipTransferredEvent.OutputObject
-  >;
-  getEvent(
-    key: "RegistrationVerifierUpdated"
-  ): TypedContractEvent<
-    RegistrationVerifierUpdatedEvent.InputTuple,
-    RegistrationVerifierUpdatedEvent.OutputTuple,
-    RegistrationVerifierUpdatedEvent.OutputObject
   >;
   getEvent(
     key: "RoyaltyClaimed"
@@ -1216,6 +1177,17 @@ export interface RoyaltyAutoClaim extends BaseContract {
       AdminChangedEvent.OutputObject
     >;
 
+    "EmailVerifierUpdated(address)": TypedContractEvent<
+      EmailVerifierUpdatedEvent.InputTuple,
+      EmailVerifierUpdatedEvent.OutputTuple,
+      EmailVerifierUpdatedEvent.OutputObject
+    >;
+    EmailVerifierUpdated: TypedContractEvent<
+      EmailVerifierUpdatedEvent.InputTuple,
+      EmailVerifierUpdatedEvent.OutputTuple,
+      EmailVerifierUpdatedEvent.OutputObject
+    >;
+
     "EmergencyWithdraw(address,uint256)": TypedContractEvent<
       EmergencyWithdrawEvent.InputTuple,
       EmergencyWithdrawEvent.OutputTuple,
@@ -1247,17 +1219,6 @@ export interface RoyaltyAutoClaim extends BaseContract {
       OwnershipTransferredEvent.InputTuple,
       OwnershipTransferredEvent.OutputTuple,
       OwnershipTransferredEvent.OutputObject
-    >;
-
-    "RegistrationVerifierUpdated(address)": TypedContractEvent<
-      RegistrationVerifierUpdatedEvent.InputTuple,
-      RegistrationVerifierUpdatedEvent.OutputTuple,
-      RegistrationVerifierUpdatedEvent.OutputObject
-    >;
-    RegistrationVerifierUpdated: TypedContractEvent<
-      RegistrationVerifierUpdatedEvent.InputTuple,
-      RegistrationVerifierUpdatedEvent.OutputTuple,
-      RegistrationVerifierUpdatedEvent.OutputObject
     >;
 
     "RoyaltyClaimed(address,uint256,string)": TypedContractEvent<

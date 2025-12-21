@@ -8,7 +8,7 @@
 		"build": "bun run check && vite build",
 		"preview": "vite preview",
 		"test": "vitest --run",
-		"gen-types": "rm -rf src/typechain-v2 && typechain --target ethers-v6 --out-dir 'src/typechain-v2' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json' '../out/**/RegistrationVerifier.sol/*.json' '../out/**/StringUtils.sol/*.json' '../out/**/ISemaphore.sol/*.json' '../out/**/ISemaphoreGroups.sol/*.json'",
+		"gen-types": "rm -rf src/typechain-v2 && typechain --target ethers-v6 --out-dir 'src/typechain-v2' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json' '../out/**/EmailVerifier.sol/*.json' '../out/**/ISemaphore.sol/*.json' '../out/**/ISemaphoreGroups.sol/*.json'",
 		"deploy": "bun run scripts/deploy.ts",
 		"typecheck": "vue-tsc --noEmit",
 		"lint": "eslint .",
@@ -16,6 +16,8 @@
 		"check": "bun run typecheck && bun run lint"
 	},
 	"dependencies": {
+		"@aztec/bb.js": "0.84.0",
+		"@noir-lang/noir_js": "1.0.0-beta.5",
 		"@semaphore-protocol/data": "^4.14.0",
 		"@semaphore-protocol/group": "^4.14.0",
 		"@semaphore-protocol/identity": "^4.14.0",
@@ -26,6 +28,7 @@
 		"@zk-email/helpers": "^6.4.2",
 		"@zk-email/relayer-utils": "^0.4.65",
 		"@zk-email/sdk": "0.0.139",
+		"@zk-email/zkemail-nr": "^1.3.2",
 		"circomlibjs": "^0.1.7",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",

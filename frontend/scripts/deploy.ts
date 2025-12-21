@@ -1,10 +1,9 @@
 import { RPC_URL } from '../src/config'
 import {
 	MockToken__factory,
-	RegistrationVerifier__factory,
+	EmailVerifier__factory,
 	RoyaltyAutoClaim__factory,
 	RoyaltyAutoClaimProxy__factory,
-	StringUtils__factory,
 } from '../src/typechain-v2'
 import { ethers, JsonRpcProvider, Wallet } from 'ethers'
 import { DKIM_REGISTRY_ADDRESS } from '../src/lib/zkemail-utils'
@@ -28,25 +27,14 @@ await token.waitForDeployment()
 const tokenAddress = await token.getAddress()
 console.log('token deployed to', tokenAddress)
 
-// Deploy StringUtils
-console.log('Deploying StringUtils...')
-const stringUtils = await new StringUtils__factory(dev).deploy()
-await stringUtils.waitForDeployment()
-const stringUtilsAddress = await stringUtils.getAddress()
-
-// Deploy RegistrationVerifier
-console.log('Deploying RegistrationVerifier...')
-const RegistrationVerifier = new RegistrationVerifier__factory(
-	{
-		'lib/zk-email-verify/packages/contracts/utils/StringUtils.sol:StringUtils': stringUtilsAddress,
-	},
-	dev,
-)
-const emailSender = ethers.keccak256(ethers.toUtf8Bytes('johnson86tw'))
-const registrationVerifier = await RegistrationVerifier.deploy(DKIM_REGISTRY_ADDRESS, emailSender)
-await registrationVerifier.waitForDeployment()
-const registrationVerifierAddress = await registrationVerifier.getAddress()
-console.log('RegistrationVerifier deployed to', registrationVerifierAddress)
+// Deploy EmailVerifier
+console.log('Deploying EmailVerifier...')
+const EmailVerifier = new EmailVerifier__factory(dev)
+const emailFromAddress = ethers.keccak256(ethers.toUtf8Bytes('johnson86tw@gmail.com'))
+const emailVerifier = await EmailVerifier.deploy(DKIM_REGISTRY_ADDRESS, emailFromAddress)
+await emailVerifier.waitForDeployment()
+const registrationVerifierAddress = await emailVerifier.getAddress()
+console.log('EmailVerifier deployed to', registrationVerifierAddress)
 
 // Deploy RoyaltyAutoClaim Implementation
 console.log('Deploying RoyaltyAutoClaim...')

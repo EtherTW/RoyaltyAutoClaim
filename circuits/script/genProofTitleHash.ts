@@ -5,17 +5,20 @@ import fs from 'fs'
 import path from 'path'
 import {
 	combineFieldsToHash,
-	getIdSequence,
 	getNumberSequence,
 	getRecipientSequence,
-	getSubjectPrefixSequence,
+	MAX_EMAIL_BODY_LENGTH,
+	MAX_EMAIL_HEADER_LENGTH,
 	parseBoundedVecToString,
 	splitHashToFields,
 } from './utils'
-import { writeProverTomlTitleHash, type CircuitInputsTitleHash } from './utilsTitleHash'
+import {
+	getIdSequence,
+	getSubjectPrefixSequence,
+	writeProverTomlTitleHash,
+	type CircuitInputsTitleHash,
+} from './utilsTitleHash'
 
-const MAX_EMAIL_HEADER_LENGTH = 640
-const MAX_EMAIL_BODY_LENGTH = 1280
 const DUMMY_USER_OP_HASH = '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297'
 
 const CIRCUIT_TARGET_PATH = path.join(__dirname, '../title_hash/target')

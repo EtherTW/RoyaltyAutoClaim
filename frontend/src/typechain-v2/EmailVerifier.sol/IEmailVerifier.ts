@@ -17,33 +17,49 @@ import type {
   TypedEventLog,
   TypedListener,
   TypedContractMethod,
-} from "./common";
+} from "../common";
 
-export interface StringUtilsInterface extends Interface {
-  getFunction(
-    nameOrSignature: "lower" | "removeTrailingZeros" | "upper"
-  ): FunctionFragment;
+export declare namespace TitleHashVerifierLib {
+  export type EmailProofStruct = {
+    proof: BytesLike;
+    publicInputs: BytesLike[];
+  };
 
-  encodeFunctionData(functionFragment: "lower", values: [string]): string;
-  encodeFunctionData(
-    functionFragment: "removeTrailingZeros",
-    values: [string]
-  ): string;
-  encodeFunctionData(functionFragment: "upper", values: [string]): string;
-
-  decodeFunctionResult(functionFragment: "lower", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "removeTrailingZeros",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "upper", data: BytesLike): Result;
+  export type EmailProofStructOutput = [
+    proof: string,
+    publicInputs: string[]
+  ] & { proof: string; publicInputs: string[] };
 }
 
-export interface StringUtils extends BaseContract {
-  connect(runner?: ContractRunner | null): StringUtils;
+export interface IEmailVerifierInterface extends Interface {
+  getFunction(
+    nameOrSignature: "verifyEmail" | "verifyUserOpHash"
+  ): FunctionFragment;
+
+  encodeFunctionData(
+    functionFragment: "verifyEmail",
+    values: [string, TitleHashVerifierLib.EmailProofStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "verifyUserOpHash",
+    values: [TitleHashVerifierLib.EmailProofStruct, BytesLike]
+  ): string;
+
+  decodeFunctionResult(
+    functionFragment: "verifyEmail",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "verifyUserOpHash",
+    data: BytesLike
+  ): Result;
+}
+
+export interface IEmailVerifier extends BaseContract {
+  connect(runner?: ContractRunner | null): IEmailVerifier;
   waitForDeployment(): Promise<this>;
 
-  interface: StringUtilsInterface;
+  interface: IEmailVerifierInterface;
 
   queryFilter<TCEvent extends TypedContractEvent>(
     event: TCEvent,
@@ -82,25 +98,36 @@ export interface StringUtils extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  lower: TypedContractMethod<[_base: string], [string], "view">;
+  verifyEmail: TypedContractMethod<
+    [_title: string, _proof: TitleHashVerifierLib.EmailProofStruct],
+    [boolean],
+    "view"
+  >;
 
-  removeTrailingZeros: TypedContractMethod<[input: string], [string], "view">;
-
-  upper: TypedContractMethod<[_base: string], [string], "view">;
+  verifyUserOpHash: TypedContractMethod<
+    [_proof: TitleHashVerifierLib.EmailProofStruct, _userOpHash: BytesLike],
+    [boolean],
+    "view"
+  >;
 
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
   getFunction(
-    nameOrSignature: "lower"
-  ): TypedContractMethod<[_base: string], [string], "view">;
+    nameOrSignature: "verifyEmail"
+  ): TypedContractMethod<
+    [_title: string, _proof: TitleHashVerifierLib.EmailProofStruct],
+    [boolean],
+    "view"
+  >;
   getFunction(
-    nameOrSignature: "removeTrailingZeros"
-  ): TypedContractMethod<[input: string], [string], "view">;
-  getFunction(
-    nameOrSignature: "upper"
-  ): TypedContractMethod<[_base: string], [string], "view">;
+    nameOrSignature: "verifyUserOpHash"
+  ): TypedContractMethod<
+    [_proof: TitleHashVerifierLib.EmailProofStruct, _userOpHash: BytesLike],
+    [boolean],
+    "view"
+  >;
 
   filters: {};
 }

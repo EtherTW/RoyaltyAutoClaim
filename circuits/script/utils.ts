@@ -1,3 +1,6 @@
+export const MAX_EMAIL_HEADER_LENGTH = 640
+export const MAX_EMAIL_BODY_LENGTH = 1280
+
 export type Sequence = {
 	index: string
 	length: string
@@ -323,120 +326,6 @@ export function getRecipientSequence(body: Buffer): {
 	return {
 		recipient_field_seq,
 		recipient_seq,
-	}
-}
-
-export function getSubjectPrefixSequence(header: Buffer): {
-	subject_field_seq: Sequence
-	subject_prefix_seq: Sequence
-} {
-	const headerStr = header.toString()
-
-	// Find the subject header start
-	const subjectStartMatch = headerStr.match(/subject:/i)
-	if (!subjectStartMatch || subjectStartMatch.index === undefined) {
-		throw new Error('Subject field not found in header')
-	}
-
-	const subjectStart = subjectStartMatch.index
-
-	// Find the end of the subject header field (could be multiple lines)
-	// Subject header continues until we hit a line that doesn't start with whitespace
-	let currentPos = subjectStart
-	let subjectEnd = subjectStart
-
-	while (true) {
-		const crlfIndex = headerStr.indexOf('\r\n', currentPos)
-		if (crlfIndex === -1) {
-			subjectEnd = headerStr.length
-			break
-		}
-
-		// Check if next line starts with whitespace (continuation)
-		const nextChar = headerStr[crlfIndex + 2]
-		if (nextChar === ' ' || nextChar === '\t') {
-			currentPos = crlfIndex + 2
-			continue
-		} else {
-			subjectEnd = crlfIndex
-			break
-		}
-	}
-
-	// Extract the full subject header (including continuation lines)
-	const subjectHeaderFull = headerStr.substring(subjectStart, subjectEnd)
-
-	// Define the two possible base64-encoded prefixes
-	const registrationPrefix = '56K66KqN5bey5pS25Yiw5oqV56i/Oi' // 30 bytes
-	const recipientUpdatePrefix = '56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOi' // 54 bytes
-
-	// Search for registration prefix first
-	let prefixIndex = subjectHeaderFull.indexOf(registrationPrefix)
-	let prefixLength = registrationPrefix.length
-
-	// If not found, search for recipient update prefix
-	if (prefixIndex === -1) {
-		prefixIndex = subjectHeaderFull.indexOf(recipientUpdatePrefix)
-		prefixLength = recipientUpdatePrefix.length
-	}
-
-	// If still not found, throw error
-	if (prefixIndex === -1) {
-		throw new Error('No valid subject prefix found (expected registration or recipient update prefix)')
-	}
-
-	// Calculate subject_field_seq
-	const subject_field_seq: Sequence = {
-		index: subjectStart.toString(),
-		length: (subjectEnd - subjectStart).toString(),
-	}
-
-	// Calculate subject_prefix_seq (adjust index to be relative to full header)
-	const subject_prefix_seq: Sequence = {
-		index: (subjectStart + prefixIndex).toString(),
-		length: prefixLength.toString(),
-	}
-
-	return {
-		subject_field_seq,
-		subject_prefix_seq,
-	}
-}
-
-export function getIdSequence(body: Buffer): {
-	id_field_seq: Sequence
-	id_seq: Sequence
-} {
-	const bodyStr = body.toString()
-
-	// Use regex to find "ID: <hash>" pattern
-	const idMatch = bodyStr.match(/ID:\s*(0x[a-fA-F0-9]{64})/)
-
-	if (!idMatch || idMatch.index === undefined) {
-		throw new Error('No ID hash found in body with pattern "ID: 0x<64 hex chars>"')
-	}
-
-	const id = idMatch[1]!
-
-	// id_field_seq: from 'I' in "ID:" to the end of the hash
-	const fieldIndex = idMatch.index
-	const fieldLength = idMatch[0].length
-	const id_field_seq: Sequence = {
-		index: fieldIndex.toString(),
-		length: fieldLength.toString(),
-	}
-
-	// id_seq: just the hash itself
-	const idIndex = idMatch.index + idMatch[0].indexOf(id)
-	const idLength = id.length
-	const id_seq: Sequence = {
-		index: idIndex.toString(),
-		length: idLength.toString(),
-	}
-
-	return {
-		id_field_seq,
-		id_seq,
 	}
 }
 

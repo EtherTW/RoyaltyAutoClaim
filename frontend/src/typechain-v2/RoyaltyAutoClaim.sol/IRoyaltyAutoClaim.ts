@@ -66,15 +66,15 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
       | "submissions"
       | "token"
       | "transferOwnership"
-      | "updateRegistrationVerifier"
+      | "updateEmailVerifier"
       | "updateRoyaltyRecipient"
   ): FunctionFragment;
 
   getEvent(
     nameOrSignatureOrTopic:
       | "AdminChanged"
+      | "EmailVerifierUpdated"
       | "EmergencyWithdraw"
-      | "RegistrationVerifierUpdated"
       | "RoyaltyClaimed"
       | "RoyaltyTokenChanged"
       | "SubmissionRegistered"
@@ -145,7 +145,7 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateRegistrationVerifier",
+    functionFragment: "updateEmailVerifier",
     values: [AddressLike]
   ): string;
   encodeFunctionData(
@@ -215,7 +215,7 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateRegistrationVerifier",
+    functionFragment: "updateEmailVerifier",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -237,12 +237,11 @@ export namespace AdminChangedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace EmergencyWithdrawEvent {
-  export type InputTuple = [token: AddressLike, amount: BigNumberish];
-  export type OutputTuple = [token: string, amount: bigint];
+export namespace EmailVerifierUpdatedEvent {
+  export type InputTuple = [emailVerifier: AddressLike];
+  export type OutputTuple = [emailVerifier: string];
   export interface OutputObject {
-    token: string;
-    amount: bigint;
+    emailVerifier: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -250,11 +249,12 @@ export namespace EmergencyWithdrawEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace RegistrationVerifierUpdatedEvent {
-  export type InputTuple = [registrationVerifier: AddressLike];
-  export type OutputTuple = [registrationVerifier: string];
+export namespace EmergencyWithdrawEvent {
+  export type InputTuple = [token: AddressLike, amount: BigNumberish];
+  export type OutputTuple = [token: string, amount: bigint];
   export interface OutputObject {
-    registrationVerifier: string;
+    token: string;
+    amount: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -468,7 +468,7 @@ export interface IRoyaltyAutoClaim extends BaseContract {
   >;
 
   registerSubmission: TypedContractMethod<
-    [title: string, royaltyRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
@@ -499,14 +499,14 @@ export interface IRoyaltyAutoClaim extends BaseContract {
     "nonpayable"
   >;
 
-  updateRegistrationVerifier: TypedContractMethod<
+  updateEmailVerifier: TypedContractMethod<
     [_verifier: AddressLike],
     [void],
     "nonpayable"
   >;
 
   updateRoyaltyRecipient: TypedContractMethod<
-    [title: string, newRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
@@ -567,7 +567,7 @@ export interface IRoyaltyAutoClaim extends BaseContract {
   getFunction(
     nameOrSignature: "registerSubmission"
   ): TypedContractMethod<
-    [title: string, royaltyRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
@@ -601,12 +601,12 @@ export interface IRoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "transferOwnership"
   ): TypedContractMethod<[newOwner: AddressLike], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "updateRegistrationVerifier"
+    nameOrSignature: "updateEmailVerifier"
   ): TypedContractMethod<[_verifier: AddressLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "updateRoyaltyRecipient"
   ): TypedContractMethod<
-    [title: string, newRecipient: AddressLike, emailHeaderHash: BytesLike],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
@@ -619,18 +619,18 @@ export interface IRoyaltyAutoClaim extends BaseContract {
     AdminChangedEvent.OutputObject
   >;
   getEvent(
+    key: "EmailVerifierUpdated"
+  ): TypedContractEvent<
+    EmailVerifierUpdatedEvent.InputTuple,
+    EmailVerifierUpdatedEvent.OutputTuple,
+    EmailVerifierUpdatedEvent.OutputObject
+  >;
+  getEvent(
     key: "EmergencyWithdraw"
   ): TypedContractEvent<
     EmergencyWithdrawEvent.InputTuple,
     EmergencyWithdrawEvent.OutputTuple,
     EmergencyWithdrawEvent.OutputObject
-  >;
-  getEvent(
-    key: "RegistrationVerifierUpdated"
-  ): TypedContractEvent<
-    RegistrationVerifierUpdatedEvent.InputTuple,
-    RegistrationVerifierUpdatedEvent.OutputTuple,
-    RegistrationVerifierUpdatedEvent.OutputObject
   >;
   getEvent(
     key: "RoyaltyClaimed"
@@ -687,6 +687,17 @@ export interface IRoyaltyAutoClaim extends BaseContract {
       AdminChangedEvent.OutputObject
     >;
 
+    "EmailVerifierUpdated(address)": TypedContractEvent<
+      EmailVerifierUpdatedEvent.InputTuple,
+      EmailVerifierUpdatedEvent.OutputTuple,
+      EmailVerifierUpdatedEvent.OutputObject
+    >;
+    EmailVerifierUpdated: TypedContractEvent<
+      EmailVerifierUpdatedEvent.InputTuple,
+      EmailVerifierUpdatedEvent.OutputTuple,
+      EmailVerifierUpdatedEvent.OutputObject
+    >;
+
     "EmergencyWithdraw(address,uint256)": TypedContractEvent<
       EmergencyWithdrawEvent.InputTuple,
       EmergencyWithdrawEvent.OutputTuple,
@@ -696,17 +707,6 @@ export interface IRoyaltyAutoClaim extends BaseContract {
       EmergencyWithdrawEvent.InputTuple,
       EmergencyWithdrawEvent.OutputTuple,
       EmergencyWithdrawEvent.OutputObject
-    >;
-
-    "RegistrationVerifierUpdated(address)": TypedContractEvent<
-      RegistrationVerifierUpdatedEvent.InputTuple,
-      RegistrationVerifierUpdatedEvent.OutputTuple,
-      RegistrationVerifierUpdatedEvent.OutputObject
-    >;
-    RegistrationVerifierUpdated: TypedContractEvent<
-      RegistrationVerifierUpdatedEvent.InputTuple,
-      RegistrationVerifierUpdatedEvent.OutputTuple,
-      RegistrationVerifierUpdatedEvent.OutputObject
     >;
 
     "RoyaltyClaimed(address,uint256,string)": TypedContractEvent<

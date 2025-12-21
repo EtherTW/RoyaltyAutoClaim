@@ -200,12 +200,12 @@ const _abi = [
         internalType: "string",
       },
       {
-        name: "royaltyRecipient",
+        name: "recipient",
         type: "address",
         internalType: "address",
       },
       {
-        name: "emailHeaderHash",
+        name: "nullifier",
         type: "bytes32",
         internalType: "bytes32",
       },
@@ -344,12 +344,12 @@ const _abi = [
   },
   {
     type: "function",
-    name: "updateRegistrationVerifier",
+    name: "updateEmailVerifier",
     inputs: [
       {
         name: "_verifier",
         type: "address",
-        internalType: "contract IRegistrationVerifier",
+        internalType: "contract IEmailVerifier",
       },
     ],
     outputs: [],
@@ -365,12 +365,12 @@ const _abi = [
         internalType: "string",
       },
       {
-        name: "newRecipient",
+        name: "recipient",
         type: "address",
         internalType: "address",
       },
       {
-        name: "emailHeaderHash",
+        name: "nullifier",
         type: "bytes32",
         internalType: "bytes32",
       },
@@ -399,6 +399,19 @@ const _abi = [
   },
   {
     type: "event",
+    name: "EmailVerifierUpdated",
+    inputs: [
+      {
+        name: "emailVerifier",
+        type: "address",
+        indexed: true,
+        internalType: "address",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "EmergencyWithdraw",
     inputs: [
       {
@@ -412,19 +425,6 @@ const _abi = [
         type: "uint256",
         indexed: false,
         internalType: "uint256",
-      },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "RegistrationVerifierUpdated",
-    inputs: [
-      {
-        name: "registrationVerifier",
-        type: "address",
-        indexed: true,
-        internalType: "address",
       },
     ],
     anonymous: false,
@@ -611,6 +611,11 @@ const _abi = [
   },
   {
     type: "error",
+    name: "InvalidOperationType",
+    inputs: [],
+  },
+  {
+    type: "error",
     name: "InvalidProof",
     inputs: [],
   },
@@ -648,6 +653,11 @@ const _abi = [
   {
     type: "error",
     name: "NullifierMismatch",
+    inputs: [],
+  },
+  {
+    type: "error",
+    name: "RecipientMismatch",
     inputs: [],
   },
   {
