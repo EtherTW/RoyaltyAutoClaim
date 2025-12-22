@@ -24,8 +24,10 @@ interface IRoyaltyAutoClaim {
     function emergencyWithdraw(address _token, uint256 _amount) external;
 
     // ZK Email Registration & Recipient Update
-    function registerSubmission(string memory title, address recipient, bytes32 nullifier) external;
-    function updateRoyaltyRecipient(string memory title, address recipient, bytes32 nullifier) external;
+    function registerSubmission(string memory title, TitleHashVerifierLib.EmailProof calldata proof) external;
+    function registerSubmission4337(string memory title, address recipient, bytes32 nullifier) external;
+    function updateRoyaltyRecipient(string memory title, TitleHashVerifierLib.EmailProof calldata proof) external;
+    function updateRoyaltyRecipient4337(string memory title, address recipient, bytes32 nullifier) external;
 
     // Admin
     function adminRegisterSubmission(string memory title, address royaltyRecipient) external;
@@ -306,7 +308,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     /// @dev call via ERC-4337
-    function registerSubmission(string memory title, address recipient, bytes32 nullifier) public onlyEntryPoint {
+    function registerSubmission4337(string memory title, address recipient, bytes32 nullifier) public onlyEntryPoint {
         _registerSubmission(title, recipient, nullifier);
     }
 
@@ -319,7 +321,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(proof.recipient() != address(0), ZeroAddress());
         require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
         require(!isEmailProofUsed(proof.nullifier()), EmailProofUsed());
-        require(proof.operationType() != TitleHashVerifierLib.OperationType.REGISTRATION, InvalidOperationType());
+        require(proof.operationType() == TitleHashVerifierLib.OperationType.REGISTRATION, InvalidOperationType());
 
         // todo: verify number
 
@@ -344,7 +346,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     /// @dev call via ERC-4337
-    function updateRoyaltyRecipient(string memory title, address recipient, bytes32 nullifier) public onlyEntryPoint {
+    function updateRoyaltyRecipient4337(string memory title, address recipient, bytes32 nullifier)
+        public
+        onlyEntryPoint
+    {
         _updateRoyaltyRecipient(title, recipient, nullifier);
     }
 
@@ -356,7 +361,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
         require(proof.recipient() != submissions(title).royaltyRecipient, SameAddress());
         require(!isEmailProofUsed(proof.nullifier()), EmailProofUsed());
-        require(proof.operationType() != TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, InvalidOperationType());
+        require(proof.operationType() == TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, InvalidOperationType());
 
         // todo: verify number
 
@@ -473,8 +478,8 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         /// ========================= Email-based operations =========================
         /// @dev userOp.signature equals to the encoded proof
         if (
-            selector == IRoyaltyAutoClaim.registerSubmission.selector
-                || selector == IRoyaltyAutoClaim.updateRoyaltyRecipient.selector
+            selector == IRoyaltyAutoClaim.registerSubmission4337.selector
+                || selector == IRoyaltyAutoClaim.updateRoyaltyRecipient4337.selector
         ) {
             (string memory title, address recipient, bytes32 nullifier) =
                 abi.decode(userOp.callData[4:], (string, address, bytes32));
@@ -486,12 +491,14 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             require(proof.recipient() == recipient, RecipientMismatch());
             require(proof.nullifier() == nullifier, NullifierMismatch());
 
-            if (selector == IRoyaltyAutoClaim.registerSubmission.selector && !_verifyRegistration(title, proof)) {
+            if (selector == IRoyaltyAutoClaim.registerSubmission4337.selector && !_verifyRegistration(title, proof)) {
                 return SIG_VALIDATION_FAILED;
             }
 
-            if (selector == IRoyaltyAutoClaim.updateRoyaltyRecipient.selector && !_verifyRecipientUpdate(title, proof))
-            {
+            if (
+                selector == IRoyaltyAutoClaim.updateRoyaltyRecipient4337.selector
+                    && !_verifyRecipientUpdate(title, proof)
+            ) {
                 return SIG_VALIDATION_FAILED;
             }
 

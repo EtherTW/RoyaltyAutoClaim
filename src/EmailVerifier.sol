@@ -61,12 +61,12 @@ contract EmailVerifier is IEmailVerifier, HonkVerifier, Ownable {
             revert InvalidTitleHash(_title);
         }
 
-        // Verify proof
-        if (!verify(_proof.proof, _proof.publicInputs)) {
+        // Verify proof: return false if verification fails instead of reverting
+        try this.verify(_proof.proof, _proof.publicInputs) returns (bool success) {
+            return success;
+        } catch {
             return false;
         }
-
-        return true;
     }
 
     function verifyUserOpHash(TitleHashVerifierLib.EmailProof calldata _proof, bytes32 _userOpHash)
