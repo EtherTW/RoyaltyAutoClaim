@@ -200,6 +200,36 @@ const _abi = [
         internalType: "string",
       },
       {
+        name: "proof",
+        type: "tuple",
+        internalType: "struct TitleHashVerifierLib.EmailProof",
+        components: [
+          {
+            name: "proof",
+            type: "bytes",
+            internalType: "bytes",
+          },
+          {
+            name: "publicInputs",
+            type: "bytes32[]",
+            internalType: "bytes32[]",
+          },
+        ],
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "registerSubmission4337",
+    inputs: [
+      {
+        name: "title",
+        type: "string",
+        internalType: "string",
+      },
+      {
         name: "recipient",
         type: "address",
         internalType: "address",
@@ -358,6 +388,36 @@ const _abi = [
   {
     type: "function",
     name: "updateRoyaltyRecipient",
+    inputs: [
+      {
+        name: "title",
+        type: "string",
+        internalType: "string",
+      },
+      {
+        name: "proof",
+        type: "tuple",
+        internalType: "struct TitleHashVerifierLib.EmailProof",
+        components: [
+          {
+            name: "proof",
+            type: "bytes",
+            internalType: "bytes",
+          },
+          {
+            name: "publicInputs",
+            type: "bytes32[]",
+            internalType: "bytes32[]",
+          },
+        ],
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "updateRoyaltyRecipient4337",
     inputs: [
       {
         name: "title",

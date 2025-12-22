@@ -145,8 +145,8 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "isSubmissionClaimable"
       | "owner"
       | "proxiableUUID"
-      | "registerSubmission(string,address,bytes32)"
-      | "registerSubmission(string,(bytes,bytes32[]))"
+      | "registerSubmission"
+      | "registerSubmission4337"
       | "renounceOwnership"
       | "reviewSubmission(string,uint16,uint256)"
       | "reviewSubmission(string,uint16,(uint256,uint256,uint256,uint256,uint256,uint256[8]))"
@@ -157,8 +157,8 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "token"
       | "transferOwnership"
       | "updateEmailVerifier"
-      | "updateRoyaltyRecipient(string,address,bytes32)"
-      | "updateRoyaltyRecipient(string,(bytes,bytes32[]))"
+      | "updateRoyaltyRecipient"
+      | "updateRoyaltyRecipient4337"
       | "upgradeToAndCall"
       | "validateUserOp"
   ): FunctionFragment;
@@ -271,12 +271,12 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "registerSubmission(string,address,bytes32)",
-    values: [string, AddressLike, BytesLike]
+    functionFragment: "registerSubmission",
+    values: [string, TitleHashVerifierLib.EmailProofStruct]
   ): string;
   encodeFunctionData(
-    functionFragment: "registerSubmission(string,(bytes,bytes32[]))",
-    values: [string, TitleHashVerifierLib.EmailProofStruct]
+    functionFragment: "registerSubmission4337",
+    values: [string, AddressLike, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -310,12 +310,12 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateRoyaltyRecipient(string,address,bytes32)",
-    values: [string, AddressLike, BytesLike]
+    functionFragment: "updateRoyaltyRecipient",
+    values: [string, TitleHashVerifierLib.EmailProofStruct]
   ): string;
   encodeFunctionData(
-    functionFragment: "updateRoyaltyRecipient(string,(bytes,bytes32[]))",
-    values: [string, TitleHashVerifierLib.EmailProofStruct]
+    functionFragment: "updateRoyaltyRecipient4337",
+    values: [string, AddressLike, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "upgradeToAndCall",
@@ -409,11 +409,11 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "registerSubmission(string,address,bytes32)",
+    functionFragment: "registerSubmission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "registerSubmission(string,(bytes,bytes32[]))",
+    functionFragment: "registerSubmission4337",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -451,11 +451,11 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateRoyaltyRecipient(string,address,bytes32)",
+    functionFragment: "updateRoyaltyRecipient",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "updateRoyaltyRecipient(string,(bytes,bytes32[]))",
+    functionFragment: "updateRoyaltyRecipient4337",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -794,14 +794,14 @@ export interface RoyaltyAutoClaim extends BaseContract {
 
   proxiableUUID: TypedContractMethod<[], [string], "view">;
 
-  "registerSubmission(string,address,bytes32)": TypedContractMethod<
-    [title: string, recipient: AddressLike, nullifier: BytesLike],
+  registerSubmission: TypedContractMethod<
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
     [void],
     "nonpayable"
   >;
 
-  "registerSubmission(string,(bytes,bytes32[]))": TypedContractMethod<
-    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
+  registerSubmission4337: TypedContractMethod<
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
@@ -850,14 +850,14 @@ export interface RoyaltyAutoClaim extends BaseContract {
     "nonpayable"
   >;
 
-  "updateRoyaltyRecipient(string,address,bytes32)": TypedContractMethod<
-    [title: string, recipient: AddressLike, nullifier: BytesLike],
+  updateRoyaltyRecipient: TypedContractMethod<
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
     [void],
     "nonpayable"
   >;
 
-  "updateRoyaltyRecipient(string,(bytes,bytes32[]))": TypedContractMethod<
-    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
+  updateRoyaltyRecipient4337: TypedContractMethod<
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
@@ -988,16 +988,16 @@ export interface RoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "proxiableUUID"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
-    nameOrSignature: "registerSubmission(string,address,bytes32)"
+    nameOrSignature: "registerSubmission"
   ): TypedContractMethod<
-    [title: string, recipient: AddressLike, nullifier: BytesLike],
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
     [void],
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "registerSubmission(string,(bytes,bytes32[]))"
+    nameOrSignature: "registerSubmission4337"
   ): TypedContractMethod<
-    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;
@@ -1048,16 +1048,16 @@ export interface RoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "updateEmailVerifier"
   ): TypedContractMethod<[_verifier: AddressLike], [void], "nonpayable">;
   getFunction(
-    nameOrSignature: "updateRoyaltyRecipient(string,address,bytes32)"
+    nameOrSignature: "updateRoyaltyRecipient"
   ): TypedContractMethod<
-    [title: string, recipient: AddressLike, nullifier: BytesLike],
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
     [void],
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "updateRoyaltyRecipient(string,(bytes,bytes32[]))"
+    nameOrSignature: "updateRoyaltyRecipient4337"
   ): TypedContractMethod<
-    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
+    [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
   >;

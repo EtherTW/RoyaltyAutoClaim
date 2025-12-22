@@ -81,7 +81,7 @@ console.log('RoyaltyAutoClaim (proxy) deployed to', racAddress)
 console.log('Giving proxy 0.001 ETH...')
 const tx = await dev.sendTransaction({
 	to: racAddress,
-	value: ethers.parseEther('0.001'),
+	value: ethers.parseEther('0.01'), // This requires the necessary quota; verifying an email proof may require large gas.
 	gasLimit: 100000, // Explicit gas limit for contract interaction
 })
 await tx.wait()

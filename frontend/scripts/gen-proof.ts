@@ -15,7 +15,7 @@ bun run scripts/gen-proof.ts recipient-update 0x341015A264A75E824CB5F569E0170b5d
 import { UltraHonkBackend } from '@aztec/bb.js'
 import { Noir } from '@noir-lang/noir_js'
 import { Contract, Interface, JsonRpcProvider } from 'ethers'
-import fs from 'fs'
+import fs, { writeFileSync } from 'fs'
 import path from 'path'
 import { prepareCircuitInputs } from '../../circuits/script/utilsTitleHash'
 import { RPC_URL } from '../src/config'
@@ -80,7 +80,7 @@ try {
 	console.log(`Proof generated in ${proveTime}s`)
 	console.log(`Proof size: ${(proof.proof.length / 1024).toFixed(2)} KB`)
 
-	console.log('publicInputs:', proof.publicInputs)
+	writeFileSync('publicInputs', JSON.stringify(proof.publicInputs, null, 2))
 
 	// Verify proof
 	console.log('\nVerifying proof onchain...')

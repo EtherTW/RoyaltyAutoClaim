@@ -83,7 +83,8 @@ export function handleUserOpError(e: unknown) {
 		EmailVerifier: EmailVerifier__factory.createInterface(),
 	})
 	if (customError) {
-		console.info({
+		console.log('\nContract revert:')
+		console.log({
 			[revert]: customError,
 		})
 	}

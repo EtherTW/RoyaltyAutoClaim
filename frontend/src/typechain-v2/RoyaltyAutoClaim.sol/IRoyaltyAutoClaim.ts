@@ -23,6 +23,18 @@ import type {
   TypedContractMethod,
 } from "../common";
 
+export declare namespace TitleHashVerifierLib {
+  export type EmailProofStruct = {
+    proof: BytesLike;
+    publicInputs: BytesLike[];
+  };
+
+  export type EmailProofStructOutput = [
+    proof: string,
+    publicInputs: string[]
+  ] & { proof: string; publicInputs: string[] };
+}
+
 export declare namespace IRoyaltyAutoClaim {
   export type SubmissionStruct = {
     royaltyRecipient: AddressLike;
@@ -59,6 +71,7 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
       | "hasReviewed"
       | "isSubmissionClaimable"
       | "registerSubmission"
+      | "registerSubmission4337"
       | "reviewSubmission"
       | "reviewerGroupId"
       | "revokeSubmission"
@@ -68,6 +81,7 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
       | "transferOwnership"
       | "updateEmailVerifier"
       | "updateRoyaltyRecipient"
+      | "updateRoyaltyRecipient4337"
   ): FunctionFragment;
 
   getEvent(
@@ -123,6 +137,10 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "registerSubmission",
+    values: [string, TitleHashVerifierLib.EmailProofStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "registerSubmission4337",
     values: [string, AddressLike, BytesLike]
   ): string;
   encodeFunctionData(
@@ -150,6 +168,10 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "updateRoyaltyRecipient",
+    values: [string, TitleHashVerifierLib.EmailProofStruct]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "updateRoyaltyRecipient4337",
     values: [string, AddressLike, BytesLike]
   ): string;
 
@@ -193,6 +215,10 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "registerSubmission4337",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "reviewSubmission",
     data: BytesLike
   ): Result;
@@ -220,6 +246,10 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "updateRoyaltyRecipient",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "updateRoyaltyRecipient4337",
     data: BytesLike
   ): Result;
 }
@@ -468,6 +498,12 @@ export interface IRoyaltyAutoClaim extends BaseContract {
   >;
 
   registerSubmission: TypedContractMethod<
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
+    [void],
+    "nonpayable"
+  >;
+
+  registerSubmission4337: TypedContractMethod<
     [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
@@ -506,6 +542,12 @@ export interface IRoyaltyAutoClaim extends BaseContract {
   >;
 
   updateRoyaltyRecipient: TypedContractMethod<
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
+    [void],
+    "nonpayable"
+  >;
+
+  updateRoyaltyRecipient4337: TypedContractMethod<
     [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
@@ -567,6 +609,13 @@ export interface IRoyaltyAutoClaim extends BaseContract {
   getFunction(
     nameOrSignature: "registerSubmission"
   ): TypedContractMethod<
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "registerSubmission4337"
+  ): TypedContractMethod<
     [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
     "nonpayable"
@@ -605,6 +654,13 @@ export interface IRoyaltyAutoClaim extends BaseContract {
   ): TypedContractMethod<[_verifier: AddressLike], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "updateRoyaltyRecipient"
+  ): TypedContractMethod<
+    [title: string, proof: TitleHashVerifierLib.EmailProofStruct],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "updateRoyaltyRecipient4337"
   ): TypedContractMethod<
     [title: string, recipient: AddressLike, nullifier: BytesLike],
     [void],
