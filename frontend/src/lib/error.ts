@@ -1,7 +1,7 @@
 import type { ethers } from 'ethers'
 import { ErrorCode, Interface, isError } from 'ethers'
 import { ERC4337Error, extractHexString } from 'sendop'
-import { MockToken__factory, RegistrationVerifier__factory, RoyaltyAutoClaim__factory } from '../typechain-v2'
+import { MockToken__factory, EmailVerifier__factory, RoyaltyAutoClaim__factory } from '../typechain-v2'
 
 /**
  * Checks if an error indicates a user rejection from browser wallet or passkey.
@@ -80,7 +80,7 @@ export function handleUserOpError(e: unknown) {
 	const revert = extractHexString((e as Error).message) || ''
 	const customError = parseContractRevert(revert, {
 		RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
-		RegistrationVerifier: RegistrationVerifier__factory.createInterface(),
+		EmailVerifier: EmailVerifier__factory.createInterface(),
 	})
 	if (customError) {
 		console.info({

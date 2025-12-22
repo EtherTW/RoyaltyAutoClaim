@@ -1,16 +1,23 @@
+import { UltraHonkBackend } from '@aztec/bb.js'
+import { Noir } from '@noir-lang/noir_js'
 import { JsonRpcProvider } from 'ethers'
-import fs from 'fs/promises'
+import { readFileSync } from 'fs'
 import path from 'path'
-import { ERC4337Bundler } from 'sendop'
+import { abiEncode, ERC4337Bundler, zeroBytes } from 'sendop'
+import { parseEmail } from '../../circuits/script/utils'
+import {
+	prepareCircuitInputs,
+	prepareCircuitOutput,
+	TitleHashCircuitOutput,
+} from '../../circuits/script/utilsTitleHash'
 import { BUNDLER_URL, RPC_URL } from '../src/config'
 import { buildUserOp, setFixedVerificationGasLimitForZkProof } from '../src/lib/erc4337-utils'
 import { handleUserOpError } from '../src/lib/error'
-import { genProof, makeDummyProof, parseEmailData } from '../src/lib/zkemail-utils'
 import { IRoyaltyAutoClaim__factory } from '../src/typechain-v2'
 
 /*
 
-bun run scripts/register.ts registration 0xaCf34e475Ef850AF607ECA2563C07542F5D2F47a
+bun run scripts/register.ts registration 0xC83B22659A0038d1051059183eE71f04f8344090
 
 */
 
@@ -28,34 +35,40 @@ if (!racAddress) {
 
 const ARGS = {
 	racAddress,
-	eml: await fs.readFile(path.join(__dirname, '..', '..', 'emails', `${emailFileName}.eml`), 'utf-8'),
+	eml: readFileSync(path.join(__dirname, '..', '..', 'emails', `${emailFileName}.eml`)),
 } as const
 
 const CHAIN_ID = '84532'
+const CIRCUIT_PATH = path.join(__dirname, '../../circuits/title_hash/target', 'title_hash.json')
 
 const client = new JsonRpcProvider(RPC_URL[CHAIN_ID])
 const bundler = new ERC4337Bundler(BUNDLER_URL[CHAIN_ID], undefined, {
 	batchMaxCount: 1,
 })
 
-console.log('parsing email...')
-const emailData = await parseEmailData(ARGS.eml)
-
-console.log('building user op...')
+const { title, recipient, nullifier } = await parseEmail(ARGS.eml)
 const callData = IRoyaltyAutoClaim__factory.createInterface().encodeFunctionData('registerSubmission', [
-	emailData.title,
-	emailData.recipient,
-	emailData.headerHash,
+	title,
+	recipient,
+	nullifier,
 ])
 
 const op = await buildUserOp({ royaltyAutoClaimAddress: ARGS.racAddress, chainId: CHAIN_ID, client, bundler, callData })
-op.setSignature(makeDummyProof(emailData.signals))
+
+// Make dummy proof
+const circuitInputs = await prepareCircuitInputs(ARGS.eml)
+const circuit = JSON.parse(readFileSync(CIRCUIT_PATH, 'utf-8'))
+const noir = new Noir(circuit)
+const { witness, returnValue } = await noir.execute(circuitInputs)
+const circuitOutputs = prepareCircuitOutput(returnValue as TitleHashCircuitOutput)
+const dummyProof = zeroBytes(32)
+op.setSignature(abiEncode(['bytes', 'bytes32[]'], [dummyProof, circuitOutputs]))
 
 console.log('estimating gas...')
 try {
 	await op.estimateGas()
 } catch (e: unknown) {
-	console.log('handleOps', op.encodeHandleOpsDataWithDefaultGas())
+	console.log(`handleOps:\n${op.encodeHandleOpsDataWithDefaultGas()}`)
 	handleUserOpError(e)
 }
 
@@ -65,8 +78,15 @@ console.log('generating proof...')
 const opHash = op.hash()
 console.log('opHash', opHash)
 
-const { encodedProof } = await genProof(ARGS.eml, opHash)
-op.setSignature(encodedProof)
+const startProve = Date.now()
+const backend = new UltraHonkBackend(circuit.bytecode)
+const proof = await backend.generateProof(witness, { keccak: true })
+const proveTime = ((Date.now() - startProve) / 1000).toFixed(2)
+
+console.log(`Proof generated in ${proveTime}s`)
+console.log(`Proof size: ${(proof.proof.length / 1024).toFixed(2)} KB`)
+
+op.setSignature(abiEncode(['bytes', 'bytes32[]'], [proof.proof, proof.publicInputs]))
 
 console.log('sending user op...')
 try {

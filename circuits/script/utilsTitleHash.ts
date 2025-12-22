@@ -1,4 +1,13 @@
+import { generateEmailVerifierInputs } from '@zk-email/zkemail-nr'
 import type { BoundedVec, RSAPubkey, Sequence } from './utils'
+import {
+	getNumberSequence,
+	getRecipientSequence,
+	MAX_EMAIL_BODY_LENGTH,
+	MAX_EMAIL_HEADER_LENGTH,
+	splitHashToFields,
+} from './utils'
+import { zeroPadValue } from 'ethers'
 
 export type CircuitInputsTitleHash = {
 	header: BoundedVec
@@ -18,6 +27,60 @@ export type CircuitInputsTitleHash = {
 	id_field_seq: Sequence
 	id_seq: Sequence
 	user_op_hash: string[]
+}
+
+export type TitleHashCircuitOutput = [
+	string, // pubkey_hash
+	string, // nullifier
+	BoundedVec, // from_address
+	string, // operation_type
+	string, // number
+	string, // recipient
+	[string, string], // title_hash
+	[string, string], // user_op_hash
+]
+
+export async function prepareCircuitInputs(eml: Buffer, userOpHash?: string) {
+	const emailInputs = await generateEmailVerifierInputs(eml, {
+		maxHeadersLength: MAX_EMAIL_HEADER_LENGTH,
+		maxBodyLength: MAX_EMAIL_BODY_LENGTH,
+		ignoreBodyHashCheck: false,
+		extractFrom: true,
+	})
+
+	const headerBuf = Buffer.from(
+		emailInputs.header.storage.slice(0, Number(emailInputs.header.len)).map(b => Number(b)),
+	)
+	const { subject_field_seq, subject_prefix_seq } = getSubjectPrefixSequence(headerBuf)
+
+	const bodyBuf = Buffer.from(emailInputs.body!.storage.slice(0, Number(emailInputs.body!.len)).map(b => Number(b)))
+	const { number_field_seq, number_seq } = getNumberSequence(bodyBuf)
+	const { recipient_field_seq, recipient_seq } = getRecipientSequence(bodyBuf)
+	const { id_field_seq, id_seq } = getIdSequence(bodyBuf)
+
+	const circuitInputs: CircuitInputsTitleHash = {
+		header: emailInputs.header,
+		pubkey: emailInputs.pubkey,
+		signature: emailInputs.signature,
+		dkim_header_seq: emailInputs.dkim_header_sequence,
+		body: emailInputs.body!,
+		body_hash_index: emailInputs.body_hash_index!,
+		from_header_seq: emailInputs.from_header_sequence!,
+		from_address_seq: emailInputs.from_address_sequence!,
+		subject_field_seq,
+		subject_prefix_seq,
+		number_field_seq,
+		number_seq,
+		recipient_field_seq,
+		recipient_seq,
+		id_field_seq,
+		id_seq,
+		user_op_hash: splitHashToFields(
+			userOpHash || '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297',
+		),
+	}
+
+	return circuitInputs
 }
 
 export function getSubjectPrefixSequence(header: Buffer): {
@@ -242,4 +305,56 @@ export function writeProverTomlTitleHash(circuitTargetPath: string, inputs: Circ
 
 	const proverTomlPath = path.join(circuitTargetPath, '../Prover.toml')
 	fs.writeFileSync(proverTomlPath, tomlLines.join('\n') + '\n')
+}
+
+/**
+ * Format circuit return values as public inputs array
+ * @param returnValue - return value from noir.execute() for title_hash circuit
+ * @returns - array of hex strings formatted like publicInputs.json
+ */
+export function prepareCircuitOutput(returnValue: TitleHashCircuitOutput): string[] {
+	// Format circuit outputs as public inputs array
+	const publicInputs: string[] = []
+
+	// Output structure from title_hash circuit:
+	// 0: pubkey_hash (Field)
+	// 1: nullifier (Field)
+	// 2: from_address (BoundedVec<u8, MAX_EMAIL_ADDRESS_LENGTH>)
+	// 3: operation_type (Field)
+	// 4: number (Field)
+	// 5: recipient (Field)
+	// 6: title_hash ([Field; 2])
+	// 7: user_op_hash ([Field; 2])
+
+	// Add pubkey_hash (pad to 32 bytes)
+	publicInputs.push(zeroPadValue(returnValue[0], 32))
+
+	// Add nullifier (pad to 32 bytes)
+	publicInputs.push(zeroPadValue(returnValue[1], 32))
+
+	// Add from_address BoundedVec (storage array + len)
+	const fromAddress = returnValue[2]
+	for (const byte of fromAddress.storage) {
+		publicInputs.push(zeroPadValue(byte, 32))
+	}
+	publicInputs.push(zeroPadValue(fromAddress.len, 32))
+
+	// Add operation_type (pad to 32 bytes)
+	publicInputs.push(zeroPadValue(returnValue[3], 32))
+
+	// Add number (pad to 32 bytes)
+	publicInputs.push(zeroPadValue(returnValue[4], 32))
+
+	// Add recipient (pad to 32 bytes)
+	publicInputs.push(zeroPadValue(returnValue[5], 32))
+
+	// Add title_hash ([Field; 2]) - pad each field to 32 bytes
+	publicInputs.push(zeroPadValue(returnValue[6][0], 32))
+	publicInputs.push(zeroPadValue(returnValue[6][1], 32))
+
+	// Add user_op_hash ([Field; 2]) - pad each field to 32 bytes
+	publicInputs.push(zeroPadValue(returnValue[7][0], 32))
+	publicInputs.push(zeroPadValue(returnValue[7][1], 32))
+
+	return publicInputs
 }

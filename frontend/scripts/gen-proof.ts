@@ -14,25 +14,15 @@ bun run scripts/gen-proof.ts recipient-update 0x341015A264A75E824CB5F569E0170b5d
 */
 import { UltraHonkBackend } from '@aztec/bb.js'
 import { Noir } from '@noir-lang/noir_js'
-import { generateEmailVerifierInputs } from '@zk-email/zkemail-nr'
 import { Contract, Interface, JsonRpcProvider } from 'ethers'
 import fs from 'fs'
 import path from 'path'
-import {
-	getNumberSequence,
-	getRecipientSequence,
-	MAX_EMAIL_BODY_LENGTH,
-	MAX_EMAIL_HEADER_LENGTH,
-	splitHashToFields,
-} from '../../circuits/script/utils'
-import { CircuitInputsTitleHash, getIdSequence, getSubjectPrefixSequence } from '../../circuits/script/utilsTitleHash'
+import { prepareCircuitInputs } from '../../circuits/script/utilsTitleHash'
 import { RPC_URL } from '../src/config'
 
 const CHAIN_ID = '84532'
-const DUMMY_USER_OP_HASH = '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297'
 
-const CIRCUIT_TARGET_PATH = path.join(__dirname, '../../circuits/title_hash/target')
-const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, 'title_hash.json')
+const CIRCUIT_PATH = path.join(__dirname, '../../circuits/title_hash/target', 'title_hash.json')
 
 /* -------------------------------------------------------------------------- */
 /*                                Command Args                                */
@@ -75,7 +65,9 @@ const eml = fs.readFileSync(EML_PATH)
 // Prepare circuit inputs
 const noir = new Noir(circuit)
 const circuitInputs = await prepareCircuitInputs(eml)
-const { witness } = await noir.execute(circuitInputs)
+
+const { witness, returnValue } = await noir.execute(circuitInputs)
+console.log('returnValue', returnValue)
 
 // Generate proof
 const backend = new UltraHonkBackend(circuit.bytecode)
@@ -87,6 +79,8 @@ try {
 
 	console.log(`Proof generated in ${proveTime}s`)
 	console.log(`Proof size: ${(proof.proof.length / 1024).toFixed(2)} KB`)
+
+	console.log('publicInputs:', proof.publicInputs)
 
 	// Verify proof
 	console.log('\nVerifying proof onchain...')
@@ -116,45 +110,4 @@ try {
 	}
 } finally {
 	await backend.destroy()
-}
-
-async function prepareCircuitInputs(eml: Buffer) {
-	const emailInputs = await generateEmailVerifierInputs(eml, {
-		maxHeadersLength: MAX_EMAIL_HEADER_LENGTH,
-		maxBodyLength: MAX_EMAIL_BODY_LENGTH,
-		ignoreBodyHashCheck: false,
-		extractFrom: true,
-	})
-
-	const headerBuf = Buffer.from(
-		emailInputs.header.storage.slice(0, Number(emailInputs.header.len)).map(b => Number(b)),
-	)
-	const { subject_field_seq, subject_prefix_seq } = getSubjectPrefixSequence(headerBuf)
-
-	const bodyBuf = Buffer.from(emailInputs.body!.storage.slice(0, Number(emailInputs.body!.len)).map(b => Number(b)))
-	const { number_field_seq, number_seq } = getNumberSequence(bodyBuf)
-	const { recipient_field_seq, recipient_seq } = getRecipientSequence(bodyBuf)
-	const { id_field_seq, id_seq } = getIdSequence(bodyBuf)
-
-	const circuitInputs: CircuitInputsTitleHash = {
-		header: emailInputs.header,
-		pubkey: emailInputs.pubkey,
-		signature: emailInputs.signature,
-		dkim_header_seq: emailInputs.dkim_header_sequence,
-		body: emailInputs.body!,
-		body_hash_index: emailInputs.body_hash_index!,
-		from_header_seq: emailInputs.from_header_sequence!,
-		from_address_seq: emailInputs.from_address_sequence!,
-		subject_field_seq,
-		subject_prefix_seq,
-		number_field_seq,
-		number_seq,
-		recipient_field_seq,
-		recipient_seq,
-		id_field_seq,
-		id_seq,
-		user_op_hash: splitHashToFields(DUMMY_USER_OP_HASH),
-	}
-
-	return circuitInputs
 }
