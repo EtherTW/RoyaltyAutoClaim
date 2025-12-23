@@ -1,7 +1,7 @@
 /*
 
-bun run scripts/register.ts registration 0x22A5501291780cbf41CF21112B2fD8C9a0132231
-bun run scripts/register.ts registration 0x22A5501291780cbf41CF21112B2fD8C9a0132231 --direct
+bun run scripts/register.ts registration 0x87119E6b3e66E71C5D5c664A1fE05dB75c0A6E59
+bun run scripts/register.ts registration 0x87119E6b3e66E71C5D5c664A1fE05dB75c0A6E59 --direct
 
 */
 import { UltraHonkBackend } from '@aztec/bb.js'
