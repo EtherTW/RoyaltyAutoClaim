@@ -40,7 +40,7 @@ export type TitleHashCircuitOutput = [
 	[string, string], // user_op_hash
 ]
 
-export async function prepareCircuitInputs(eml: Buffer, userOpHash?: string) {
+export async function prepareCircuitInputs(eml: Buffer, userOpHash?: string): Promise<CircuitInputsTitleHash> {
 	const emailInputs = await generateEmailVerifierInputs(eml, {
 		maxHeadersLength: MAX_EMAIL_HEADER_LENGTH,
 		maxBodyLength: MAX_EMAIL_BODY_LENGTH,

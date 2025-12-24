@@ -1,7 +1,7 @@
 /*
 
-bun run scripts/register.ts registration 0x87119E6b3e66E71C5D5c664A1fE05dB75c0A6E59
-bun run scripts/register.ts registration 0x87119E6b3e66E71C5D5c664A1fE05dB75c0A6E59 --direct
+bun run scripts/register.ts registration <rac-address>
+bun run scripts/register.ts registration <rac-address> --direct
 
 */
 import { UltraHonkBackend } from '@aztec/bb.js'
@@ -10,7 +10,7 @@ import { JsonRpcProvider, Wallet } from 'ethers'
 import { readFileSync } from 'fs'
 import path from 'path'
 import { abiEncode, ERC4337Bundler, zeroBytes } from 'sendop'
-import { parseEmail } from '../../circuits/script/utils'
+import { parseEmail, splitHashToFields } from '../../circuits/script/utils'
 import {
 	prepareCircuitInputs,
 	prepareCircuitOutput,
@@ -114,35 +114,11 @@ if (isDirect) {
 
 	// Prepare circuit inputs
 	console.log('preparing circuit inputs...')
-	let circuitOutputs
-	{
-		const circuitInputs = await prepareCircuitInputs(ARGS.eml)
-		const circuit = JSON.parse(readFileSync(CIRCUIT_PATH, 'utf-8'))
-		const noir = new Noir(circuit)
-		const { witness, returnValue } = await noir.execute(circuitInputs)
-		circuitOutputs = prepareCircuitOutput(returnValue as TitleHashCircuitOutput)
-		// Generate proof
-		// console.log('generating proof...')
-		// const startProve = Date.now()
-		// const backend = new UltraHonkBackend(circuit.bytecode)
-		// const proof = await backend.generateProof(witness, { keccak: true })
-		// const proveTime = ((Date.now() - startProve) / 1000).toFixed(2)
-
-		// console.log(`Proof generated in ${proveTime}s`)
-		// console.log(`Proof size: ${(proof.proof.length / 1024).toFixed(2)} KB`)
-
-		// op.setSignature(
-		// 	abiEncode(
-		// 		['tuple(bytes proof, bytes32[] publicInputs)'],
-		// 		[
-		// 			{
-		// 				proof: proof.proof,
-		// 				publicInputs: proof.publicInputs,
-		// 			},
-		// 		],
-		// 	),
-		// )
-	}
+	const circuitInputs = await prepareCircuitInputs(ARGS.eml)
+	const circuit = JSON.parse(readFileSync(CIRCUIT_PATH, 'utf-8'))
+	const noir = new Noir(circuit)
+	const { returnValue } = await noir.execute(circuitInputs)
+	const circuitOutputs = prepareCircuitOutput(returnValue as TitleHashCircuitOutput)
 
 	// Make dummy proof for gas estimation
 	op.setSignature(
@@ -172,9 +148,7 @@ if (isDirect) {
 
 	// Prepare circuit inputs for the userOpHash
 	console.log('preparing circuit inputs...')
-	const circuitInputs = await prepareCircuitInputs(ARGS.eml, opHash)
-	const circuit = JSON.parse(readFileSync(CIRCUIT_PATH, 'utf-8'))
-	const noir = new Noir(circuit)
+	circuitInputs.user_op_hash = splitHashToFields(opHash)
 	const { witness } = await noir.execute(circuitInputs)
 
 	// Generate proof
