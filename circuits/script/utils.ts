@@ -122,7 +122,7 @@ export function getSubjectHeaderSequence(
 
 	// Extract base64 sequences (pointing to base64 content within each encoded-word)
 	// Strip ALL padding since the circuit uses BASE64_NO_PAD_DECODER
-	const encoded_word_seqs: Sequence[] = matches.map((m, i) => {
+	const encoded_word_seqs: Sequence[] = matches.map(m => {
 		const base64Start = m.index + 10 // Length of "=?UTF-8?B?"
 		const base64Content = m[1]!.replace(/=+$/, '') // Captured group with padding stripped
 

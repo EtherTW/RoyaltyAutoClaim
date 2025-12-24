@@ -8,7 +8,7 @@
 		"build": "bun run check && vite build",
 		"preview": "vite preview",
 		"test": "vitest --run",
-		"gen-types": "rm -rf src/typechain-v2 && typechain --target ethers-v6 --out-dir 'src/typechain-v2' '../out/**/RoyaltyAutoClaimProxy.sol/*.json' '../out/**/RoyaltyAutoClaim.sol/*.json' '../out/**/MockToken.sol/*.json' '../out/**/EmailVerifier.sol/*.json' '../out/**/ISemaphore.sol/*.json' '../out/**/ISemaphoreGroups.sol/*.json'",
+		"gen-types": "bash scripts/gen-types.sh",
 		"deploy": "bun run scripts/deploy.ts",
 		"typecheck": "vue-tsc --noEmit",
 		"lint": "eslint .",

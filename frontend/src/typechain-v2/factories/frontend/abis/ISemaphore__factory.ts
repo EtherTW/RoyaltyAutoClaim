@@ -3,7 +3,10 @@
 /* eslint-disable */
 
 import { Contract, Interface, type ContractRunner } from "ethers";
-import type { ISemaphore, ISemaphoreInterface } from "../ISemaphore";
+import type {
+  ISemaphore,
+  ISemaphoreInterface,
+} from "../../../frontend/abis/ISemaphore";
 
 const _abi = [
   {

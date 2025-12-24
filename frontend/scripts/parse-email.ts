@@ -1,10 +1,11 @@
-import { parseEmailData } from '../src/lib/zkemail-utils'
+/*
+
+bun run scripts/parse-email.ts registration
+
+*/
 import fs from 'fs/promises'
 import path from 'path'
-
-/*
-bun run scripts/parse-email.ts registration
-*/
+import { parseEmail } from '../../circuits/script/utils'
 
 const emailFile = process.argv[2]
 if (!emailFile) {
@@ -13,5 +14,5 @@ if (!emailFile) {
 }
 const eml = await fs.readFile(path.join(__dirname, '..', '..', 'emails', `${emailFile}.eml`), 'utf-8')
 
-const emailData = await parseEmailData(eml)
+const emailData = await parseEmail(eml)
 console.log(emailData)

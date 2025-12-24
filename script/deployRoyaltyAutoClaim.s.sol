@@ -7,8 +7,6 @@ import {RoyaltyAutoClaimProxy} from "../src/RoyaltyAutoClaimProxy.sol";
 import {EmailVerifier} from "../src/EmailVerifier.sol";
 import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
 import {ISemaphore} from "@semaphore/interfaces/ISemaphore.sol";
-// import for compiling the contract used for frontend type generation
-import {ISemaphoreGroups} from "@semaphore/interfaces/ISemaphoreGroups.sol";
 
 /*
 
