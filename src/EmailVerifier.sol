@@ -10,15 +10,11 @@ interface IEmailVerifier {
     error ZeroValue();
     error InvalidDKIMPublicKey(bytes32 publicKeyHash);
     error EmailFromAddressMismatch(bytes32 expected, string actual);
-    error InvalidTitleHash(string title);
+    error TitleHashMismatch(string title, bytes32 titleHash);
 
     function verifyEmail(string calldata _title, TitleHashVerifierLib.EmailProof calldata _proof)
         external
         view
-        returns (bool);
-    function verifyUserOpHash(TitleHashVerifierLib.EmailProof calldata _proof, bytes32 _userOpHash)
-        external
-        pure
         returns (bool);
 }
 
@@ -58,7 +54,7 @@ contract EmailVerifier is IEmailVerifier, HonkVerifier, Ownable {
 
         // Verify title hash
         if (keccak256(abi.encodePacked(_title)) != _proof.titleHash()) {
-            revert InvalidTitleHash(_title);
+            revert TitleHashMismatch(_title, _proof.titleHash());
         }
 
         // Verify proof: return false if verification fails instead of reverting
@@ -67,13 +63,5 @@ contract EmailVerifier is IEmailVerifier, HonkVerifier, Ownable {
         } catch {
             return false;
         }
-    }
-
-    function verifyUserOpHash(TitleHashVerifierLib.EmailProof calldata _proof, bytes32 _userOpHash)
-        external
-        pure
-        returns (bool)
-    {
-        return _userOpHash == _proof.userOpHash();
     }
 }

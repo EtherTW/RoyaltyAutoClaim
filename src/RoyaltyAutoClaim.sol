@@ -516,8 +516,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
                 return SIG_VALIDATION_FAILED;
             }
 
-            // Verify userOpHash last to allow gas estimation with valid proof but mismatched userOpHash
-            if (!_getMainStorage().configs.emailVerifier.verifyUserOpHash(proof, userOpHash)) {
+            // Make the userOpHash check the final step, so that the gas estimated when running
+            // frontend/scripts/estimate-verificationGasLimit.ts
+            // is close to the gas used when the zk verify function is executed correctly.
+            if (proof.userOpHash() != userOpHash) {
                 return SIG_VALIDATION_FAILED;
             }
 
