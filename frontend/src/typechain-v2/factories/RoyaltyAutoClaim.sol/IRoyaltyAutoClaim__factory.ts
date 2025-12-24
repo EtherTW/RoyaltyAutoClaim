@@ -173,6 +173,25 @@ const _abi = [
   },
   {
     type: "function",
+    name: "isEmailRevoked",
+    inputs: [
+      {
+        name: "number",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "bool",
+        internalType: "bool",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
     name: "isSubmissionClaimable",
     inputs: [
       {
@@ -459,6 +478,19 @@ const _abi = [
   },
   {
     type: "event",
+    name: "EmailRevoked",
+    inputs: [
+      {
+        name: "number",
+        type: "uint256",
+        indexed: true,
+        internalType: "uint256",
+      },
+    ],
+    anonymous: false,
+  },
+  {
+    type: "event",
     name: "EmailVerifierUpdated",
     inputs: [
       {
@@ -724,6 +756,17 @@ const _abi = [
     type: "error",
     name: "RenounceOwnershipDisabled",
     inputs: [],
+  },
+  {
+    type: "error",
+    name: "RevokedEmail",
+    inputs: [
+      {
+        name: "number",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
   },
   {
     type: "error",

@@ -46,6 +46,7 @@ interface IRoyaltyAutoClaim {
     event RoyaltyTokenChanged(address indexed oldToken, address indexed newToken);
     event EmergencyWithdraw(address indexed token, uint256 amount);
     event EmailVerifierUpdated(address indexed emailVerifier);
+    event EmailRevoked(uint256 indexed number);
 
     event SubmissionRegistered(string indexed titleHash, address indexed royaltyRecipient, string title);
     event SubmissionRoyaltyRecipientUpdated(
@@ -66,6 +67,7 @@ interface IRoyaltyAutoClaim {
     function semaphore() external view returns (ISemaphore);
     function isSubmissionClaimable(string memory title) external view returns (bool);
     function getRoyalty(string memory title) external view returns (uint256 royalty);
+    function isEmailRevoked(uint256 number) external view returns (bool);
     function entryPoint() external pure returns (address);
 
     // Errors
@@ -93,6 +95,7 @@ interface IRoyaltyAutoClaim {
     error ScopeMismatch();
     error RecipientMismatch();
     error InvalidOperationType();
+    error RevokedEmail(uint256 number);
 
     // Structs
     struct Configs {
@@ -122,6 +125,7 @@ interface IRoyaltyAutoClaim {
         mapping(string => Submission) submissions;
         mapping(string => mapping(uint256 => bool)) hasReviewed; // Track nullifiers per submission
         mapping(bytes32 => bool) emailNullifierHashes;
+        mapping(uint256 => bool) revokedEmailNumbers; // Track revoked email numbers
     }
 }
 
@@ -295,6 +299,12 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         emit EmailVerifierUpdated(address(_verifier));
     }
 
+    function revokeEmail(uint256 number) public onlyAdminOrEntryPoint {
+        MainStorage storage $ = _getMainStorage();
+        $.revokedEmailNumbers[number] = true;
+        emit EmailRevoked(number);
+    }
+
     /* -------------------------------------------------------------------------- */
     /*                  ZK Email Registration & Recipient Update                  */
     /* -------------------------------------------------------------------------- */
@@ -323,7 +333,9 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(!isEmailProofUsed(proof.nullifier()), EmailProofUsed());
         require(proof.operationType() == TitleHashVerifierLib.OperationType.REGISTRATION, InvalidOperationType());
 
-        // todo: verify number
+        // Verify email number is not revoked
+        uint256 emailNumber = proof.number();
+        require(!_getMainStorage().revokedEmailNumbers[emailNumber], RevokedEmail(emailNumber));
 
         return _getMainStorage().configs.emailVerifier.verifyEmail(title, proof);
     }
@@ -363,7 +375,9 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         require(!isEmailProofUsed(proof.nullifier()), EmailProofUsed());
         require(proof.operationType() == TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, InvalidOperationType());
 
-        // todo: verify number
+        // Verify email number is not revoked
+        uint256 emailNumber = proof.number();
+        require(!_getMainStorage().revokedEmailNumbers[emailNumber], RevokedEmail(emailNumber));
 
         return _getMainStorage().configs.emailVerifier.verifyEmail(title, proof);
     }
@@ -620,6 +634,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function hasReviewed(string memory title, uint256 nullifier) public view returns (bool) {
         return _getMainStorage().hasReviewed[title][nullifier];
+    }
+
+    function isEmailRevoked(uint256 number) public view returns (bool) {
+        return _getMainStorage().revokedEmailNumbers[number];
     }
 
     function isSubmissionClaimable(string memory title) public view returns (bool) {

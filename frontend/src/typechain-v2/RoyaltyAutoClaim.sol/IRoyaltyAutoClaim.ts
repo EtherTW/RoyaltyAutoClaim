@@ -69,6 +69,7 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
       | "entryPoint"
       | "getRoyalty"
       | "hasReviewed"
+      | "isEmailRevoked"
       | "isSubmissionClaimable"
       | "registerSubmission"
       | "registerSubmission4337"
@@ -87,6 +88,7 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
   getEvent(
     nameOrSignatureOrTopic:
       | "AdminChanged"
+      | "EmailRevoked"
       | "EmailVerifierUpdated"
       | "EmergencyWithdraw"
       | "RoyaltyClaimed"
@@ -130,6 +132,10 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
   encodeFunctionData(
     functionFragment: "hasReviewed",
     values: [string, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isEmailRevoked",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "isSubmissionClaimable",
@@ -207,6 +213,10 @@ export interface IRoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "isEmailRevoked",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "isSubmissionClaimable",
     data: BytesLike
   ): Result;
@@ -260,6 +270,18 @@ export namespace AdminChangedEvent {
   export interface OutputObject {
     oldAdmin: string;
     newAdmin: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace EmailRevokedEvent {
+  export type InputTuple = [number: BigNumberish];
+  export type OutputTuple = [number: bigint];
+  export interface OutputObject {
+    number: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -491,6 +513,12 @@ export interface IRoyaltyAutoClaim extends BaseContract {
     "view"
   >;
 
+  isEmailRevoked: TypedContractMethod<
+    [number: BigNumberish],
+    [boolean],
+    "view"
+  >;
+
   isSubmissionClaimable: TypedContractMethod<
     [title: string],
     [boolean],
@@ -604,6 +632,9 @@ export interface IRoyaltyAutoClaim extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "isEmailRevoked"
+  ): TypedContractMethod<[number: BigNumberish], [boolean], "view">;
+  getFunction(
     nameOrSignature: "isSubmissionClaimable"
   ): TypedContractMethod<[title: string], [boolean], "view">;
   getFunction(
@@ -675,6 +706,13 @@ export interface IRoyaltyAutoClaim extends BaseContract {
     AdminChangedEvent.OutputObject
   >;
   getEvent(
+    key: "EmailRevoked"
+  ): TypedContractEvent<
+    EmailRevokedEvent.InputTuple,
+    EmailRevokedEvent.OutputTuple,
+    EmailRevokedEvent.OutputObject
+  >;
+  getEvent(
     key: "EmailVerifierUpdated"
   ): TypedContractEvent<
     EmailVerifierUpdatedEvent.InputTuple,
@@ -741,6 +779,17 @@ export interface IRoyaltyAutoClaim extends BaseContract {
       AdminChangedEvent.InputTuple,
       AdminChangedEvent.OutputTuple,
       AdminChangedEvent.OutputObject
+    >;
+
+    "EmailRevoked(uint256)": TypedContractEvent<
+      EmailRevokedEvent.InputTuple,
+      EmailRevokedEvent.OutputTuple,
+      EmailRevokedEvent.OutputObject
+    >;
+    EmailRevoked: TypedContractEvent<
+      EmailRevokedEvent.InputTuple,
+      EmailRevokedEvent.OutputTuple,
+      EmailRevokedEvent.OutputObject
     >;
 
     "EmailVerifierUpdated(address)": TypedContractEvent<

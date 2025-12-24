@@ -141,6 +141,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "initialize"
       | "isAdmin"
       | "isEmailProofUsed"
+      | "isEmailRevoked"
       | "isRecipient"
       | "isSubmissionClaimable"
       | "owner"
@@ -151,6 +152,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
       | "reviewSubmission(string,uint16,uint256)"
       | "reviewSubmission(string,uint16,(uint256,uint256,uint256,uint256,uint256,uint256[8]))"
       | "reviewerGroupId"
+      | "revokeEmail"
       | "revokeSubmission"
       | "semaphore"
       | "submissions"
@@ -166,6 +168,7 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   getEvent(
     nameOrSignatureOrTopic:
       | "AdminChanged"
+      | "EmailRevoked"
       | "EmailVerifierUpdated"
       | "EmergencyWithdraw"
       | "Initialized"
@@ -258,6 +261,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     values: [BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "isEmailRevoked",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "isRecipient",
     values: [string, AddressLike]
   ): string;
@@ -293,6 +300,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   encodeFunctionData(
     functionFragment: "reviewerGroupId",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "revokeEmail",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "revokeSubmission",
@@ -396,6 +407,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "isEmailRevoked",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "isRecipient",
     data: BytesLike
   ): Result;
@@ -430,6 +445,10 @@ export interface RoyaltyAutoClaimInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "reviewerGroupId",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "revokeEmail",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -474,6 +493,18 @@ export namespace AdminChangedEvent {
   export interface OutputObject {
     oldAdmin: string;
     newAdmin: string;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
+export namespace EmailRevokedEvent {
+  export type InputTuple = [number: BigNumberish];
+  export type OutputTuple = [number: bigint];
+  export interface OutputObject {
+    number: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -778,6 +809,12 @@ export interface RoyaltyAutoClaim extends BaseContract {
     "view"
   >;
 
+  isEmailRevoked: TypedContractMethod<
+    [number: BigNumberish],
+    [boolean],
+    "view"
+  >;
+
   isRecipient: TypedContractMethod<
     [title: string, recipient: AddressLike],
     [boolean],
@@ -825,6 +862,12 @@ export interface RoyaltyAutoClaim extends BaseContract {
   >;
 
   reviewerGroupId: TypedContractMethod<[], [bigint], "view">;
+
+  revokeEmail: TypedContractMethod<
+    [number: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
 
   revokeSubmission: TypedContractMethod<[title: string], [void], "nonpayable">;
 
@@ -972,6 +1015,9 @@ export interface RoyaltyAutoClaim extends BaseContract {
     nameOrSignature: "isEmailProofUsed"
   ): TypedContractMethod<[emailHeaderHash: BytesLike], [boolean], "view">;
   getFunction(
+    nameOrSignature: "isEmailRevoked"
+  ): TypedContractMethod<[number: BigNumberish], [boolean], "view">;
+  getFunction(
     nameOrSignature: "isRecipient"
   ): TypedContractMethod<
     [title: string, recipient: AddressLike],
@@ -1025,6 +1071,9 @@ export interface RoyaltyAutoClaim extends BaseContract {
   getFunction(
     nameOrSignature: "reviewerGroupId"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "revokeEmail"
+  ): TypedContractMethod<[number: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "revokeSubmission"
   ): TypedContractMethod<[title: string], [void], "nonpayable">;
@@ -1086,6 +1135,13 @@ export interface RoyaltyAutoClaim extends BaseContract {
     AdminChangedEvent.InputTuple,
     AdminChangedEvent.OutputTuple,
     AdminChangedEvent.OutputObject
+  >;
+  getEvent(
+    key: "EmailRevoked"
+  ): TypedContractEvent<
+    EmailRevokedEvent.InputTuple,
+    EmailRevokedEvent.OutputTuple,
+    EmailRevokedEvent.OutputObject
   >;
   getEvent(
     key: "EmailVerifierUpdated"
@@ -1175,6 +1231,17 @@ export interface RoyaltyAutoClaim extends BaseContract {
       AdminChangedEvent.InputTuple,
       AdminChangedEvent.OutputTuple,
       AdminChangedEvent.OutputObject
+    >;
+
+    "EmailRevoked(uint256)": TypedContractEvent<
+      EmailRevokedEvent.InputTuple,
+      EmailRevokedEvent.OutputTuple,
+      EmailRevokedEvent.OutputObject
+    >;
+    EmailRevoked: TypedContractEvent<
+      EmailRevokedEvent.InputTuple,
+      EmailRevokedEvent.OutputTuple,
+      EmailRevokedEvent.OutputObject
     >;
 
     "EmailVerifierUpdated(address)": TypedContractEvent<
