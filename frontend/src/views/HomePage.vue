@@ -26,7 +26,9 @@ onMounted(async () => {
 	await royaltyAutoClaimStore.fetchReviewerMembers()
 })
 
-// ===================================== email-based operations =====================================
+/* -------------------------------------------------------------------------- */
+/*                              Email Operations                              */
+/* -------------------------------------------------------------------------- */
 
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const showUploadCard = ref(false)

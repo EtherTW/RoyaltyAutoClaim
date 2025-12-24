@@ -26,7 +26,7 @@ import {
 	generateSemaphoreProof,
 	makeDummySemaphoreProof,
 } from './semaphore-utils'
-import { ParsedEmailData } from './zkemail-utils'
+import { generateEmailProof, makeDummyEmailProof, ParsedEmailData } from './zkemail-utils'
 
 export function useContractCallV2<T extends unknown[] = []>(options: {
 	getCalldata?: (...args: T) => string
@@ -70,7 +70,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 
 			if (options.getEmailOperation) {
 				/* -------------------------------------------------------------------------- */
-				/*                             Email ZK proof flow                            */
+				/*                              Email Operations                              */
 				/* -------------------------------------------------------------------------- */
 				const emailOperation = options.getEmailOperation(...args)
 
@@ -98,7 +98,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 						emailOperation.parsedEmailData.nullifier,
 					])
 				} else {
-					throw new Error('Unknown email operation type')
+					throw new Error(`Unknown email operation type: ${emailOperation.parsedEmailData.operationType}`)
 				}
 
 				// Build user op
@@ -107,7 +107,9 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 					.setNonce(await getNonceV08(senderAddress, client))
 					.setCallData(callData)
 					.setGasPrice(await fetchGasPricePimlico(pimlicoUrl))
-					.setSignature(makeDummyProof(emailOperation.parsedEmailData.signals)) // Set dummy proof for gas estimation
+
+				// Make dummy proof for gas estimation
+				op.setSignature(await makeDummyEmailProof(emailOperation.eml))
 
 				// Estimate gas
 				try {
@@ -124,8 +126,8 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				const genProofToast = toast.info('Generating proof...', {
 					duration: Infinity,
 				})
-				const useLocalProof = options.getUseLocalProof?.() ?? false
-				const { encodedProof } = await genProof(emailOperation.eml, op.hash(), useLocalProof)
+
+				const encodedProof = await generateEmailProof(emailOperation.eml, op.hash())
 				op.setSignature(encodedProof)
 
 				toast.dismiss(genProofToast)
@@ -134,7 +136,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				await sendAndWaitForUserOp(op, options.successTitle)
 			} else if (options.getSemaphoreOperation) {
 				/* -------------------------------------------------------------------------- */
-				/*                           Semaphore ZK proof flow                          */
+				/*                                  Semaphore                                 */
 				/* -------------------------------------------------------------------------- */
 				const semaphoreOperation = options.getSemaphoreOperation(...args)
 
