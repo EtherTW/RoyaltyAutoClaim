@@ -127,7 +127,12 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 					duration: Infinity,
 				})
 
+				const proofStartTime = performance.now()
 				const encodedProof = await generateEmailProof(emailOperation.eml, op.hash())
+				const proofEndTime = performance.now()
+				const proofDuration = ((proofEndTime - proofStartTime) / 1000).toFixed(2)
+				console.info(`Email proof generation took ${proofDuration}s`)
+
 				op.setSignature(encodedProof)
 
 				toast.dismiss(genProofToast)

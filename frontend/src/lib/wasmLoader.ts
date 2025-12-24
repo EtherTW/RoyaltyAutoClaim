@@ -5,6 +5,9 @@
  * with proper caching and error handling.
  */
 
+const ACVM_WASM_PATH = '/RoyaltyAutoClaim/wasm/acvm_js_bg.wasm'
+const ABI_WASM_PATH = '/RoyaltyAutoClaim/wasm/noirc_abi_wasm_bg.wasm'
+
 let wasmInitialized = false
 let initPromise: Promise<void> | null = null
 
@@ -32,8 +35,8 @@ export async function initializeWasm(): Promise<void> {
 
 			// Initialize with explicit WASM paths
 			await Promise.all([
-				initACVM(new URL('/wasm/acvm_js_bg.wasm', window.location.origin)),
-				initAbi(new URL('/wasm/noirc_abi_wasm_bg.wasm', window.location.origin)),
+				initACVM(new URL(ACVM_WASM_PATH, window.location.origin)),
+				initAbi(new URL(ABI_WASM_PATH, window.location.origin)),
 			])
 
 			wasmInitialized = true

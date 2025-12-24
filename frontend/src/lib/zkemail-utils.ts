@@ -10,9 +10,10 @@ import {
 } from '../../../circuits/script/utilsTitleHash'
 import { initializeWasm } from './wasmLoader'
 
-export type ParsedEmailData = Awaited<ReturnType<typeof parseEmail>>
-
 export const DKIM_REGISTRY_ADDRESS = '0x3D3935B3C030893f118a84C92C66dF1B9E4169d6'
+export const CIRCUIT_PATH = '/RoyaltyAutoClaim/title_hash.json'
+
+export type ParsedEmailData = Awaited<ReturnType<typeof parseEmail>>
 
 // Circuit and backend cache
 let cachedCircuit: Record<string, unknown> | null = null
@@ -35,7 +36,7 @@ export async function loadCircuit(): Promise<Record<string, unknown>> {
 		return cachedCircuit
 	}
 
-	const response = await fetch('/title_hash.json')
+	const response = await fetch(CIRCUIT_PATH)
 	if (!response.ok) {
 		throw new Error('Failed to load circuit. Make sure the circuit is compiled.')
 	}
