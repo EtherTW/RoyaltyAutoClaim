@@ -26,11 +26,11 @@ import {
 	generateSemaphoreProof,
 	makeDummySemaphoreProof,
 } from './semaphore-utils'
+import { ParsedEmailData } from './zkemail-utils'
 
 export function useContractCallV2<T extends unknown[] = []>(options: {
 	getCalldata?: (...args: T) => string
 	getEmailOperation?: (...args: T) => {
-		type: EmailSubjectType
 		eml: string
 		parsedEmailData: ParsedEmailData | null
 	}
@@ -85,17 +85,17 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				// Generate calldata based on operation type
 				let callData: string
 				const iface = IRoyaltyAutoClaim__factory.createInterface()
-				if (emailOperation.type === 'registration') {
-					callData = iface.encodeFunctionData('registerSubmission', [
+				if (emailOperation.parsedEmailData.operationType === 1) {
+					callData = iface.encodeFunctionData('registerSubmission4337', [
 						emailOperation.parsedEmailData.title,
 						emailOperation.parsedEmailData.recipient,
-						emailOperation.parsedEmailData.headerHash,
+						emailOperation.parsedEmailData.nullifier,
 					])
-				} else if (emailOperation.type === 'recipient-update') {
-					callData = iface.encodeFunctionData('updateRoyaltyRecipient', [
+				} else if (emailOperation.parsedEmailData.operationType === 2) {
+					callData = iface.encodeFunctionData('updateRoyaltyRecipient4337', [
 						emailOperation.parsedEmailData.title,
 						emailOperation.parsedEmailData.recipient,
-						emailOperation.parsedEmailData.headerHash,
+						emailOperation.parsedEmailData.nullifier,
 					])
 				} else {
 					throw new Error('Unknown email operation type')

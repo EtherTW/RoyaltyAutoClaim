@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useContractCallV2 } from '@/lib/useContractCallV2'
+import { ParsedEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { Edit, Loader2, Settings, X } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
+import { parseEmail } from '../../../circuits/script/utils'
 
 const globalLoaderStore = useGlobalLoaderStore()
 
@@ -64,7 +66,7 @@ async function handleFileUpload(event: Event) {
 		isParsingEmail.value = true
 		useGlobalLoaderStore().isGlobalLoading = true
 		try {
-			parsedEmailData.value = await parseEmailData(text)
+			parsedEmailData.value = await parseEmail(text)
 		} catch (error) {
 			parseError.value = error instanceof Error ? error.message : 'Failed to parse email'
 			console.error('Error parsing email:', error)
@@ -79,7 +81,6 @@ async function handleFileUpload(event: Event) {
 // Register Submission
 const { isLoading: isRegisterSubmissionLoading, send: onClickRegisterSubmission } = useContractCallV2({
 	getEmailOperation: (_title: string) => ({
-		type: 'registration',
 		eml: fileContent.value,
 		parsedEmailData: parsedEmailData.value,
 	}),
@@ -94,7 +95,6 @@ const { isLoading: isRegisterSubmissionLoading, send: onClickRegisterSubmission 
 // Update Recipient
 const { isLoading: isUpdateRecipientLoading, send: onClickUpdateRecipient } = useContractCallV2({
 	getEmailOperation: (_title: string, _recipient: string) => ({
-		type: 'recipient-update',
 		eml: fileContent.value,
 		parsedEmailData: parsedEmailData.value,
 	}),
@@ -316,7 +316,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 						</div>
 					</div>
 					<Button
-						v-if="parsedEmailData && parsedEmailData.subjectType === 'registration'"
+						v-if="parsedEmailData && parsedEmailData.operationType === 1"
 						:loading="isRegisterSubmissionLoading"
 						:disabled="isRegisterSubmissionLoading || isParsingEmail || isButtonDisabled"
 						@click="onClickRegisterSubmission(parsedEmailData.title)"
@@ -324,7 +324,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 						Register Submission
 					</Button>
 					<Button
-						v-if="parsedEmailData && parsedEmailData.subjectType === 'recipient-update'"
+						v-if="parsedEmailData && parsedEmailData.operationType === 2"
 						:loading="isUpdateRecipientLoading"
 						:disabled="isUpdateRecipientLoading || isParsingEmail || isButtonDisabled"
 						@click="onClickUpdateRecipient(parsedEmailData.title, parsedEmailData.recipient)"
