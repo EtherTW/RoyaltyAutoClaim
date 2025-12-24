@@ -45,6 +45,28 @@ const mode = useColorMode()
 	--toast-close-button-transform: translate(285px, -6px);
 }
 
+/* Fix close button background color for light theme toast */
+[data-sonner-toaster][data-theme='light'] [data-close-button] {
+	border: 1px solid rgb(200, 200, 200) !important;
+}
+
+/* Close button hover state for light theme */
+[data-sonner-toaster][data-theme='light'] [data-close-button]:hover {
+	background: rgb(240, 240, 240) !important;
+}
+
+/* Fix close button background color for dark theme toast */
+[data-sonner-toaster][data-theme='dark'] [data-close-button] {
+	background: rgb(38, 38, 38) !important;
+	border: 1px solid rgb(100, 100, 100) !important;
+	color: white !important;
+}
+
+/* Close button hover state for dark theme */
+[data-sonner-toaster][data-theme='dark'] [data-close-button]:hover {
+	background: rgb(50, 50, 50) !important;
+}
+
 /* Set a fixed toast width instead of using the default 356px */
 [data-sonner-toast] {
 	width: 300px; /* Custom width for each individual toast */

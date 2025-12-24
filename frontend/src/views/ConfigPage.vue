@@ -553,11 +553,11 @@ const displayTokenAmount = computed(() => {
 				</Button>
 			</RouterLink>
 
-			<Button size="icon" variant="ghost">
-				<RouterLink :to="{ name: 'identity' }">
+			<RouterLink :to="{ name: 'identity' }">
+				<Button size="icon" variant="ghost">
 					<UserCircle />
-				</RouterLink>
-			</Button>
+				</Button>
+			</RouterLink>
 		</div>
 
 		<Card class="mb-8">
