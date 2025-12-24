@@ -6,7 +6,6 @@ import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {UserOperationLib} from "@account-abstraction/contracts/core/UserOperationLib.sol";
-import {ECDSA} from "solady/utils/ECDSA.sol";
 
 abstract contract AATest is Test {
     using UserOperationLib for PackedUserOperation;

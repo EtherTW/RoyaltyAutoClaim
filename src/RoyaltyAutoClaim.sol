@@ -575,6 +575,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             // ========================= Admin =========================
             selector == this.adminRegisterSubmission.selector || selector == this.adminUpdateRoyaltyRecipient.selector
                 || selector == this.revokeSubmission.selector || selector == this.updateEmailVerifier.selector
+                || selector == this.revokeEmail.selector
         ) {
             require(appendedSigner == admin(), Unauthorized(appendedSigner));
             if (signer != appendedSigner) {

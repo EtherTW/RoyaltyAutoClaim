@@ -41,8 +41,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         new RoyaltyAutoClaimProxy(
             address(newImpl),
             abi.encodeCall(
-                RoyaltyAutoClaim.initialize,
-                (address(0), admin, address(token), mockRegistrationVerifier, mockSemaphore)
+                RoyaltyAutoClaim.initialize, (address(0), admin, address(token), mockEmailVerifier, mockSemaphore)
             )
         );
 
@@ -51,8 +50,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         new RoyaltyAutoClaimProxy(
             address(newImpl),
             abi.encodeCall(
-                RoyaltyAutoClaim.initialize,
-                (owner, address(0), address(token), mockRegistrationVerifier, mockSemaphore)
+                RoyaltyAutoClaim.initialize, (owner, address(0), address(token), mockEmailVerifier, mockSemaphore)
             )
         );
 
@@ -60,9 +58,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         new RoyaltyAutoClaimProxy(
             address(newImpl),
-            abi.encodeCall(
-                RoyaltyAutoClaim.initialize, (owner, admin, address(0), mockRegistrationVerifier, mockSemaphore)
-            )
+            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(0), mockEmailVerifier, mockSemaphore))
         );
 
         // Test zero verifier
@@ -70,8 +66,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         new RoyaltyAutoClaimProxy(
             address(newImpl),
             abi.encodeCall(
-                RoyaltyAutoClaim.initialize,
-                (owner, admin, address(token), IRegistrationVerifier(address(0)), mockSemaphore)
+                RoyaltyAutoClaim.initialize, (owner, admin, address(token), IEmailVerifier(address(0)), mockSemaphore)
             )
         );
 
@@ -80,8 +75,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         new RoyaltyAutoClaimProxy(
             address(newImpl),
             abi.encodeCall(
-                RoyaltyAutoClaim.initialize,
-                (owner, admin, address(token), mockRegistrationVerifier, ISemaphore(address(0)))
+                RoyaltyAutoClaim.initialize, (owner, admin, address(token), mockEmailVerifier, ISemaphore(address(0)))
             )
         );
     }
@@ -104,14 +98,14 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     }
 
     function testCannot_registerSubmission_invalid_proof() public {
-        vm.mockCall(
-            address(mockRegistrationVerifier),
-            abi.encodeWithSelector(IRegistrationVerifier.verify.selector),
-            abi.encode(false)
-        );
+        // Set mock to return false
+        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(false);
 
         vm.expectRevert(IRoyaltyAutoClaim.InvalidProof.selector);
         _registerSubmission("test", recipient);
+
+        // Reset mock
+        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(true);
     }
 
     function testCannot_registerSubmission_if_the_submission_already_exists_or_is_claimed() public {
@@ -140,20 +134,25 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     }
 
     function testCannot_registerSubmission_with_used_email_proof() public {
-        bytes32 emailHeaderHash = bytes32(uint256(12345));
+        bytes32 emailNullifier = bytes32(uint256(12345));
 
-        // First registration with the email header hash
-        royaltyAutoClaim.registerSubmission("test", recipient, emailHeaderHash, validRegistrationProof());
+        // First registration with the email nullifier
+        TitleHashVerifierLib.EmailProof memory proof =
+            _createEmailProof(recipient, emailNullifier, TitleHashVerifierLib.OperationType.REGISTRATION, bytes32(0));
+        royaltyAutoClaim.registerSubmission("test", proof);
 
-        // Verify the email header hash is marked as used
-        assertTrue(royaltyAutoClaim.isEmailProofUsed(emailHeaderHash), "Email proof should be marked as used");
+        // Verify the email nullifier is marked as used
+        assertTrue(royaltyAutoClaim.isEmailProofUsed(emailNullifier), "Email proof should be marked as used");
 
-        // Second registration with the same email header hash should fail even with different title
+        // Second registration with the same nullifier should fail even with different title
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmailProofUsed.selector));
-        royaltyAutoClaim.registerSubmission("test2", recipient, emailHeaderHash, validRegistrationProof());
+        royaltyAutoClaim.registerSubmission("test2", proof);
 
-        // Third registration with a new email header hash should succeed
-        royaltyAutoClaim.registerSubmission("test2", recipient, bytes32(vm.randomBytes(32)), validRegistrationProof());
+        // Third registration with a new nullifier should succeed
+        TitleHashVerifierLib.EmailProof memory newProof = _createEmailProof(
+            recipient, bytes32(vm.randomUint()), TitleHashVerifierLib.OperationType.REGISTRATION, bytes32(0)
+        );
+        royaltyAutoClaim.registerSubmission("test2", newProof);
     }
 
     function testCannot_registerSubmission_if_not_called_by_entrypoint(
@@ -168,7 +167,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         // Try to call the onlyEntryPoint version directly (not through EntryPoint)
         vm.prank(caller);
         vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
-        royaltyAutoClaim.registerSubmission("test", recipientAddress, emailHash);
+        royaltyAutoClaim.registerSubmission4337("test", recipientAddress, emailHash);
     }
 
     // ======================================== updateRoyaltyRecipient ========================================
@@ -188,14 +187,14 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         address newRecipient = vm.randomAddress();
         _registerSubmission("test", originalRecipient);
 
-        vm.mockCall(
-            address(mockRegistrationVerifier),
-            abi.encodeWithSelector(IRegistrationVerifier.verify.selector),
-            abi.encode(false)
-        );
+        // Set mock to return false
+        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(false);
 
         vm.expectRevert(IRoyaltyAutoClaim.InvalidProof.selector);
         _updateRoyaltyRecipient("test", newRecipient);
+
+        // Reset mock
+        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(true);
     }
 
     function testCannot_updateRoyaltyRecipient_if_the_submission_is_claimed_or_not_exist() public {
@@ -228,24 +227,31 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     }
 
     function testCannot_updateRoyaltyRecipient_with_used_email_proof() public {
-        bytes32 emailHeaderHash = bytes32(uint256(54321));
+        bytes32 emailNullifier = bytes32(uint256(54321));
 
-        // First registration with the email header hash
-        royaltyAutoClaim.registerSubmission("test", recipient, emailHeaderHash, validRegistrationProof());
+        // First registration with the email nullifier
+        TitleHashVerifierLib.EmailProof memory regProof =
+            _createEmailProof(recipient, emailNullifier, TitleHashVerifierLib.OperationType.REGISTRATION, bytes32(0));
+        royaltyAutoClaim.registerSubmission("test", regProof);
 
-        // Verify the email header hash is marked as used
-        assertTrue(royaltyAutoClaim.isEmailProofUsed(emailHeaderHash), "Email proof should be marked as used");
+        // Verify the email nullifier is marked as used
+        assertTrue(royaltyAutoClaim.isEmailProofUsed(emailNullifier), "Email proof should be marked as used");
 
-        // Try to update royalty recipient using the same email header hash should fail
+        // Try to update royalty recipient using the same nullifier should fail
+        TitleHashVerifierLib.EmailProof memory updateProof = _createEmailProof(
+            vm.randomAddress(), emailNullifier, TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, bytes32(0)
+        );
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmailProofUsed.selector));
-        royaltyAutoClaim.updateRoyaltyRecipient(
-            "test", vm.randomAddress(), emailHeaderHash, validRecipientUpdateProof()
-        );
+        royaltyAutoClaim.updateRoyaltyRecipient("test", updateProof);
 
-        // Update with a new email header hash should succeed
-        royaltyAutoClaim.updateRoyaltyRecipient(
-            "test", vm.randomAddress(), bytes32(vm.randomBytes(32)), validRecipientUpdateProof()
+        // Update with a new nullifier should succeed
+        TitleHashVerifierLib.EmailProof memory newProof = _createEmailProof(
+            vm.randomAddress(),
+            bytes32(vm.randomUint()),
+            TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE,
+            bytes32(0)
         );
+        royaltyAutoClaim.updateRoyaltyRecipient("test", newProof);
     }
 
     function testCannot_updateRoyaltyRecipient_if_not_called_by_entrypoint(
@@ -263,7 +269,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         // Try to call the onlyEntryPoint version directly (not through EntryPoint)
         vm.prank(caller);
         vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
-        royaltyAutoClaim.updateRoyaltyRecipient("test", newRecipient, emailHash);
+        royaltyAutoClaim.updateRoyaltyRecipient4337("test", newRecipient, emailHash);
     }
 
     // ======================================== Owner Functions ========================================
@@ -601,26 +607,106 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.revokeSubmission("test");
     }
 
-    // ================================== updateRegistrationVerifier ==================================
+    // ================================== updateEmailVerifier ==================================
 
-    function test_updateRegistrationVerifier() public {
+    function test_updateEmailVerifier() public {
         address newVerifier = vm.randomAddress();
         vm.prank(admin);
-        royaltyAutoClaim.updateRegistrationVerifier(IRegistrationVerifier(newVerifier));
-        assertEq(royaltyAutoClaim.registrationVerifier(), newVerifier);
+        royaltyAutoClaim.updateEmailVerifier(IEmailVerifier(newVerifier));
+        assertEq(royaltyAutoClaim.emailVerifier(), newVerifier);
     }
 
-    function testCannot_updateRegistrationVerifier_if_not_admin() public {
+    function testCannot_updateEmailVerifier_if_not_admin() public {
         address newVerifier = vm.randomAddress();
         vm.prank(fake);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
-        royaltyAutoClaim.updateRegistrationVerifier(IRegistrationVerifier(newVerifier));
+        royaltyAutoClaim.updateEmailVerifier(IEmailVerifier(newVerifier));
     }
 
-    function testCannot_updateRegistrationVerifier_if_zero_address() public {
+    function testCannot_updateEmailVerifier_if_zero_address() public {
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
-        royaltyAutoClaim.updateRegistrationVerifier(IRegistrationVerifier(address(0)));
+        royaltyAutoClaim.updateEmailVerifier(IEmailVerifier(address(0)));
+    }
+
+    // ================================== revokeEmail ==================================
+
+    function test_revokeEmail() public {
+        uint256 emailNumber = 12345;
+
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit IRoyaltyAutoClaim.EmailRevoked(emailNumber);
+        royaltyAutoClaim.revokeEmail(emailNumber);
+
+        assertTrue(royaltyAutoClaim.isEmailRevoked(emailNumber));
+    }
+
+    function testCannot_revokeEmail_if_not_admin() public {
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.revokeEmail(12345);
+    }
+
+    function testCannot_registerSubmission_with_revoked_email() public {
+        uint256 emailNumber = 12345;
+
+        // Revoke email number
+        vm.prank(admin);
+        royaltyAutoClaim.revokeEmail(emailNumber);
+
+        // Create proof with revoked email number
+        TitleHashVerifierLib.EmailProof memory proof = _createEmailProofWithNumber(
+            recipient,
+            bytes32(vm.randomUint()),
+            TitleHashVerifierLib.OperationType.REGISTRATION,
+            bytes32(0),
+            emailNumber
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.RevokedEmail.selector, emailNumber));
+        royaltyAutoClaim.registerSubmission("test", proof);
+    }
+
+    function testCannot_updateRoyaltyRecipient_with_revoked_email() public {
+        // First register
+        _registerSubmission("test", recipient);
+
+        uint256 emailNumber = 67890;
+
+        // Revoke email number
+        vm.prank(admin);
+        royaltyAutoClaim.revokeEmail(emailNumber);
+
+        // Try to update with revoked email
+        TitleHashVerifierLib.EmailProof memory proof = _createEmailProofWithNumber(
+            vm.randomAddress(),
+            bytes32(vm.randomUint()),
+            TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE,
+            bytes32(0),
+            emailNumber
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.RevokedEmail.selector, emailNumber));
+        royaltyAutoClaim.updateRoyaltyRecipient("test", proof);
+    }
+
+    function test_isEmailRevoked() public view {
+        assertFalse(royaltyAutoClaim.isEmailRevoked(12345));
+    }
+
+    function test_revokeEmail_via_erc4337() public {
+        uint256 emailNumber = 99999;
+
+        PackedUserOperation memory userOp = _buildUserOp(
+            adminKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.revokeEmail, (emailNumber))
+        );
+
+        vm.expectEmit(true, false, false, false);
+        emit IRoyaltyAutoClaim.EmailRevoked(emailNumber);
+        _handleUserOp(userOp);
+
+        assertTrue(royaltyAutoClaim.isEmailRevoked(emailNumber));
     }
 
     // ======================================== Reviewer Functions ========================================

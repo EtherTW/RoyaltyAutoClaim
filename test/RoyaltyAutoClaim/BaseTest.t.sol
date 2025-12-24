@@ -6,18 +6,18 @@ import "../../src/RoyaltyAutoClaimProxy.sol";
 import "../utils/AATest.t.sol";
 import {ERC1967Utils} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Utils.sol";
 import {MockToken} from "../../src/MockToken.sol";
-import {ZKTest} from "../utils/ZKTest.sol";
-import {MockRegistrationVerifier} from "../utils/MockRegistrationVerifier.sol";
+import {MockEmailVerifier} from "../utils/MockEmailVerifier.sol";
 import {MockDKIMRegistry} from "../utils/MockDKIMRegistry.sol";
 import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
-import {IRegistrationVerifier, RegistrationVerifier} from "../../src/RegistrationVerifier.sol";
+import {IEmailVerifier, EmailVerifier} from "../../src/EmailVerifier.sol";
 import {ISemaphore} from "../../lib/semaphore/packages/contracts/contracts/interfaces/ISemaphore.sol";
 import {MockSemaphore} from "../utils/MockSemaphore.sol";
+import {TitleHashVerifierLib} from "../../src/verifiers/TitleHashVerifierLib.sol";
 
 /// @dev for testing internal functions
 contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {}
 
-abstract contract BaseTest is AATest, ZKTest {
+abstract contract BaseTest is AATest {
     address fake;
     uint256 fakeKey;
     address owner;
@@ -47,9 +47,8 @@ abstract contract BaseTest is AATest, ZKTest {
     uint256 reviewer2Nullifier1 = uint256(keccak256("reviewer2_nullifier_1"));
     uint256 reviewer2Nullifier2 = uint256(keccak256("reviewer2_nullifier_2"));
 
-    IRegistrationVerifier public mockRegistrationVerifier;
+    IEmailVerifier public mockEmailVerifier;
     IDKIMRegistry public mockDKIMRegistry;
-    IRegistrationVerifier public registrationVerifier;
 
     RoyaltyAutoClaim impl;
     RoyaltyAutoClaimProxy proxy;
@@ -84,9 +83,8 @@ abstract contract BaseTest is AATest, ZKTest {
 
         harness = new RoyaltyAutoClaimHarness();
 
-        mockRegistrationVerifier = new MockRegistrationVerifier();
+        mockEmailVerifier = new MockEmailVerifier();
         mockDKIMRegistry = new MockDKIMRegistry();
-        registrationVerifier = new RegistrationVerifier(mockDKIMRegistry, keccak256("johnson86tw"));
 
         mockSemaphore = new MockSemaphore();
 
@@ -94,7 +92,7 @@ abstract contract BaseTest is AATest, ZKTest {
         proxy = new RoyaltyAutoClaimProxy(
             address(impl),
             abi.encodeCall(
-                RoyaltyAutoClaim.initialize, (owner, admin, address(token), mockRegistrationVerifier, mockSemaphore)
+                RoyaltyAutoClaim.initialize, (owner, admin, address(token), mockEmailVerifier, mockSemaphore)
             )
         );
 
@@ -129,54 +127,122 @@ abstract contract BaseTest is AATest, ZKTest {
         vm.label(address(harness), "harness");
     }
 
+    function _createEmailProof(
+        address _recipient,
+        bytes32 _nullifier,
+        TitleHashVerifierLib.OperationType _operationType,
+        bytes32 userOpHash
+    ) internal pure returns (TitleHashVerifierLib.EmailProof memory) {
+        // Create public inputs array matching circuit output (330 elements)
+        bytes32[] memory publicInputs = new bytes32[](330);
+
+        // Set key indices based on circuit output:
+        // [0]: pubkey_hash (mock)
+        // [1]: nullifier
+        // [323]: operation_type (1=REGISTRATION, 2=RECIPIENT_UPDATE)
+        // [324]: number (email identifier)
+        // [325]: recipient
+        // [326-327]: title_hash (upper/lower)
+        // [328-329]: user_op_hash (upper/lower)
+
+        // Split userOpHash into upper and lower 128 bits
+        bytes32 upper = bytes32(uint256(userOpHash) >> 128);
+        bytes32 lower = bytes32(uint256(userOpHash) & ((1 << 128) - 1));
+
+        publicInputs[0] = bytes32(uint256(1)); // mock pubkey_hash
+        publicInputs[1] = _nullifier;
+        publicInputs[323] = bytes32(uint256(_operationType));
+        publicInputs[324] = bytes32(uint256(12345)); // mock email number
+        publicInputs[325] = bytes32(uint256(uint160(_recipient)));
+        publicInputs[326] = bytes32(0); // title_hash upper
+        publicInputs[327] = bytes32(0); // title_hash lower
+        publicInputs[328] = upper; // user_op_hash upper
+        publicInputs[329] = lower; // user_op_hash lower
+
+        return TitleHashVerifierLib.EmailProof({proof: new bytes(0), publicInputs: publicInputs});
+    }
+
+    /// @dev Helper to create an EmailProof with a specific email number (for revocation testing)
+    function _createEmailProofWithNumber(
+        address _recipient,
+        bytes32 _nullifier,
+        TitleHashVerifierLib.OperationType _operationType,
+        bytes32 userOpHash,
+        uint256 _emailNumber
+    ) internal pure returns (TitleHashVerifierLib.EmailProof memory) {
+        bytes32[] memory publicInputs = new bytes32[](330);
+
+        // Split userOpHash into upper and lower 128 bits
+        bytes32 upper = bytes32(uint256(userOpHash) >> 128);
+        bytes32 lower = bytes32(uint256(userOpHash) & ((1 << 128) - 1));
+
+        publicInputs[0] = bytes32(uint256(1)); // mock pubkey_hash
+        publicInputs[1] = _nullifier;
+        publicInputs[323] = bytes32(uint256(_operationType));
+        publicInputs[324] = bytes32(_emailNumber); // custom email number
+        publicInputs[325] = bytes32(uint256(uint160(_recipient)));
+        publicInputs[326] = bytes32(0); // title_hash upper
+        publicInputs[327] = bytes32(0); // title_hash lower
+        publicInputs[328] = upper; // user_op_hash upper
+        publicInputs[329] = lower; // user_op_hash lower
+
+        return TitleHashVerifierLib.EmailProof({proof: new bytes(0), publicInputs: publicInputs});
+    }
+
+    /// @dev Helper for direct registration with EmailProof
     function _registerSubmission(string memory _title, address _recipient) internal {
-        royaltyAutoClaim.registerSubmission(_title, _recipient, bytes32(vm.randomUint()), validRegistrationProof());
+        TitleHashVerifierLib.EmailProof memory proof = _createEmailProof(
+            _recipient, bytes32(vm.randomUint()), TitleHashVerifierLib.OperationType.REGISTRATION, bytes32(0)
+        );
+        royaltyAutoClaim.registerSubmission(_title, proof);
     }
 
+    /// @dev Helper for ERC-4337 registration
     function _registerSubmission4337(string memory _title, address _recipient) public {
+        bytes32 nullifier = bytes32(vm.randomUint());
+
         PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
             address(royaltyAutoClaim),
-            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission, (_title, _recipient, bytes32(vm.randomUint())))
+            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission4337, (_title, _recipient, nullifier))
         );
 
-        userOp.signature = abi.encode(validRegistrationProof());
+        // Calculate userOpHash before creating the proof
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+
+        TitleHashVerifierLib.EmailProof memory proof =
+            _createEmailProof(_recipient, nullifier, TitleHashVerifierLib.OperationType.REGISTRATION, userOpHash);
+
+        userOp.signature = abi.encode(proof);
 
         _handleUserOp(userOp);
     }
 
+    /// @dev Helper for direct recipient update with EmailProof
     function _updateRoyaltyRecipient(string memory _title, address _recipient) internal {
-        royaltyAutoClaim.updateRoyaltyRecipient(
-            _title, _recipient, bytes32(vm.randomUint()), validRecipientUpdateProof()
+        TitleHashVerifierLib.EmailProof memory proof = _createEmailProof(
+            _recipient, bytes32(vm.randomUint()), TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, bytes32(0)
         );
+        royaltyAutoClaim.updateRoyaltyRecipient(_title, proof);
     }
 
+    /// @dev Helper for ERC-4337 recipient update
     function _updateRoyaltyRecipient4337(string memory _title, address _recipient) public {
+        bytes32 nullifier = bytes32(vm.randomUint());
+
         PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
             address(royaltyAutoClaim),
-            abi.encodeCall(IRoyaltyAutoClaim.updateRoyaltyRecipient, (_title, _recipient, bytes32(vm.randomUint())))
+            abi.encodeCall(IRoyaltyAutoClaim.updateRoyaltyRecipient4337, (_title, _recipient, nullifier))
         );
 
-        userOp.signature = abi.encode(validRecipientUpdateProof());
+        // Calculate userOpHash before creating the proof
+        bytes32 userOpHash = entryPoint.getUserOpHash(userOp);
+
+        TitleHashVerifierLib.EmailProof memory proof =
+            _createEmailProof(_recipient, nullifier, TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, userOpHash);
+
+        userOp.signature = abi.encode(proof);
 
         _handleUserOp(userOp);
-    }
-
-    /// @dev Deploy a separate RoyaltyAutoClaim instance with real RegistrationVerifier for ZK proof testing
-    function _deployWithRealVerifier() internal returns (RoyaltyAutoClaim) {
-        RoyaltyAutoClaim realImpl = new RoyaltyAutoClaim();
-        RoyaltyAutoClaimProxy realProxy = new RoyaltyAutoClaimProxy(
-            address(realImpl),
-            abi.encodeCall(
-                RoyaltyAutoClaim.initialize, (owner, admin, address(token), registrationVerifier, mockSemaphore)
-            )
-        );
-
-        vm.deal(address(realProxy), 100 ether);
-
-        // Deal tokens directly to the new contract instead of transferring from owner
-        deal(address(token), address(realProxy), 10 ether);
-
-        return RoyaltyAutoClaim(payable(address(realProxy)));
     }
 
     /// @dev Create a valid Semaphore proof for testing

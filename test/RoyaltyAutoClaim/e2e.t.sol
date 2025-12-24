@@ -27,7 +27,6 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
     }
 
     function test_simple_flow() public {
-        vm.prank(admin);
         _registerSubmission("test", recipient);
 
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
