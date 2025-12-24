@@ -1,7 +1,7 @@
 import { useEOAStore } from '@/stores/useEOA'
 import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { IRoyaltyAutoClaim__factory, RegistrationVerifier__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
+import { EmailVerifier__factory, IRoyaltyAutoClaim__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
 import { Group } from '@semaphore-protocol/group'
 import { useVueDapp } from '@vue-dapp/core'
 import { concat } from 'ethers'
@@ -26,7 +26,6 @@ import {
 	generateSemaphoreProof,
 	makeDummySemaphoreProof,
 } from './semaphore-utils'
-import { EmailSubjectType, genProof, makeDummyProof, ParsedEmailData } from './zkemail-utils'
 
 export function useContractCallV2<T extends unknown[] = []>(options: {
 	getCalldata?: (...args: T) => string
@@ -70,7 +69,9 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 			}
 
 			if (options.getEmailOperation) {
-				// Email-based ZK proof flow
+				/* -------------------------------------------------------------------------- */
+				/*                             Email ZK proof flow                            */
+				/* -------------------------------------------------------------------------- */
 				const emailOperation = options.getEmailOperation(...args)
 
 				if (!emailOperation.parsedEmailData) {
@@ -132,7 +133,9 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				// send
 				await sendAndWaitForUserOp(op, options.successTitle)
 			} else if (options.getSemaphoreOperation) {
-				// Semaphore ZK proof flow
+				/* -------------------------------------------------------------------------- */
+				/*                           Semaphore ZK proof flow                          */
+				/* -------------------------------------------------------------------------- */
 				const semaphoreOperation = options.getSemaphoreOperation(...args)
 
 				if (!eoaStore.signer) {
@@ -217,6 +220,9 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				// send
 				await sendAndWaitForUserOp(op, options.successTitle)
 			} else {
+				/* -------------------------------------------------------------------------- */
+				/*                             EOA signature flow                             */
+				/* -------------------------------------------------------------------------- */
 				const { chainId: walletChainId, connector } = useVueDapp()
 
 				if (walletChainId.value !== Number(chainId)) {
@@ -271,7 +277,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 			if (err instanceof ERC4337Error) {
 				revert = extractAndParseRevert(err, {
 					RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
-					RegistrationVerifier: RegistrationVerifier__factory.createInterface(),
+					EmailVerifier: EmailVerifier__factory.createInterface(),
 					IERC20Errors: IERC20Errors__factory.createInterface(),
 				})
 			}

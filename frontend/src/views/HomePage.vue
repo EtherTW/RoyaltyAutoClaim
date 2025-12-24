@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useContractCallV2 } from '@/lib/useContractCallV2'
-import { ParsedEmailData, parseEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
