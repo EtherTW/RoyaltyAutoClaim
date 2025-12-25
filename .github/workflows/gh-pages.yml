@@ -35,7 +35,11 @@ jobs:
               with:
                   bun-version: latest
 
-            - name: Install dependencies
+            - name: Install circuits dependencies
+              working-directory: ./circuits
+              run: bun install
+
+            - name: Install frontend dependencies
               working-directory: ./frontend
               run: bun install
 
