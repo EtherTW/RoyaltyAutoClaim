@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCountdownTimer } from '@/lib/useCountdownTimer'
 import { useSubmissionPolling } from '@/lib/submission-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { ParsedEmailData } from '@/lib/zkemail-utils'
@@ -92,6 +93,14 @@ async function handleFileUpload(event: Event) {
 	reader.readAsText(file)
 }
 
+// Register Submission Timer
+const {
+	countdown: registerSubmissionCountdown,
+	startTimer: startRegisterSubmissionTimer,
+	stopTimer: stopRegisterSubmissionTimer,
+	timerDisplay: registerSubmissionTimerDisplay,
+} = useCountdownTimer()
+
 // Register Submission
 const { isLoading: isRegisterSubmissionLoading, send: onClickRegisterSubmission } = useContractCallV2({
 	getEmailOperation: (_title: string) => ({
@@ -100,10 +109,22 @@ const { isLoading: isRegisterSubmissionLoading, send: onClickRegisterSubmission 
 	}),
 	successTitle: 'Successfully Registered Submission',
 	errorTitle: 'Error Registering Submission',
+	onBeforeCall: async () => {
+		startRegisterSubmissionTimer()
+	},
 	onAfterCall: async (title: string) => {
 		await pollForSubmissionUpdate(title)
+		stopRegisterSubmissionTimer()
 	},
 })
+
+// Update Recipient Timer
+const {
+	countdown: updateRecipientCountdown,
+	startTimer: startUpdateRecipientTimer,
+	stopTimer: stopUpdateRecipientTimer,
+	timerDisplay: updateRecipientTimerDisplay,
+} = useCountdownTimer()
 
 // Update Recipient
 const { isLoading: isUpdateRecipientLoading, send: onClickUpdateRecipient } = useContractCallV2({
@@ -113,6 +134,9 @@ const { isLoading: isUpdateRecipientLoading, send: onClickUpdateRecipient } = us
 	}),
 	successTitle: 'Successfully Updated Recipient',
 	errorTitle: 'Error Updating Recipient',
+	onBeforeCall: async () => {
+		startUpdateRecipientTimer()
+	},
 	onAfterCall: async (title: string, recipient: string) => {
 		await pollForSubmissionUpdate(title, submission => {
 			// For recipient updates, verify the recipient was actually updated
@@ -121,6 +145,7 @@ const { isLoading: isUpdateRecipientLoading, send: onClickUpdateRecipient } = us
 			}
 			return isSameAddress(submission.recipient, recipient)
 		})
+		stopUpdateRecipientTimer()
 	},
 })
 
@@ -283,6 +308,12 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 						@click="onClickRegisterSubmission(parsedEmailData.title)"
 					>
 						Register Submission
+						<span
+							v-if="isRegisterSubmissionLoading"
+							:class="{ 'text-red-500': registerSubmissionCountdown <= 0 }"
+						>
+							&nbsp;{{ registerSubmissionTimerDisplay }}
+						</span>
 					</Button>
 					<Button
 						v-if="parsedEmailData && parsedEmailData.operationType === 2"
@@ -291,6 +322,12 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 						@click="onClickUpdateRecipient(parsedEmailData.title, parsedEmailData.recipient)"
 					>
 						Update Recipient
+						<span
+							v-if="isUpdateRecipientLoading"
+							:class="{ 'text-red-500': updateRecipientCountdown <= 0 }"
+						>
+							&nbsp;{{ updateRecipientTimerDisplay }}
+						</span>
 					</Button>
 				</div>
 			</CardContent>

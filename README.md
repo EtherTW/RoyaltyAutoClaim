@@ -86,6 +86,7 @@ Deployed Addresses
     "@noir-lang/noir_js": "1.0.0-beta.5",
     ```
 -   The frontend scripts currently only implement the title_hash circuit.
+-   The integration is inspired by the design of [mintmarks.fun](https://github.com/trionlabs/mintmarks.fun)
 
 ### Semaphore Integration
 
