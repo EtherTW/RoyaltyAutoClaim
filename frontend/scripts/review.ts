@@ -1,6 +1,10 @@
 /**
  * Review Submission Script
  *
+ * ⚠️ KNOWN ISSUE: This script will fail when run with Bun due to lack of worker thread support.
+ * See: https://github.com/semaphore-protocol/semaphore/issues/1072
+ * Semaphore's proof generation requires multithreading, which Bun does not currently support.
+ *
  * This script allows reviewers to submit reviews for registered submissions
  * using Semaphore zero-knowledge proofs through the ERC-4337 flow.
  *
@@ -124,7 +128,7 @@ const signature2 = await reviewer2Wallet.signMessage(SEMAPHORE_IDENTITY_MESSAGE)
 const identity2 = new Identity(signature2)
 console.log('Reviewer 2 commitment:', identity2.commitment.toString())
 
-// Create off-chain group with members using SemaphoreEthers
+// Create off-chain group
 const members = await fetchReviewerGroupMembers({
 	rpcUrl: TENDERLY_RPC_URL[CHAIN_ID],
 	semaphoreAddress,
@@ -153,7 +157,7 @@ const randomNullifier = BigInt(keccak256(randomBytes(32)))
 
 const dummyProofEncoded = makeDummySemaphoreProof(merkleTreeDepth, merkleTreeRoot, randomNullifier, message, scope)
 
-const callData = IRoyaltyAutoClaim__factory.createInterface().encodeFunctionData('reviewSubmission', [
+const callData = IRoyaltyAutoClaim__factory.createInterface().encodeFunctionData('reviewSubmission4337', [
 	title,
 	royaltyLevel,
 	randomNullifier,
@@ -199,7 +203,7 @@ if (hasAlreadyReviewed) {
 console.log('\nUpdating user operation with real proof...')
 
 // Update callData with the real nullifier
-const realCallData = IRoyaltyAutoClaim__factory.createInterface().encodeFunctionData('reviewSubmission', [
+const realCallData = IRoyaltyAutoClaim__factory.createInterface().encodeFunctionData('reviewSubmission4337', [
 	title,
 	royaltyLevel,
 	toBeHex(semaphoreProof.nullifier, 32),

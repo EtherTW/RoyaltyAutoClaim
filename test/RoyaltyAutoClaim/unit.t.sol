@@ -1025,7 +1025,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
         // Try to call the onlyEntryPoint version directly
         vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
-        royaltyAutoClaim.reviewSubmission("test", 20, reviewer1Nullifier1);
+        royaltyAutoClaim.reviewSubmission4337("test", 20, reviewer1Nullifier1);
     }
 
     function test_hasReviewed() public {

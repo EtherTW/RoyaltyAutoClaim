@@ -90,7 +90,7 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
 
         // First review with Semaphore
         userOp = _buildUserOpWithoutSignature(
-            address(proxy), abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission, ("test", 20, reviewer1Nullifier1))
+            address(proxy), abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission4337, ("test", 20, reviewer1Nullifier1))
         );
         ISemaphore.SemaphoreProof memory proof1 = _createSemaphoreProof(reviewer1Nullifier1, 20, "test");
         userOp.signature = abi.encode(proof1);
@@ -111,7 +111,7 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
 
         // Second review with Semaphore
         userOp = _buildUserOpWithoutSignature(
-            address(proxy), abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission, ("test", 40, reviewer2Nullifier1))
+            address(proxy), abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission4337, ("test", 40, reviewer2Nullifier1))
         );
         ISemaphore.SemaphoreProof memory proof2 = _createSemaphoreProof(reviewer2Nullifier1, 40, "test");
         userOp.signature = abi.encode(proof2);

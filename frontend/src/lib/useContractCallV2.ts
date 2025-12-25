@@ -197,11 +197,10 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 					semaphoreProof.scope,
 				)
 
-				const callData = IRoyaltyAutoClaim__factory.createInterface().encodeFunctionData('reviewSubmission', [
-					semaphoreOperation.title,
-					semaphoreOperation.royaltyLevel,
-					semaphoreProof.nullifier,
-				])
+				const callData = IRoyaltyAutoClaim__factory.createInterface().encodeFunctionData(
+					'reviewSubmission4337',
+					[semaphoreOperation.title, semaphoreOperation.royaltyLevel, semaphoreProof.nullifier],
+				)
 
 				const op = new UserOpBuilder({
 					chainId,

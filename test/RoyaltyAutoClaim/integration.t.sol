@@ -133,7 +133,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
 
         uint256 nullifier = reviewer1Nullifier1;
         bytes memory reviewerCall =
-            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission, (testSubmissionTitle, 20, nullifier));
+            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission4337, (testSubmissionTitle, 20, nullifier));
 
         // Create proof
         ISemaphore.SemaphoreProof memory semaphoreProof = _createSemaphoreProof(nullifier, 20, testSubmissionTitle);
@@ -555,7 +555,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         // Second review from same nullifier should fail
         PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
             address(royaltyAutoClaim),
-            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission, (testSubmissionTitle, 40, reviewer1Nullifier1))
+            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission4337, (testSubmissionTitle, 40, reviewer1Nullifier1))
         );
         ISemaphore.SemaphoreProof memory proof = _createSemaphoreProof(reviewer1Nullifier1, 40, testSubmissionTitle);
         userOp.signature = abi.encode(proof);
@@ -605,7 +605,7 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
     function _reviewSubmission4337(uint256 nullifier, string memory title, uint16 royaltyLevel) internal {
         PackedUserOperation memory userOp = _buildUserOpWithoutSignature(
             address(royaltyAutoClaim),
-            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission, (title, royaltyLevel, nullifier))
+            abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission4337, (title, royaltyLevel, nullifier))
         );
 
         ISemaphore.SemaphoreProof memory semaphoreProof = _createSemaphoreProof(nullifier, royaltyLevel, title);
