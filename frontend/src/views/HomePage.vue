@@ -7,8 +7,10 @@ import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoCla
 import { Edit, Loader2, Settings, X } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
 import { parseEmail } from '../../../circuits/script/utils'
+import { useSubmissionPolling } from '@/lib/submission-utils'
 
 const globalLoaderStore = useGlobalLoaderStore()
+const { isPollingForSubmissionUpdate, pollForSubmissionUpdate } = useSubmissionPolling()
 
 const isButtonDisabled = computed(
 	() => isSubmitReviewLoading.value || isClaimRoyaltyLoading.value || globalLoaderStore.isGlobalLoading,
@@ -170,45 +172,6 @@ const { isLoading: isClaimRoyaltyLoading, send: onClickClaimRoyalty } = useContr
 	},
 })
 
-const isPollingForSubmissionUpdate = ref(false)
-
-// Helper function to poll for submission updates after operations
-async function pollForSubmissionUpdate(
-	submissionTitle: string,
-	verifyFn?: (submission: Submission) => boolean,
-): Promise<void> {
-	const maxAttempts = 10
-	const delayMs = 500
-
-	isPollingForSubmissionUpdate.value = true
-
-	for (let attempt = 0; attempt < maxAttempts; attempt++) {
-		await royaltyAutoClaimStore.updateSubmissions()
-
-		const found = royaltyAutoClaimStore.submissions.find(s => s.title === submissionTitle)
-
-		if (found) {
-			// If verification function provided, check if update is reflected
-			if (verifyFn && !verifyFn(found)) {
-				// Continue polling if verification fails
-				if (attempt < maxAttempts - 1) {
-					await new Promise(resolve => setTimeout(resolve, delayMs))
-					continue
-				}
-			} else {
-				isPollingForSubmissionUpdate.value = false
-				return // Successfully found and verified
-			}
-		}
-
-		if (attempt < maxAttempts - 1) {
-			await new Promise(resolve => setTimeout(resolve, delayMs))
-		}
-	}
-
-	console.warn('Submission update not reflected after polling, but transaction succeeded')
-}
-
 function getAvgRoyaltyLevel(submission: Submission) {
 	if (!submission.reviewCount || !submission.totalRoyaltyLevel) {
 		return null
@@ -246,11 +209,11 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 				<div>Close</div>
 			</Button>
 
-			<Button size="icon" variant="ghost" :disabled="isButtonDisabled">
-				<RouterLink :to="{ name: 'v2-config' }">
+			<RouterLink :to="{ name: 'v2-config' }">
+				<Button size="icon" variant="ghost" :disabled="isButtonDisabled">
 					<Settings />
-				</RouterLink>
-			</Button>
+				</Button>
+			</RouterLink>
 		</div>
 
 		<!-- Email Upload Section -->

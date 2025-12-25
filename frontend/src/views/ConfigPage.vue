@@ -2,6 +2,7 @@
 import { TENDERLY_RPC_URL } from '@/config'
 import { formatErrMsg, isUserRejectedError, normalizeError, parseContractRevert } from '@/lib/error'
 import { fetchReviewerGroupMembers, SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
+import { useSubmissionPolling } from '@/lib/submission-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useEOAStore } from '@/stores/useEOA'
@@ -11,6 +12,7 @@ import { Group } from '@semaphore-protocol/group'
 import { useVueDapp } from '@vue-dapp/core'
 import { Contract, ContractTransactionResponse, formatEther, Interface, parseEther } from 'ethers'
 import { ArrowLeft, UserCircle } from 'lucide-vue-next'
+import { isSameAddress } from 'sendop'
 import { h } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -19,6 +21,7 @@ const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 const blockchainStore = useBlockchainStore()
 const eoaStore = useEOAStore()
 const { chainId: walletChainId, connector } = useVueDapp()
+const { isPollingForSubmissionUpdate, pollForSubmissionUpdate } = useSubmissionPolling()
 
 // Semaphore contract instance
 const semaphoreContract = computed(() => {
@@ -59,10 +62,14 @@ const isAnyReviewerLoading = computed(
 const isBtnDisabled = computed(
 	() =>
 		isRevokeLoading.value ||
+		isAdminRegisterLoading.value ||
+		isAdminUpdateRecipientLoading.value ||
+		isRevokeEmailLoading.value ||
 		isChangeAdminLoading.value ||
 		isChangeTokenLoading.value ||
 		isEmergencyWithdrawLoading.value ||
-		isAnyReviewerLoading.value,
+		isAnyReviewerLoading.value ||
+		isPollingForSubmissionUpdate.value,
 )
 
 const currentAdmin = ref('')
@@ -92,6 +99,85 @@ onMounted(async () => {
 // ===================================== Submission Management =====================================
 
 const title = ref('')
+const recipientAddress = ref('')
+const emailNumber = ref('')
+
+// Admin Register Submission
+const { isLoading: isAdminRegisterLoading, send: onClickAdminRegister } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('adminRegisterSubmission', [title.value, recipientAddress.value]),
+	successTitle: 'Successfully Registered Submission',
+	errorTitle: 'Error Registering Submission',
+	onBeforeCall: async () => {
+		// Validate address format
+		if (!/^0x[a-fA-F0-9]{40}$/i.test(recipientAddress.value)) {
+			throw new Error('Invalid recipient address format')
+		}
+		// Check if submission already exists
+		const existing = royaltyAutoClaimStore.submissions.find(s => s.title === title.value)
+
+		if (existing && existing.status !== null) {
+			throw new Error('Submission already exists')
+		}
+	},
+	onAfterCall: async () => {
+		// Poll for submission registration
+		await pollForSubmissionUpdate(title.value, submission => {
+			return isSameAddress(submission.recipient, recipientAddress.value) && submission.status === 'registered'
+		})
+		// Clear inputs
+		title.value = ''
+		recipientAddress.value = ''
+	},
+})
+
+// Admin Update Royalty Recipient
+const { isLoading: isAdminUpdateRecipientLoading, send: onClickAdminUpdateRecipient } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('adminUpdateRoyaltyRecipient', [title.value, recipientAddress.value]),
+	successTitle: 'Successfully Updated Recipient',
+	errorTitle: 'Error Updating Recipient',
+	onBeforeCall: async () => {
+		// Validate address format
+		if (!/^0x[a-fA-F0-9]{40}$/i.test(recipientAddress.value)) {
+			throw new Error('Invalid recipient address format')
+		}
+		// Check submission exists
+		const submission = royaltyAutoClaimStore.submissions.find(s => s.title === title.value)
+		if (!submission || submission.status !== 'registered') {
+			throw new Error('Submission not found or not in registered status')
+		}
+		// Check not same as current
+		if (isSameAddress(submission.recipient, recipientAddress.value)) {
+			throw new Error('New recipient is the same as current recipient')
+		}
+	},
+	onAfterCall: async () => {
+		// Poll for recipient update
+		await pollForSubmissionUpdate(title.value, submission => {
+			return isSameAddress(submission.recipient, recipientAddress.value)
+		})
+		// Clear inputs
+		title.value = ''
+		recipientAddress.value = ''
+	},
+})
+
+// Revoke Email
+const { isLoading: isRevokeEmailLoading, send: onClickRevokeEmail } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('revokeEmail', [emailNumber.value]),
+	successTitle: 'Successfully Revoked Email',
+	errorTitle: 'Error Revoking Email',
+	onBeforeCall: async () => {
+		// Validate number is positive integer
+		const num = parseInt(emailNumber.value)
+		if (isNaN(num) || num < 0) {
+			throw new Error('Email number must be a non-negative integer')
+		}
+	},
+	onAfterCall: async () => {
+		// Clear input
+		emailNumber.value = ''
+	},
+})
 
 // Revoke Submission
 const { isLoading: isRevokeLoading, send: onClickRevokeSubmission } = useContractCallV2({
@@ -568,19 +654,67 @@ const displayTokenAmount = computed(() => {
 				<CardDescription>onlyAdmin</CardDescription>
 			</CardHeader>
 			<CardContent>
-				<div class="grid w-full items-center gap-4">
-					<div class="flex flex-col space-y-1.5">
-						<Label for="submissionTitle">Submission Title</Label>
-						<Input id="submissionTitle" v-model="title" placeholder="title" />
+				<div class="grid w-full items-center gap-6">
+					<!-- Admin Register Submission -->
+					<div class="space-y-2">
+						<Label class="text-base font-semibold">Register Submission</Label>
+						<div class="flex flex-col space-y-1.5">
+							<Label for="registerTitle">Title</Label>
+							<Input id="registerTitle" v-model="title" placeholder="Submission title" />
+
+							<Label for="registerRecipient">Recipient Address</Label>
+							<Input id="registerRecipient" v-model="recipientAddress" placeholder="0x..." />
+						</div>
+
+						<div class="flex flex-wrap gap-2">
+							<Button
+								:loading="isAdminRegisterLoading"
+								:disabled="isBtnDisabled || !title || !recipientAddress"
+								@click="onClickAdminRegister"
+							>
+								Register Submission
+							</Button>
+
+							<Button
+								:loading="isAdminUpdateRecipientLoading"
+								:disabled="isBtnDisabled || !title || !recipientAddress"
+								@click="onClickAdminUpdateRecipient"
+							>
+								Update Recipient
+							</Button>
+
+							<Button
+								variant="destructive"
+								:loading="isRevokeLoading"
+								:disabled="isBtnDisabled || !title"
+								@click="onClickRevokeSubmission"
+							>
+								Revoke Submission
+							</Button>
+						</div>
 					</div>
-					<div class="flex gap-4 flex-wrap">
+
+					<hr class="border-border" />
+
+					<!-- Revoke Email -->
+					<div class="space-y-2">
+						<Label class="text-base font-semibold">Revoke Email</Label>
+						<div class="flex flex-col space-y-1.5">
+							<Label for="emailNumber">Email Number</Label>
+							<Input
+								id="emailNumber"
+								v-model="emailNumber"
+								type="number"
+								placeholder="Email number to revoke"
+							/>
+						</div>
 						<Button
 							variant="destructive"
-							:loading="isRevokeLoading"
-							:disabled="isBtnDisabled || !title"
-							@click="onClickRevokeSubmission"
+							:loading="isRevokeEmailLoading"
+							:disabled="isBtnDisabled || !emailNumber"
+							@click="onClickRevokeEmail"
 						>
-							Revoke Submission
+							Revoke Email
 						</Button>
 					</div>
 				</div>
