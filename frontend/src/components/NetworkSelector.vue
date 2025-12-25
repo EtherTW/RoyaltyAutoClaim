@@ -31,6 +31,7 @@ const items = computed(() => {
 	return availableItems
 })
 
+// Check out onMounted in HomePageV1.vue and HomePage.vue for handling missing address issue
 const selected = computed({
 	get: () => (blockchainStore.isTestnet ? 'Testing' : 'Production'),
 	set: (value: string) => {

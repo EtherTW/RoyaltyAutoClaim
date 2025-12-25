@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useSubmissionPolling } from '@/lib/submission-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { ParsedEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
@@ -6,8 +7,8 @@ import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { Edit, Loader2, Settings, X } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
+import { toast } from 'vue-sonner'
 import { parseEmail } from '../../../circuits/script/utils'
-import { useSubmissionPolling } from '@/lib/submission-utils'
 
 const router = useRouter()
 const globalLoaderStore = useGlobalLoaderStore()
@@ -23,8 +24,14 @@ const blockchainStore = useBlockchainStore()
 onMounted(async () => {
 	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
 		console.error('RoyaltyAutoClaim address not set')
-		blockchainStore.isTestnet = true
-		window.location.reload()
+		blockchainStore.setIsTestnet(true)
+		if (!blockchainStore.royaltyAutoClaimProxyAddress) {
+			console.error('RoyaltyAutoClaim address not set after setting to testnet, redirecting to v1')
+			toast.info('v2 is not ready yet, redirecting to v1')
+			router.replace({ name: 'v1' })
+		} else {
+			window.location.reload()
+		}
 		return
 	}
 

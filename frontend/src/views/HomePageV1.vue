@@ -16,8 +16,12 @@ const blockchainStore = useBlockchainStore()
 onMounted(async () => {
 	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
 		console.error('RoyaltyAutoClaim address not set')
-		blockchainStore.isTestnet = true
-		window.location.reload()
+		blockchainStore.setIsTestnet(true)
+		if (!blockchainStore.royaltyAutoClaimProxyAddress) {
+			throw new Error('RoyaltyAutoClaim address not set after setting to testnet')
+		} else {
+			window.location.reload()
+		}
 		return
 	}
 	await royaltyAutoClaimStore.fetchSubmissions()
