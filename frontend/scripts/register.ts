@@ -10,12 +10,13 @@ import { JsonRpcProvider, Wallet } from 'ethers'
 import { readFileSync } from 'fs'
 import path from 'path'
 import { abiEncode, ERC4337Bundler, zeroBytes } from 'sendop'
-import { parseEmail, splitHashToFields } from '../../circuits/script/utils'
 import {
+	parseEmail,
 	prepareCircuitInputs,
 	prepareCircuitOutput,
+	splitHashToFields,
 	TitleHashCircuitOutput,
-} from '../../circuits/script/utilsTitleHash'
+} from '../../circuits/script/utils'
 import { BUNDLER_URL, RPC_URL } from '../src/config'
 import { buildUserOp, setFixedVerificationGasLimitForZkProof } from '../src/lib/erc4337-utils'
 import { handleUserOpError } from '../src/lib/error'

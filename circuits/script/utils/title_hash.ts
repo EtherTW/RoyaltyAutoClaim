@@ -1,15 +1,12 @@
 import { generateEmailVerifierInputs } from '@zk-email/zkemail-nr'
-import type { BoundedVec, RSAPubkey, Sequence } from './utils'
-import {
-	getNumberSequence,
-	getRecipientSequence,
-	MAX_EMAIL_BODY_LENGTH,
-	MAX_EMAIL_HEADER_LENGTH,
-	splitHashToFields,
-} from './utils'
 import { zeroPadValue } from 'ethers'
+import { getNumberSequence, getRecipientSequence, splitHashToFields } from './common'
+import type { BoundedVec, RSAPubkey, Sequence } from './types'
 
-export type CircuitInputsTitleHash = {
+export const TITLE_HASH_MAX_EMAIL_HEADER_LENGTH = 640
+export const TITLE_HASH_MAX_EMAIL_BODY_LENGTH = 1280
+
+export type TitleHashCircuitInputs = {
 	header: BoundedVec
 	pubkey: RSAPubkey
 	signature: string[]
@@ -40,10 +37,10 @@ export type TitleHashCircuitOutput = [
 	[string, string], // user_op_hash
 ]
 
-export async function prepareCircuitInputs(eml: Buffer, userOpHash?: string): Promise<CircuitInputsTitleHash> {
+export async function prepareCircuitInputs(eml: Buffer, userOpHash?: string): Promise<TitleHashCircuitInputs> {
 	const emailInputs = await generateEmailVerifierInputs(eml, {
-		maxHeadersLength: MAX_EMAIL_HEADER_LENGTH,
-		maxBodyLength: MAX_EMAIL_BODY_LENGTH,
+		maxHeadersLength: TITLE_HASH_MAX_EMAIL_HEADER_LENGTH,
+		maxBodyLength: TITLE_HASH_MAX_EMAIL_BODY_LENGTH,
 		ignoreBodyHashCheck: false,
 		extractFrom: true,
 	})
@@ -58,7 +55,7 @@ export async function prepareCircuitInputs(eml: Buffer, userOpHash?: string): Pr
 	const { recipient_field_seq, recipient_seq } = getRecipientSequence(bodyBuf)
 	const { id_field_seq, id_seq } = getIdSequence(bodyBuf)
 
-	const circuitInputs: CircuitInputsTitleHash = {
+	const circuitInputs: TitleHashCircuitInputs = {
 		header: emailInputs.header,
 		pubkey: emailInputs.pubkey,
 		signature: emailInputs.signature,
@@ -202,7 +199,7 @@ export function getIdSequence(body: Buffer): {
  * @param circuitTargetPath - path to circuits/target directory
  * @param inputs - circuit inputs object for title_hash
  */
-export function writeProverTomlTitleHash(circuitTargetPath: string, inputs: CircuitInputsTitleHash) {
+export function writeProverTomlTitleHash(circuitTargetPath: string, inputs: TitleHashCircuitInputs) {
 	const fs = require('fs')
 	const path = require('path')
 	const tomlLines: string[] = []

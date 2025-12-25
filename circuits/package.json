@@ -1,8 +1,10 @@
 {
 	"name": "circuits",
-	"module": "index.ts",
 	"type": "module",
 	"private": true,
+	"scripts": {
+		"check": "bunx tsc --noEmit"
+	},
 	"devDependencies": {
 		"@types/bun": "latest"
 	},

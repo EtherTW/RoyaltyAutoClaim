@@ -11,7 +11,7 @@ if (!circuitName) {
 
 const CIRCUIT_TARGET_PATH = path.join(__dirname, `../${circuitName}/target`)
 const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, `${circuitName}.json`)
-const VERIFIER_PATH = path.join(__dirname, `../../src/verifiers/${snakeToPascal(circuitName)}Verifier.sol`)
+const VERIFIER_PATH = path.join(CIRCUIT_TARGET_PATH, `${snakeToPascal(circuitName)}Verifier.sol`)
 
 function snakeToPascal(str: string): string {
 	const camel = str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())

@@ -5,19 +5,17 @@ import fs from 'fs'
 import path from 'path'
 import {
 	combineFieldsToHash,
+	getIdSequence,
 	getNumberSequence,
 	getRecipientSequence,
-	MAX_EMAIL_BODY_LENGTH,
-	MAX_EMAIL_HEADER_LENGTH,
+	getSubjectPrefixSequence,
 	parseBoundedVecToString,
 	splitHashToFields,
-} from './utils'
-import {
-	getIdSequence,
-	getSubjectPrefixSequence,
+	TITLE_HASH_MAX_EMAIL_BODY_LENGTH,
+	TITLE_HASH_MAX_EMAIL_HEADER_LENGTH,
 	writeProverTomlTitleHash,
-	type CircuitInputsTitleHash,
-} from './utilsTitleHash'
+	type TitleHashCircuitInputs,
+} from './utils'
 
 const DUMMY_USER_OP_HASH = '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297'
 
@@ -60,8 +58,8 @@ async function main(emlPath: string) {
 	const email = fs.readFileSync(emlPath)
 
 	const emailInputs = await generateEmailVerifierInputs(email, {
-		maxHeadersLength: MAX_EMAIL_HEADER_LENGTH,
-		maxBodyLength: MAX_EMAIL_BODY_LENGTH,
+		maxHeadersLength: TITLE_HASH_MAX_EMAIL_HEADER_LENGTH,
+		maxBodyLength: TITLE_HASH_MAX_EMAIL_BODY_LENGTH,
 		ignoreBodyHashCheck: false,
 		extractFrom: true,
 	})
@@ -116,7 +114,7 @@ async function main(emlPath: string) {
 	)
 	console.log('id_seq', bodyBuf.toString().substring(+id_seq.index, +id_seq.index + +id_seq.length))
 
-	const circuitInputs: CircuitInputsTitleHash = {
+	const circuitInputs: TitleHashCircuitInputs = {
 		header: emailInputs.header,
 		pubkey: emailInputs.pubkey,
 		signature: emailInputs.signature,

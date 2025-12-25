@@ -1,13 +1,13 @@
+import { TitleHashVerifierLib } from '@/typechain-v2/out/RoyaltyAutoClaim.sol/RoyaltyAutoClaim'
 import { UltraHonkBackend } from '@aztec/bb.js'
 import { Noir } from '@noir-lang/noir_js'
-import { TitleHashVerifierLib } from '@/typechain-v2/out/RoyaltyAutoClaim.sol/RoyaltyAutoClaim'
 import { abiEncode, zeroBytes } from 'sendop'
-import { parseEmail } from '../../../circuits/script/utils'
 import {
+	parseEmail,
 	prepareCircuitInputs,
 	prepareCircuitOutput,
 	TitleHashCircuitOutput,
-} from '../../../circuits/script/utilsTitleHash'
+} from '../../../circuits/script/utils'
 import { initializeWasm } from './wasmLoader'
 
 export const DKIM_REGISTRY_ADDRESS = '0x3D3935B3C030893f118a84C92C66dF1B9E4169d6'

@@ -1,10 +1,12 @@
+/*
+
+Script to generate email verifier inputs from a .eml file.
+
+*/
 import { generateEmailVerifierInputs } from '@zk-email/zkemail-nr'
 import fs from 'fs'
-import path from 'path'
 
 const MAX_EMAIL_HEADER_LENGTH = 1088
-const CIRCUIT_PATH = path.join(__dirname, '../main/target', 'main.json')
-
 const emlPath = process.argv[2]
 
 if (!emlPath) {
@@ -19,17 +21,6 @@ main(emlPath).catch(err => {
 })
 
 async function main(emlPath: string) {
-	// Check circuit exists
-	if (!fs.existsSync(CIRCUIT_PATH)) {
-		console.error('[ERROR]: Circuit not compiled. Run: nargo compile')
-		process.exit(1)
-	}
-
-	// Load circuit
-	const circuit = JSON.parse(fs.readFileSync(CIRCUIT_PATH, 'utf-8'))
-	console.log(`Circuit: ${CIRCUIT_PATH}`)
-	console.log(`Noir version: ${circuit.noir_version}`)
-
 	// Check email file exists
 	if (!fs.existsSync(emlPath)) {
 		console.error(`[ERROR]: Email file not found: ${emlPath}`)

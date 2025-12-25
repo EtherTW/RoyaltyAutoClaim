@@ -17,7 +17,7 @@ import { Noir } from '@noir-lang/noir_js'
 import { Contract, Interface, JsonRpcProvider } from 'ethers'
 import fs, { writeFileSync } from 'fs'
 import path from 'path'
-import { prepareCircuitInputs } from '../../circuits/script/utilsTitleHash'
+import { prepareCircuitInputs } from '../../circuits/script/utils'
 import { RPC_URL } from '../src/config'
 
 const CHAIN_ID = '84532'

@@ -12,8 +12,8 @@ import {
 	getTitleSequence,
 	parseBoundedVecToString,
 	splitHashToFields,
-	writeProverToml,
-	type CircuitInputs,
+	writeProverTomlSubjectDecoding,
+	type SubjectDecodingCircuitInputs,
 } from './utils'
 
 const MAX_EMAIL_HEADER_LENGTH = 640
@@ -22,8 +22,8 @@ const MAX_DECODED_SUBJECT_LENGTH = 192
 const MAX_ENCODED_WORDS = 2
 const DUMMY_USER_OP_HASH = '0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297'
 
-const CIRCUIT_TARGET_PATH = path.join(__dirname, '../main/target')
-const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, 'main.json')
+const CIRCUIT_TARGET_PATH = path.join(__dirname, '../subject_decoding/target')
+const CIRCUIT_PATH = path.join(CIRCUIT_TARGET_PATH, 'subject_decoding.json')
 
 const emlPath = process.argv[2]
 
@@ -133,7 +133,7 @@ async function main(emlPath: string) {
 		bodyBuf.toString().substring(+recipient_seq.index, +recipient_seq.index + +recipient_seq.length),
 	)
 
-	const circuitInputs: CircuitInputs = {
+	const circuitInputs: SubjectDecodingCircuitInputs = {
 		header: emailInputs.header,
 		pubkey: emailInputs.pubkey,
 		signature: emailInputs.signature,
@@ -155,7 +155,7 @@ async function main(emlPath: string) {
 
 	// Write circuit inputs to Prover.toml
 	console.log(`\nWriting circuit inputs to Prover.toml...`)
-	writeProverToml(CIRCUIT_TARGET_PATH, circuitInputs)
+	writeProverTomlSubjectDecoding(CIRCUIT_TARGET_PATH, circuitInputs)
 
 	console.log('\nInitializing Noir and UltraHonk backend...')
 	const noir = new Noir(circuit)

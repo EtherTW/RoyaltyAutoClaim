@@ -1,15 +1,18 @@
 # circuits
 
-To install dependencies:
-
-```bash
-bun install
+```
+cd title_hash
+nargo compile
+nargo info
 ```
 
-To run:
-
-```bash
-bun run index.ts
+```
+bun run script/genProofTitleHash.ts ../emails/registration.eml
+bun run script/genVerifier.ts title_hash
 ```
 
-This project was created using `bun init` in bun v1.3.2. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+## Circuit projects
+
+-   title_hash: extract the title hash from an email
+-   subject_decoding: decode the subject to extract the title
+-   lib: circuits library

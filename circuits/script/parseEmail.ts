@@ -1,5 +1,5 @@
-import { parseEmail } from './utils'
 import fs from 'fs'
+import { parseEmail } from './utils'
 
 const emlPath = process.argv[2]
 
