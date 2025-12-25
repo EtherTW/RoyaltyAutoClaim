@@ -35,10 +35,6 @@ jobs:
               with:
                   bun-version: latest
 
-            - name: Install circuits dependencies
-              working-directory: ./circuits
-              run: bun install
-
             - name: Install frontend dependencies
               working-directory: ./frontend
               run: bun install
@@ -49,6 +45,8 @@ jobs:
               env:
                   VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET }}
                   VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA }}
+                  VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA }}
+                  VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE }}
                   VITE_ALCHEMY_API_KEY: ${{ secrets.VITE_ALCHEMY_API_KEY }}
 
             # Workaround for 404 error with vue-router: https://stackoverflow.com/a/65539760/10752354
