@@ -124,7 +124,7 @@ interface IRoyaltyAutoClaim {
         Configs configs;
         mapping(string => Submission) submissions;
         mapping(string => mapping(uint256 => bool)) hasReviewed; // Track nullifiers per submission
-        mapping(bytes32 => bool) emailNullifierHashes;
+        mapping(bytes32 => bool) emailNullifierUsed;
         mapping(uint256 => bool) revokedEmailNumbers; // Track revoked email numbers
     }
 }
@@ -342,7 +342,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function _registerSubmission(string memory title, address recipient, bytes32 nullifier) internal {
         MainStorage storage $ = _getMainStorage();
-        $.emailNullifierHashes[nullifier] = true;
+        $.emailNullifierUsed[nullifier] = true;
         $.submissions[title].royaltyRecipient = recipient;
         $.submissions[title].status = SubmissionStatus.Registered;
         emit SubmissionRegistered(title, recipient, title);
@@ -384,7 +384,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function _updateRoyaltyRecipient(string memory title, address recipient, bytes32 nullifier) internal {
         MainStorage storage $ = _getMainStorage();
-        $.emailNullifierHashes[nullifier] = true;
+        $.emailNullifierUsed[nullifier] = true;
         address oldRecipient = $.submissions[title].royaltyRecipient;
         $.submissions[title].royaltyRecipient = recipient;
         emit SubmissionRoyaltyRecipientUpdated(title, oldRecipient, recipient, title);
@@ -632,7 +632,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     function isEmailProofUsed(bytes32 emailHeaderHash) public view returns (bool) {
-        return _getMainStorage().emailNullifierHashes[emailHeaderHash];
+        return _getMainStorage().emailNullifierUsed[emailHeaderHash];
     }
 
     function hasReviewed(string memory title, uint256 nullifier) public view returns (bool) {
