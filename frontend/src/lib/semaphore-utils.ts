@@ -114,12 +114,13 @@ export async function fetchReviewerGroupMembers(params: {
 	rpcUrl: string
 	semaphoreAddress: string
 	groupId: string
-}): Promise<string[]> {
+}): Promise<bigint[]> {
 	const { rpcUrl, semaphoreAddress, groupId } = params
 
 	const semaphoreEthers = new SemaphoreEthers(rpcUrl, {
 		address: semaphoreAddress,
 	})
 
-	return await semaphoreEthers.getGroupMembers(groupId)
+	const members = await semaphoreEthers.getGroupMembers(groupId)
+	return members.map(member => BigInt(member))
 }

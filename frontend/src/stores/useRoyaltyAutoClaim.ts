@@ -29,7 +29,7 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 	// Semaphore-related state
 	const semaphoreAddress = ref<string | null>(null)
 	const reviewerGroupId = ref<bigint | null>(null)
-	const reviewerMembers = ref<string[]>([])
+	const reviewerMembers = ref<bigint[]>([])
 	const isLoadingReviewerMembers = ref(false)
 
 	async function fetchSubmissions() {

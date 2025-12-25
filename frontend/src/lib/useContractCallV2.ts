@@ -161,11 +161,13 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				await royaltyAutoClaimStore.fetchReviewerMembers()
 				const members = royaltyAutoClaimStore.reviewerMembers
 
-				// Create off-chain group from subgraph members
+				console.log(members)
+
+				// Create off-chain group from members
 				const group = new Group(members)
 
 				// Verify identity is in the group
-				const isMember = members.some((member: string) => BigInt(member) === identity.commitment)
+				const isMember = members.some((member: bigint) => member === identity.commitment)
 				if (!isMember) {
 					throw new Error(
 						'Your identity is not a member of the reviewer group. Please contact the admin to be added.',

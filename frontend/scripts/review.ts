@@ -132,7 +132,7 @@ const members = await fetchReviewerGroupMembers({
 })
 const group = new Group(members)
 
-const isMember = members.some(m => m === identity.commitment.toString())
+const isMember = members.some(m => m === identity.commitment)
 if (!isMember) {
 	throw new Error('Reviewer is not the group member')
 }
