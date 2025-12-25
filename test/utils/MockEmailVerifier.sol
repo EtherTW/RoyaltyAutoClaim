@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {IEmailVerifier} from "../../src/EmailVerifier.sol";
-import {TitleHashVerifierLib} from "../../src/verifiers/TitleHashVerifierLib.sol";
+import {TitleHashVerifierLib} from "../../src/TitleHashVerifierLib.sol";
 
 /// @title MockEmailVerifier
 /// @notice Mock implementation of IEmailVerifier interface for testing

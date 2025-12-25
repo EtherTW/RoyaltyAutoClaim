@@ -1,6 +1,6 @@
 import { BarretenbergSync, Fr } from '@aztec/bb.js'
 import * as NoirBignum from '@mach-34/noir-bignum-paramgen'
-import { REGISTRATION_PREFIX, ROYALTY_CLAIM_PREFIX } from './constants'
+import { RECIPIENT_UPDATE_PREFIX, REGISTRATION_PREFIX } from './constants'
 
 /**
  * Parse raw email to extract title, recipient, nullifier, and operation type
@@ -102,17 +102,17 @@ export async function parseEmail(email: Buffer | string): Promise<{
 
 	// Decode the base64 prefixes to get the actual Chinese text
 	const registrationPrefixDecoded = Buffer.from(REGISTRATION_PREFIX, 'base64').toString('utf-8')
-	const royaltyClaimPrefixDecoded = Buffer.from(ROYALTY_CLAIM_PREFIX, 'base64').toString('utf-8')
+	const recipientUpdatePrefixDecoded = Buffer.from(RECIPIENT_UPDATE_PREFIX, 'base64').toString('utf-8')
 
 	// Determine operation type based on subject prefix
 	let operationType: number
 	if (decodedSubject.startsWith(registrationPrefixDecoded)) {
 		operationType = 1 // Registration
-	} else if (decodedSubject.startsWith(royaltyClaimPrefixDecoded)) {
+	} else if (decodedSubject.startsWith(recipientUpdatePrefixDecoded)) {
 		operationType = 2 // Recipient update
 	} else {
 		throw new Error(
-			`Invalid subject prefix. Expected registration prefix "${registrationPrefixDecoded}" or royalty claim prefix "${royaltyClaimPrefixDecoded}"`,
+			`Invalid subject prefix. Expected registration prefix "${registrationPrefixDecoded}" or royalty claim prefix "${recipientUpdatePrefixDecoded}"`,
 		)
 	}
 

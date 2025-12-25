@@ -3,8 +3,8 @@ use zkemail::{headers::constrain_header_field, Sequence};
 
 global MAX_SUBJECT_FIELD_LENGTH: u32 = 256;
 // global MIME_PREFIX_LENGTH: u32 = 10; // "=?UTF-8?B?"
-global REGISTRATION_PREFIX_LENGTH: u32 = 30;
-global RECIPIENT_UPDATE_PREFIX_LENGTH: u32 = 54;
+global REGISTRATION_PREFIX_LENGTH: u32 = 29;
+global RECIPIENT_UPDATE_PREFIX_LENGTH: u32 = 53;
 
 pub fn get_operation_type<let MAX_EMAIL_HEADER_LENGTH: u32>(
     header: BoundedVec<u8, MAX_EMAIL_HEADER_LENGTH>,
@@ -37,11 +37,11 @@ pub fn get_operation_type<let MAX_EMAIL_HEADER_LENGTH: u32>(
 
     // Registration prefix
     let registration_prefix: [u8; REGISTRATION_PREFIX_LENGTH] =
-        comptime { "56K66KqN5bey5pS25Yiw5oqV56i/Oi".as_bytes() };
+        comptime { "56K66KqN5bey5pS25Yiw5oqV56i/O".as_bytes() };
 
     // Recipient update prefix
     let recipient_update_prefix: [u8; RECIPIENT_UPDATE_PREFIX_LENGTH] =
-        comptime { "56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOi".as_bytes() };
+        comptime { "56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AO".as_bytes() };
 
     let mut operation_type: Field = 0;
     if subject_prefix_seq.length == REGISTRATION_PREFIX_LENGTH {

@@ -12,7 +12,7 @@ use zkemail::{
     Sequence,
 };
 
-global MAX_EMAIL_HEADER_LENGTH: u32 = 640;
+global MAX_EMAIL_HEADER_LENGTH: u32 = 960;
 global MAX_EMAIL_BODY_LENGTH: u32 = 1280;
 
 fn main(

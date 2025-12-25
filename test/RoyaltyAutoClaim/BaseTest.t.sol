@@ -9,10 +9,9 @@ import {MockToken} from "../../src/MockToken.sol";
 import {MockEmailVerifier} from "../utils/MockEmailVerifier.sol";
 import {MockDKIMRegistry} from "../utils/MockDKIMRegistry.sol";
 import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
-import {IEmailVerifier, EmailVerifier} from "../../src/EmailVerifier.sol";
 import {ISemaphore} from "../../lib/semaphore/packages/contracts/contracts/interfaces/ISemaphore.sol";
 import {MockSemaphore} from "../utils/MockSemaphore.sol";
-import {TitleHashVerifierLib} from "../../src/verifiers/TitleHashVerifierLib.sol";
+import {TitleHashVerifierLib} from "../../src/TitleHashVerifierLib.sol";
 
 /// @dev for testing internal functions
 contract RoyaltyAutoClaimHarness is RoyaltyAutoClaim {}

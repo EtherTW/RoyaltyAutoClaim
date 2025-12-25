@@ -1,21 +1,22 @@
-/* 
+/*
 
 Generate proof for title_hash circuit and verify on Base Sepolia
 
 Usage:
 cd frontend
-bun run scripts/gen-proof.ts <emailFilename> <emailVerifierAddress>
+bun run scripts/gen-proof.ts <emailFilename> <emailVerifierAddress> <saveProof>
 
-example: 
+example:
 bun run scripts/gen-proof.ts
 bun run scripts/gen-proof.ts registration
 bun run scripts/gen-proof.ts recipient-update 0x341015A264A75E824CB5F569E0170b5d7A48E3CF
+bun run scripts/gen-proof.ts recipient-update 0x341015A264A75E824CB5F569E0170b5d7A48E3CF true
 
 */
 import { UltraHonkBackend } from '@aztec/bb.js'
 import { Noir } from '@noir-lang/noir_js'
 import { Contract, Interface, JsonRpcProvider } from 'ethers'
-import fs, { writeFileSync } from 'fs'
+import fs from 'fs'
 import path from 'path'
 import { prepareCircuitInputs } from '../../circuits/script/utils'
 import { RPC_URL } from '../src/config'
@@ -30,6 +31,7 @@ const CIRCUIT_PATH = path.join(__dirname, '../../circuits/title_hash/target', 't
 
 const emailFilename = process.argv[2] || 'registration'
 const emailVerifierAddress = process.argv[3] || '0x341015A264A75E824CB5F569E0170b5d7A48E3CF'
+const saveProof = process.argv[4] === 'true'
 
 const EML_PATH = path.join(__dirname, '..', '..', 'emails', `${emailFilename}.eml`)
 
@@ -80,8 +82,6 @@ try {
 	console.log(`Proof generated in ${proveTime}s`)
 	console.log(`Proof size: ${(proof.proof.length / 1024).toFixed(2)} KB`)
 
-	writeFileSync('publicInputs', JSON.stringify(proof.publicInputs, null, 2))
-
 	// Verify proof
 	console.log('\nVerifying proof onchain...')
 	const startVerify = Date.now()
@@ -98,7 +98,7 @@ try {
 	console.log('Verified:', verified)
 
 	// Save proof to .json file
-	if (verified) {
+	if (verified && saveProof) {
 		const proofData = {
 			proof: Array.from(proof.proof),
 			publicInputs: Array.from(proof.publicInputs),

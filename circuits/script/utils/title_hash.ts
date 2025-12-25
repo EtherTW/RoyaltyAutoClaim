@@ -2,8 +2,9 @@ import { generateEmailVerifierInputs } from '@zk-email/zkemail-nr'
 import { zeroPadValue } from 'ethers'
 import { getNumberSequence, getRecipientSequence, splitHashToFields } from './common'
 import type { BoundedVec, RSAPubkey, Sequence } from './types'
+import { REGISTRATION_PREFIX, RECIPIENT_UPDATE_PREFIX } from './constants'
 
-export const TITLE_HASH_MAX_EMAIL_HEADER_LENGTH = 640
+export const TITLE_HASH_MAX_EMAIL_HEADER_LENGTH = 960
 export const TITLE_HASH_MAX_EMAIL_BODY_LENGTH = 1280
 
 export type TitleHashCircuitInputs = {
@@ -120,18 +121,14 @@ export function getSubjectPrefixSequence(header: Buffer): {
 	// Extract the full subject header (including continuation lines)
 	const subjectHeaderFull = headerStr.substring(subjectStart, subjectEnd)
 
-	// Define the two possible base64-encoded prefixes
-	const registrationPrefix = '56K66KqN5bey5pS25Yiw5oqV56i/Oi' // 30 bytes
-	const recipientUpdatePrefix = '56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOi' // 54 bytes
-
 	// Search for registration prefix first
-	let prefixIndex = subjectHeaderFull.indexOf(registrationPrefix)
-	let prefixLength = registrationPrefix.length
+	let prefixIndex = subjectHeaderFull.indexOf(REGISTRATION_PREFIX)
+	let prefixLength = REGISTRATION_PREFIX.length
 
 	// If not found, search for recipient update prefix
 	if (prefixIndex === -1) {
-		prefixIndex = subjectHeaderFull.indexOf(recipientUpdatePrefix)
-		prefixLength = recipientUpdatePrefix.length
+		prefixIndex = subjectHeaderFull.indexOf(RECIPIENT_UPDATE_PREFIX)
+		prefixLength = RECIPIENT_UPDATE_PREFIX.length
 	}
 
 	// If still not found, throw error

@@ -13,7 +13,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IEmailVerifier} from "./EmailVerifier.sol";
 import {ISemaphore} from "@semaphore/interfaces/ISemaphore.sol";
-import {TitleHashVerifierLib} from "./verifiers/TitleHashVerifierLib.sol";
+import {TitleHashVerifierLib} from "./TitleHashVerifierLib.sol";
 
 interface IRoyaltyAutoClaim {
     // Owner

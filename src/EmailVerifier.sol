@@ -3,8 +3,8 @@ pragma solidity 0.8.30;
 
 import {IDKIMRegistry} from "@zk-email/contracts/interfaces/IDKIMRegistry.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {HonkVerifier} from "./verifiers/TitleHashVerifier.sol";
-import {TitleHashVerifierLib} from "./verifiers/TitleHashVerifierLib.sol";
+import {HonkVerifier} from "../circuits/title_hash/target/TitleHashVerifier.sol";
+import {TitleHashVerifierLib} from "./TitleHashVerifierLib.sol";
 
 interface IEmailVerifier {
     error ZeroValue();

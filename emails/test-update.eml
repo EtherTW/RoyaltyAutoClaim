@@ -1,0 +1,109 @@
+Delivered-To: chnejohnson@gmail.com
+Received: by 2002:a05:7022:ff44:b0:121:8fb7:5bb3 with SMTP id vp4csp1524186dlb;
+        Wed, 24 Dec 2025 18:21:56 -0800 (PST)
+X-Received: by 2002:a05:6512:1454:20b0:59a:1a65:96d1 with SMTP id 2adb3069b0e04-59a1a65971bmr5214322e87.34.1766629316606;
+        Wed, 24 Dec 2025 18:21:56 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1766629316; cv=none;
+        d=google.com; s=arc-20240605;
+        b=GQvIGEj9mVpu+BTXYHtBFV1jfPHaTCegAoCBMI73rKKMXmI0ERIXp1sUHYQiblaNtc
+         pIcZVhDyQ4N2QXxzb+H8CKGYH1qeBd3rNAekmK8hhOY4+y9JC//SnZmves3JgjpXRbyF
+         TrzqNvwwqUHbHREBzbW/Ju4xMwN6SK7hcS5zaEh2c/ibbIlmpr7Q1tRs6qaPl/f5qdjw
+         cTXJ0aD9JYXdbqm1/+S7xC8trIWyvfiARg/+PjmKk2CFCZPl2+0YYrcwQptdkGW5045U
+         BaHNDjN7bcZqvEiFaSnEQ32oPJbZfBMg4/bp0UcPLkS6UvdwlYeZSIZZwDlb3anE120F
+         wpQQ==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=xEBYk8Yg8iJdOiWpeSBRICvJag5/IqNan9vHrULVsy4=;
+        fh=T7nKoZxbjFeqY0YU6esvoK9zrDLdOlSPtvjkKN1NpMs=;
+        b=MRQLd7jalcC+CMGrvoP+ZlUxbPOEd0wW8/0mfE8gvI9cnNBelG3IcAvtJWq1KRxGh7
+         lawJcpbmaV1I8hQHolhTWubClrN/x6yO1neznJa8cAHFi4GCu0QYBPXjcXWWA/G98sEI
+         IflwYkGi/gMlfU4H+5gFkl328fIs1SMqs/9HKq2GPysNGPWHlH/hXCQw3szqGcmcWuG9
+         +/PIBaEtt/qouqjFbu/2R651Kzp7iZSCiddn60gWFMzZ8iMiZBi8umRIEB6m5Hq1VV71
+         WVXtQdUnZfF3dIg8KdJeOlrYHDiETSgCZKt2IvrMEAwXlomzyrwCFWOK3EqBDGMKKgoh
+         pTUA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b="h/+buHu+";
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <johnson86tw@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 38308e7fff4ca-3811406aa19sor26978001fa.11.2025.12.24.18.21.56
+        for <chnejohnson@gmail.com>
+        (Google Transport Security);
+        Wed, 24 Dec 2025 18:21:56 -0800 (PST)
+Received-SPF: pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b="h/+buHu+";
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1766629316; x=1767234116; dara=google.com;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=xEBYk8Yg8iJdOiWpeSBRICvJag5/IqNan9vHrULVsy4=;
+        b=h/+buHu+OsDskewhoxEhA9Bspxla8Lmcc7MCUtif7gWw03wK/c28/VdzL5+UHetFey
+         57IGj6pFJ03HMXVN2Ws6xHI1FLjqDoRpDChgRr+iIIxZTL0tAfvKaMMYR/YmYneePb/e
+         UpmOqwJd2PrCIhXfXF3StSiCLkZPUrKrWFQpfATaEVmyVzruwtpqfesWwX+VU1uYqkVn
+         EaPSvk9xigQqEPz5V0sYlrgsMp/JnAt19Kq302Oe8dVJOPP6QWteJPMZxgSpsgPhTZOw
+         7kwbDBU1dRW+xsuG0iEJkZJcgXknBkkH/q4RVNoxwLs+zwHf5NQpLwtbn0KtlOLtPTPU
+         vGEg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1766629316; x=1767234116;
+        h=to:subject:message-id:date:from:mime-version:x-gm-gg
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=xEBYk8Yg8iJdOiWpeSBRICvJag5/IqNan9vHrULVsy4=;
+        b=P1zK8A7R0Ialw8r/ZBj5cOWIkCpzenfv9HyImRnnoxLgEKN2mLGueYozyko9lKPhr8
+         Dya0Pa/wZ4W0PWMpQSxogakpw8ENqYZaI6zAO1Bhnay45lZBC25alZTy8mdYy/SgAQ1D
+         ExuVAMhAOPyc3rElfNGAEh4jEyLAaL7AtskcK29+EuzEDTPLddII4ePDICaBTtuhCIQT
+         FPtDvOqbPgUZlth/BVYzNd9M4E7o33atDLx3rR4wvY5fiLDVW5nH8tuAzpl7FEtUgsNo
+         9nW9xjC9anr1VilZa8PTKtJQJNR9RZRyK3VgYCTSSZ1HaFAqppRYDjEGrcd2HLKDeAcM
+         tpAw==
+X-Gm-Message-State: AOJu0YxmInGeM0XTGsVqeUOB8II2nKnyr7A5SqtTjgpj91ZMc9FsmpjX
+	uXr+68ay2kcL+8YO0PkMQc1+PkGXhfg2pWNsCEk4e5V4h51qXTlJykoy7K/N9wQRH9fONWlW7yv
+	9KLxG5XLAxXAfAiPT1L9XwaL4yv0iUFh4k6R6
+X-Gm-Gg: AY/fxX5oqlEXIXc9+EzRnDgc47Fy+TyfB7pm1CrsF6RJb18k0u+2nDijfIqSvAybIL6
+	TxXOF51rHXKdekPnUkJzRxm+A7mSZkDnwbG07u5PyJ/ylVTr/IBwQAzMrqtNS3MPVUyJRtWuctu
+	ahZbiD41lJ1/Ik5G8sLErkCzCcSviLA4DI4NuSmIsh71rIoRUr+rsLfh0dPDPPtEH44Mkm4G6o1
+	ZFvJNB62nJFvPVDw7U7nJt5NUO+Qs8v9OPtQSBl0NZpXCzKMZd6rP22BDJDYqA8Zv4WACm5
+X-Google-Smtp-Source: AGHT+IHd6rkMTTRlGZVDR9A3JpVca09esfjTvG9pLSwIVl7NuTWZxXdOxVRVMv+9FrV+ZnYXhHqQP4hIhXdzdJUxvC8=
+X-Received: by 2002:a2e:bc0f:0:b0:37e:6031:4e5 with SMTP id
+ 38308e7fff4ca-381216351b7mr65681661fa.22.1766629315592; Wed, 24 Dec 2025
+ 18:21:55 -0800 (PST)
+MIME-Version: 1.0
+From: Johnson <johnson86tw@gmail.com>
+Date: Thu, 25 Dec 2025 10:21:44 +0800
+X-Gm-Features: AQt7F2pvpqOULUbro8Kt3Igaey_6qVXJIgiYNF62xuEph0Fav3mRw4VlZSZ6PTM
+Message-ID: <CAAcMZv8LLS3SYpXJBm8mh65OApaKoLxGAD-t3sNR5PELUp0fhQ@mail.gmail.com>
+Subject: =?UTF-8?B?56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOuOAjOWcqCBkQXBwIA==?=
+	=?UTF-8?B?5LiK5a+m54++IEVSQy00MzM377ya5Lul5Y675Lit5b+D5YyW6aCY56i/6LK75qmf5Yi25a+m6amX54K6?=
+	=?UTF-8?B?5L6L44CNYnkgSm9obnNvbg==?=
+To: chnejohnson@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000ce447a0646bd70e7"
+
+--000000000000ce447a0646bd70e7
+Content-Type: text/plain; charset="UTF-8"
+
+No: 3
+ID: 0x71e51aafe768570d0282c32ef2e237038feb35dc882463b40a7ba5fc1d8328b5
+Recipient: 0x0F0356aE7f7e1c0e812f5fB672B9D5557aB0Bf86
+Memo: Lorem Ipsum is simply dummy text of the printing and typesetting
+industry. Lorem Ipsum has been the industry's standard dummy text ever
+since the 1500s, when an unknown printer took a galley of type and
+scrambled it to make a type specimen book.
+
+--000000000000ce447a0646bd70e7
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr">No: 3<div><div>ID: 0x71e51aafe768570d0282c32ef2e237038feb3=
+5dc882463b40a7ba5fc1d8328b5=C2=A0=C2=A0<br>Recipient: 0x0F0356aE7f7e1c0e812=
+f5fB672B9D5557aB0Bf86=C2=A0=C2=A0<br>Memo:=C2=A0Lorem Ipsum is simply dummy=
+ text of the printing and typesetting industry. Lorem Ipsum has been the in=
+dustry&#39;s standard dummy text ever since the 1500s, when an unknown prin=
+ter took a galley of type and scrambled it to make a type specimen book.</d=
+iv></div></div>
+
+--000000000000ce447a0646bd70e7--
