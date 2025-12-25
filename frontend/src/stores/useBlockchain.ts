@@ -4,6 +4,7 @@ import {
 	CHAIN_ID,
 	EXPLORER_URL,
 	IS_DEV,
+	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA,
@@ -68,12 +69,12 @@ export const useBlockchainStore = defineStore(
 						return ''
 					}
 					return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA
-				// case CHAIN_ID.BASE:
-				// 	if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE) {
-				// 		console.warn('royaltyAutoClaimProxyAddress: base address is not set')
-				// 		return ''
-				// 	}
-				// 	return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE
+				case CHAIN_ID.BASE:
+					if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE) {
+						console.warn('royaltyAutoClaimProxyAddress: base address is not set')
+						return ''
+					}
+					return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE
 				default:
 					console.warn(`royaltyAutoClaimProxyAddress: Unsupported chain id: ${chainId.value}`)
 					return ''

@@ -19,7 +19,10 @@ const blockchainStore = useBlockchainStore()
 
 onMounted(async () => {
 	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
-		throw new Error('RoyaltyAutoClaim address not set')
+		console.error('RoyaltyAutoClaim address not set')
+		blockchainStore.isTestnet = true
+		window.location.reload()
+		return
 	}
 
 	await royaltyAutoClaimStore.fetchSubmissions()
@@ -235,7 +238,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 				:disabled="isButtonDisabled"
 			>
 				<Edit :size="16" />
-				<div>Register or Update Recipient</div>
+				<div>Email Operations</div>
 			</Button>
 
 			<Button v-else @click="toggleUploadCard" size="sm" variant="ghost" :disabled="isButtonDisabled">
