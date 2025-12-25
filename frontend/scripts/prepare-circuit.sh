@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Preparing frontend assets..."
+echo "Preparing frontend circuit assets..."
 
 # Create public/wasm directory
 mkdir -p public/wasm

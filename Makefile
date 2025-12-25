@@ -4,6 +4,9 @@ build:
 gen-types:
 	cd frontend && bun run gen-types
 
+prepare-circuit:
+	cd frontend && bun run prepare-circuit
+
 deploy:
 	cd frontend && bun run deploy
 

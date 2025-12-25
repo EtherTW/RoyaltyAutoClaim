@@ -9,6 +9,7 @@
 		"preview": "vite preview",
 		"test": "vitest --run",
 		"gen-types": "bash scripts/gen-types.sh",
+		"prepare-circuit": "bash scripts/prepare-circuit.sh",
 		"deploy": "bun run scripts/deploy.ts",
 		"typecheck": "vue-tsc --noEmit",
 		"lint": "eslint .",

@@ -29,6 +29,7 @@ frontend
 ```
 make gen-types
 make deploy
+make prepare-circuit
 
 cd frontend
 bun run scripts/gen-proof.ts <EMAIL_FILENAME> <EMAIL_VERIFIER_ADDRESS>

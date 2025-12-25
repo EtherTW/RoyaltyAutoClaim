@@ -9,6 +9,7 @@ import { isSameAddress } from 'sendop'
 import { parseEmail } from '../../../circuits/script/utils'
 import { useSubmissionPolling } from '@/lib/submission-utils'
 
+const router = useRouter()
 const globalLoaderStore = useGlobalLoaderStore()
 const { isPollingForSubmissionUpdate, pollForSubmissionUpdate } = useSubmissionPolling()
 
@@ -209,11 +210,14 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 				<div>Close</div>
 			</Button>
 
-			<RouterLink :to="{ name: 'v2-config' }">
-				<Button size="icon" variant="ghost" :disabled="isButtonDisabled">
-					<Settings />
-				</Button>
-			</RouterLink>
+			<Button
+				size="icon"
+				variant="ghost"
+				:disabled="isButtonDisabled"
+				@click="router.push({ name: 'v2-config' })"
+			>
+				<Settings />
+			</Button>
 		</div>
 
 		<!-- Email Upload Section -->
