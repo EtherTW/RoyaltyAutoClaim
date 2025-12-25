@@ -51,6 +51,9 @@ const isRemoveMemberLoading = ref(false)
 const membersList = ref<bigint[]>([])
 const isFetchingMembers = ref(false)
 
+// Filter out removed members (identity === 0n)
+const activeMembers = computed(() => membersList.value.filter(member => member !== 0n))
+
 const isAnyReviewerLoading = computed(
 	() =>
 		isAddMemberLoading.value ||
@@ -736,18 +739,18 @@ const displayTokenAmount = computed(() => {
 							<div class="flex items-center justify-between mb-2">
 								<Label class="text-base font-semibold">Current Members</Label>
 								<span class="text-sm text-muted-foreground">
-									{{ isFetchingMembers ? 'Loading...' : `${membersList.length} member(s)` }}
+									{{ isFetchingMembers ? 'Loading...' : `${activeMembers.length} member(s)` }}
 								</span>
 							</div>
 							<div v-if="isFetchingMembers" class="text-sm text-muted-foreground">Loading members...</div>
-							<div v-else-if="membersList.length === 0" class="text-sm text-muted-foreground">
+							<div v-else-if="activeMembers.length === 0" class="text-sm text-muted-foreground">
 								No members found
 							</div>
 							<div v-else class="space-y-1 max-h-60 overflow-y-auto">
 								<div
-									v-for="(member, index) in membersList"
+									v-for="(member, index) in activeMembers"
 									:key="index"
-									class="text-sm font-mono break-all p-2 bg-background rounded border"
+									class="text-xs break-all p-2 bg-background rounded border"
 								>
 									{{ member.toString() }}
 								</div>
