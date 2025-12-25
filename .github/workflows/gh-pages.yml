@@ -30,21 +30,18 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v3
 
-            - name: Set up Node
-              uses: actions/setup-node@v3
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@v1
               with:
-                  node-version: 20
-
-            - name: Install PNPM
-              run: npm i -g pnpm
+                  bun-version: latest
 
             - name: Install dependencies
               working-directory: ./frontend
-              run: pnpm install
+              run: bun install
 
             - name: Build
               working-directory: ./frontend
-              run: pnpm build
+              run: bun run build
               env:
                   VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET }}
                   VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA }}

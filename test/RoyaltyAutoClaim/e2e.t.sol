@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity 0.8.30;
 
 import "./BaseTest.t.sol";
 
@@ -27,8 +27,7 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
     }
 
     function test_simple_flow() public {
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        _registerSubmission("test", recipient);
 
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
         assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should be recipient");
@@ -43,15 +42,13 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         vm.expectRevert();
         royaltyAutoClaim.claimRoyalty("test");
 
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
 
         vm.expectRevert();
         royaltyAutoClaim.claimRoyalty("test");
         assertEq(royaltyAutoClaim.isSubmissionClaimable("test"), false, "Submission should not be claimable");
 
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
+        _reviewSubmissionWithProof("test", 40, reviewer2Nullifier1);
 
         uint256 proxyBalanceBefore = token.balanceOf(address(proxy));
 
@@ -65,11 +62,7 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
     }
 
     function test_simple_flow_4337() public {
-        // Register submission via admin
-        PackedUserOperation memory userOp = _buildUserOp(
-            adminKey, address(proxy), abi.encodeCall(royaltyAutoClaim.registerSubmission, ("test", recipient))
-        );
-        _handleUserOp(userOp);
+        _registerSubmission4337("test", recipient);
 
         // Verify submission state
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
@@ -83,7 +76,8 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         );
 
         // Try to claim before reviews - should fail
-        userOp = _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")));
+        PackedUserOperation memory userOp =
+            _buildUserOp(recipientKey, address(proxy), abi.encodeCall(royaltyAutoClaim.claimRoyalty, ("test")));
         vm.expectRevert(
             abi.encodeWithSelector(
                 IEntryPoint.FailedOpWithRevert.selector,
@@ -94,9 +88,12 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         );
         _handleUserOp(userOp);
 
-        // First review
-        userOp =
-            _buildUserOp(reviewer1Key, address(proxy), abi.encodeCall(royaltyAutoClaim.reviewSubmission, ("test", 20)));
+        // First review with Semaphore
+        userOp = _buildUserOpWithoutSignature(
+            address(proxy), abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission4337, ("test", 20, reviewer1Nullifier1))
+        );
+        ISemaphore.SemaphoreProof memory proof1 = _createSemaphoreProof(reviewer1Nullifier1, 20, "test");
+        userOp.signature = abi.encode(proof1);
         _handleUserOp(userOp);
 
         // Try to claim after one review - should still fail
@@ -112,9 +109,12 @@ contract RoyaltyAutoClaim_E2E_Test is BaseTest {
         _handleUserOp(userOp);
         assertEq(royaltyAutoClaim.isSubmissionClaimable("test"), false, "Submission should not be claimable");
 
-        // Second review
-        userOp =
-            _buildUserOp(reviewer2Key, address(proxy), abi.encodeCall(royaltyAutoClaim.reviewSubmission, ("test", 40)));
+        // Second review with Semaphore
+        userOp = _buildUserOpWithoutSignature(
+            address(proxy), abi.encodeCall(IRoyaltyAutoClaim.reviewSubmission4337, ("test", 40, reviewer2Nullifier1))
+        );
+        ISemaphore.SemaphoreProof memory proof2 = _createSemaphoreProof(reviewer2Nullifier1, 40, "test");
+        userOp.signature = abi.encode(proof2);
         _handleUserOp(userOp);
 
         // Record balances before claim

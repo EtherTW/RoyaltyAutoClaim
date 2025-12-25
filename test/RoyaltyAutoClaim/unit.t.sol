@@ -1,20 +1,23 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity 0.8.30;
 
 import "./BaseTest.t.sol";
 import "../utils/MockV2.sol";
 
 /*
 
-    Test case order
-    (Find following keywords to quickly navigate)
+forge test test/RoyaltyAutoClaim/unit.t.sol -vvvv --skip test/RoyaltyAutoClaim/integration.t.sol test/RoyaltyAutoClaim/e2e.t.sol
 
-    Owner Functions
-    Admin Functions
-    Reviewer Functions
-    Recipient Functions
-    View Functions
-    Internal Functions
+Test case order
+(Find following keywords to quickly navigate)
+
+ZK Email Functions
+Owner Functions
+Admin Functions
+Reviewer Functions
+Recipient Functions
+View Functions
+Internal Functions
 
 */
 
@@ -37,21 +40,236 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         new RoyaltyAutoClaimProxy(
             address(newImpl),
-            abi.encodeCall(RoyaltyAutoClaim.initialize, (address(0), admin, address(token), initialReviewers))
+            abi.encodeCall(
+                RoyaltyAutoClaim.initialize, (address(0), admin, address(token), mockEmailVerifier, mockSemaphore)
+            )
         );
 
         // Test zero admin
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         new RoyaltyAutoClaimProxy(
             address(newImpl),
-            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, address(0), address(token), initialReviewers))
+            abi.encodeCall(
+                RoyaltyAutoClaim.initialize, (owner, address(0), address(token), mockEmailVerifier, mockSemaphore)
+            )
         );
 
         // Test zero token
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
         new RoyaltyAutoClaimProxy(
-            address(newImpl), abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(0), initialReviewers))
+            address(newImpl),
+            abi.encodeCall(RoyaltyAutoClaim.initialize, (owner, admin, address(0), mockEmailVerifier, mockSemaphore))
         );
+
+        // Test zero verifier
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        new RoyaltyAutoClaimProxy(
+            address(newImpl),
+            abi.encodeCall(
+                RoyaltyAutoClaim.initialize, (owner, admin, address(token), IEmailVerifier(address(0)), mockSemaphore)
+            )
+        );
+
+        // Test zero semaphore
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        new RoyaltyAutoClaimProxy(
+            address(newImpl),
+            abi.encodeCall(
+                RoyaltyAutoClaim.initialize, (owner, admin, address(token), mockEmailVerifier, ISemaphore(address(0)))
+            )
+        );
+    }
+
+    // ======================================== ZK Email Functions ========================================
+
+    // ======================================== registerSubmission ========================================
+
+    function test_registerSubmission() public {
+        _registerSubmission("test", recipient);
+        RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
+        assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should be the recipient");
+        assertEq(submission.reviewCount, 0, "Review count should be 0");
+        assertEq(submission.totalRoyaltyLevel, 0, "Total royalty level should be 0");
+        assertEq(
+            uint256(submission.status),
+            uint256(IRoyaltyAutoClaim.SubmissionStatus.Registered),
+            "Submission status should be Registered"
+        );
+    }
+
+    function testCannot_registerSubmission_invalid_proof() public {
+        // Set mock to return false
+        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(false);
+
+        vm.expectRevert(IRoyaltyAutoClaim.InvalidProof.selector);
+        _registerSubmission("test", recipient);
+
+        // Reset mock
+        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(true);
+    }
+
+    function testCannot_registerSubmission_if_the_submission_already_exists_or_is_claimed() public {
+        _registerSubmission("test", recipient);
+
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyRegistered.selector));
+        _registerSubmission("test", recipient);
+
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof("test", 40, reviewer2Nullifier1);
+        vm.prank(recipient);
+        royaltyAutoClaim.claimRoyalty("test");
+
+        vm.expectRevert(); // submission is claimed
+        _registerSubmission("test", recipient);
+    }
+
+    function testCannot_registerSubmission_with_empty_title() public {
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmptyString.selector));
+        _registerSubmission("", vm.randomAddress());
+    }
+
+    function testCannot_registerSubmission_with_zero_address() public {
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        _registerSubmission("test", address(0));
+    }
+
+    function testCannot_registerSubmission_with_used_email_proof() public {
+        bytes32 emailNullifier = bytes32(uint256(12345));
+
+        // First registration with the email nullifier
+        TitleHashVerifierLib.EmailProof memory proof =
+            _createEmailProof(recipient, emailNullifier, TitleHashVerifierLib.OperationType.REGISTRATION, bytes32(0));
+        royaltyAutoClaim.registerSubmission("test", proof);
+
+        // Verify the email nullifier is marked as used
+        assertTrue(royaltyAutoClaim.isEmailProofUsed(emailNullifier), "Email proof should be marked as used");
+
+        // Second registration with the same nullifier should fail even with different title
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmailProofUsed.selector));
+        royaltyAutoClaim.registerSubmission("test2", proof);
+
+        // Third registration with a new nullifier should succeed
+        TitleHashVerifierLib.EmailProof memory newProof = _createEmailProof(
+            recipient, bytes32(vm.randomUint()), TitleHashVerifierLib.OperationType.REGISTRATION, bytes32(0)
+        );
+        royaltyAutoClaim.registerSubmission("test2", newProof);
+    }
+
+    function testCannot_registerSubmission_if_not_called_by_entrypoint(
+        address caller,
+        address recipientAddress,
+        bytes32 emailHash
+    ) public {
+        // Assume caller is not the entry point
+        vm.assume(caller != ENTRY_POINT);
+        vm.assume(recipientAddress != address(0));
+
+        // Try to call the onlyEntryPoint version directly (not through EntryPoint)
+        vm.prank(caller);
+        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
+        royaltyAutoClaim.registerSubmission4337("test", recipientAddress, emailHash);
+    }
+
+    // ======================================== updateRoyaltyRecipient ========================================
+
+    function test_updateRoyaltyRecipient() public {
+        address originalRecipient = vm.randomAddress();
+        address newRecipient = vm.randomAddress();
+
+        _registerSubmission("test", originalRecipient);
+        _updateRoyaltyRecipient("test", newRecipient);
+        RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
+        assertEq(submission.royaltyRecipient, newRecipient, "Royalty recipient should be updated");
+    }
+
+    function testCannot_updateRoyaltyRecipient_invalid_proof() public {
+        address originalRecipient = vm.randomAddress();
+        address newRecipient = vm.randomAddress();
+        _registerSubmission("test", originalRecipient);
+
+        // Set mock to return false
+        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(false);
+
+        vm.expectRevert(IRoyaltyAutoClaim.InvalidProof.selector);
+        _updateRoyaltyRecipient("test", newRecipient);
+
+        // Reset mock
+        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(true);
+    }
+
+    function testCannot_updateRoyaltyRecipient_if_the_submission_is_claimed_or_not_exist() public {
+        address recipient = vm.randomAddress();
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
+        _updateRoyaltyRecipient("test", recipient);
+
+        vm.prank(admin);
+        _registerSubmission("test", recipient);
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof("test", 40, reviewer2Nullifier1);
+        vm.prank(recipient);
+        royaltyAutoClaim.claimRoyalty("test");
+
+        vm.expectRevert();
+        _updateRoyaltyRecipient("test", vm.randomAddress());
+    }
+
+    function testCannot_updateRoyaltyRecipient_with_same_address() public {
+        address recipient = vm.randomAddress();
+
+        vm.prank(admin);
+        _registerSubmission("test", recipient);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
+        _updateRoyaltyRecipient("test", recipient);
+    }
+
+    function testCannot_updateRoyaltyRecipient_with_used_email_proof() public {
+        bytes32 emailNullifier = bytes32(uint256(54321));
+
+        // First registration with the email nullifier
+        TitleHashVerifierLib.EmailProof memory regProof =
+            _createEmailProof(recipient, emailNullifier, TitleHashVerifierLib.OperationType.REGISTRATION, bytes32(0));
+        royaltyAutoClaim.registerSubmission("test", regProof);
+
+        // Verify the email nullifier is marked as used
+        assertTrue(royaltyAutoClaim.isEmailProofUsed(emailNullifier), "Email proof should be marked as used");
+
+        // Try to update royalty recipient using the same nullifier should fail
+        TitleHashVerifierLib.EmailProof memory updateProof = _createEmailProof(
+            vm.randomAddress(), emailNullifier, TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, bytes32(0)
+        );
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmailProofUsed.selector));
+        royaltyAutoClaim.updateRoyaltyRecipient("test", updateProof);
+
+        // Update with a new nullifier should succeed
+        TitleHashVerifierLib.EmailProof memory newProof = _createEmailProof(
+            vm.randomAddress(),
+            bytes32(vm.randomUint()),
+            TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE,
+            bytes32(0)
+        );
+        royaltyAutoClaim.updateRoyaltyRecipient("test", newProof);
+    }
+
+    function testCannot_updateRoyaltyRecipient_if_not_called_by_entrypoint(
+        address caller,
+        address newRecipient,
+        bytes32 emailHash
+    ) public {
+        // Assume caller is not the entry point
+        vm.assume(caller != ENTRY_POINT);
+        vm.assume(newRecipient != address(0));
+
+        // First register a submission
+        _registerSubmission("test", recipient);
+
+        // Try to call the onlyEntryPoint version directly (not through EntryPoint)
+        vm.prank(caller);
+        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
+        royaltyAutoClaim.updateRoyaltyRecipient4337("test", newRecipient, emailHash);
     }
 
     // ======================================== Owner Functions ========================================
@@ -183,68 +401,13 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     // ======================================== Admin Functions ========================================
 
-    function test_updateReviewers() public {
-        address[] memory newReviewers = new address[](2);
-        bool[] memory status = new bool[](2);
+    // ======================================== adminRegisterSubmission ========================================
 
-        newReviewers[0] = vm.randomAddress();
-        newReviewers[1] = reviewer1;
-        status[0] = true;
-        status[1] = false;
-
-        // Should fail if not admin
-        vm.prank(fake);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
-        royaltyAutoClaim.updateReviewers(newReviewers, status);
-
-        // Should fail if arrays have different lengths
-        bool[] memory invalidStatus = new bool[](1);
-        invalidStatus[0] = true;
+    function test_adminRegisterSubmission() public {
+        // Admin can register directly
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidArrayLength.selector));
-        royaltyAutoClaim.updateReviewers(newReviewers, invalidStatus);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
 
-        vm.prank(admin);
-        royaltyAutoClaim.updateReviewers(newReviewers, status);
-
-        // Verify the updates
-        assertEq(royaltyAutoClaim.isReviewer(newReviewers[0]), true);
-        assertEq(royaltyAutoClaim.isReviewer(newReviewers[1]), false);
-    }
-
-    function test_updateReviewers_remove_existing_reviewer() public {
-        address[] memory existingReviewers = new address[](1);
-        bool[] memory removeStatus = new bool[](1);
-        existingReviewers[0] = reviewer1;
-        removeStatus[0] = false;
-
-        vm.prank(admin);
-        royaltyAutoClaim.updateReviewers(existingReviewers, removeStatus);
-        assertEq(royaltyAutoClaim.isReviewer(reviewer1), false);
-        assertEq(royaltyAutoClaim.isReviewer(reviewer2), true);
-    }
-
-    function testCannot_updateReviewers_if_array_length_is_0() public {
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidArrayLength.selector));
-        royaltyAutoClaim.updateReviewers(new address[](0), new bool[](0));
-    }
-
-    function testCannot_updateReviewers_if_status_is_same() public {
-        address[] memory reviewers = new address[](1);
-        reviewers[0] = reviewer1;
-        bool[] memory status = new bool[](1);
-        status[0] = true;
-
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameStatus.selector));
-        royaltyAutoClaim.updateReviewers(reviewers, status);
-    }
-
-    function test_registerSubmission() public {
-        address recipient = vm.randomAddress();
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
         assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should be the recipient");
         assertEq(submission.reviewCount, 0, "Review count should be 0");
@@ -256,101 +419,153 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         );
     }
 
-    function testCannot_registerSubmission_if_the_submission_already_exists_or_is_claimed() public {
+    function testCannot_adminRegisterSubmission_if_not_admin() public {
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+    }
+
+    function testCannot_adminRegisterSubmission_with_empty_title() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmptyString.selector));
+        royaltyAutoClaim.adminRegisterSubmission("", recipient);
+    }
+
+    function testCannot_adminRegisterSubmission_with_zero_address() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        royaltyAutoClaim.adminRegisterSubmission("test", address(0));
+    }
+
+    function testCannot_adminRegisterSubmission_if_already_registered() public {
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyRegistered.selector));
-        royaltyAutoClaim.registerSubmission("test", recipient);
-
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
-        vm.prank(recipient);
-        royaltyAutoClaim.claimRoyalty("test");
-
-        vm.expectRevert(); // submission is claimed
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
     }
 
-    function testCannot_registerSubmission_if_not_admin() public {
-        vm.prank(fake);
-        vm.expectRevert();
-        royaltyAutoClaim.registerSubmission("test", fake);
+    function test_adminRegisterSubmission_multiple_unique_titles(uint8 count) public {
+        // Constrain count to reasonable range [1, 10]
+        vm.assume(count > 0 && count <= 10);
+
+        // Admin can register multiple submissions with unique titles
+        for (uint256 i = 0; i < count; i++) {
+            string memory title = string(abi.encodePacked("test", vm.toString(i)));
+
+            vm.prank(admin);
+            royaltyAutoClaim.adminRegisterSubmission(title, recipient);
+
+            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions(title);
+            assertEq(submission.royaltyRecipient, recipient, "Royalty recipient should match");
+            assertEq(
+                uint256(submission.status),
+                uint256(IRoyaltyAutoClaim.SubmissionStatus.Registered),
+                "Submission status should be Registered"
+            );
+        }
     }
 
-    function testCannot_registerSubmission_with_empty_title() public {
-        vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.EmptyTitle.selector));
-        royaltyAutoClaim.registerSubmission("", vm.randomAddress());
-    }
+    // ======================================== adminUpdateRoyaltyRecipient ========================================
 
-    function testCannot_registerSubmission_with_zero_address() public {
+    function test_adminUpdateRoyaltyRecipient() public {
+        // First register a submission
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
-        royaltyAutoClaim.registerSubmission("test", address(0));
-    }
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
 
-    function test_updateRoyaltyRecipient() public {
-        address originalRecipient = vm.randomAddress();
-        address newRecipient = vm.randomAddress();
+        // Create a new recipient address
+        address newRecipient = makeAddr("newRecipient");
 
+        // Admin can update the recipient
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", originalRecipient);
-
-        // Update recipient
-        vm.prank(admin);
-        royaltyAutoClaim.updateRoyaltyRecipient("test", newRecipient);
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
 
         RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
         assertEq(submission.royaltyRecipient, newRecipient, "Royalty recipient should be updated");
     }
 
-    function testCannot_updateRoyaltyRecipient_if_not_admin() public {
+    function testCannot_adminUpdateRoyaltyRecipient_if_not_admin() public {
+        // First register a submission
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        address newRecipient = makeAddr("newRecipient");
 
         vm.prank(fake);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
-        royaltyAutoClaim.updateRoyaltyRecipient("test", vm.randomAddress());
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
     }
 
-    function testCannot_updateRoyaltyRecipient_if_the_submission_is_claimed_or_not_exist() public {
-        address recipient = vm.randomAddress();
+    function testCannot_adminUpdateRoyaltyRecipient_if_not_registered() public {
+        address newRecipient = makeAddr("newRecipient");
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
-        royaltyAutoClaim.updateRoyaltyRecipient("test", recipient);
-
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
-        vm.prank(recipient);
-        royaltyAutoClaim.claimRoyalty("test");
-
-        vm.expectRevert();
-        royaltyAutoClaim.updateRoyaltyRecipient("test", vm.randomAddress());
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
     }
 
-    function testCannot_updateRoyaltyRecipient_with_same_address() public {
-        address recipient = vm.randomAddress();
+    function testCannot_adminUpdateRoyaltyRecipient_with_zero_address() public {
+        // First register a submission
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
 
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", address(0));
+    }
+
+    function testCannot_adminUpdateRoyaltyRecipient_with_same_address() public {
+        // First register a submission
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SameAddress.selector));
-        royaltyAutoClaim.updateRoyaltyRecipient("test", recipient);
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", recipient);
     }
 
+    function test_adminUpdateRoyaltyRecipient_multiple_times() public {
+        // First register a submission
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        // Update recipient multiple times
+        for (uint256 i = 1; i <= 5; i++) {
+            address newRecipient = makeAddr(string(abi.encodePacked("recipient", vm.toString(i))));
+
+            vm.prank(admin);
+            royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
+
+            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
+            assertEq(submission.royaltyRecipient, newRecipient, "Royalty recipient should be updated");
+        }
+    }
+
+    function testCannot_adminUpdateRoyaltyRecipient_after_claimed() public {
+        // Register and setup for claiming
+        vm.prank(admin);
+        royaltyAutoClaim.adminRegisterSubmission("test", recipient);
+
+        // Add reviews
+        _reviewSubmissionWithProof("test", 60, reviewer1Nullifier1);
+        _reviewSubmissionWithProof("test", 80, reviewer2Nullifier1);
+
+        // Claim the royalty
+        vm.prank(recipient);
+        royaltyAutoClaim.claimRoyalty("test");
+
+        // Try to update recipient after claim
+        address newRecipient = makeAddr("newRecipient");
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
+        royaltyAutoClaim.adminUpdateRoyaltyRecipient("test", newRecipient);
+    }
+
+    // ================================== revokeSubmission ==================================
     function test_revokeSubmission() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        _registerSubmission("test", recipient);
 
         vm.prank(admin);
         royaltyAutoClaim.revokeSubmission("test");
@@ -368,7 +583,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function testCannot_revokeSubmission_if_not_admin() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        _registerSubmission("test", vm.randomAddress());
 
         // Try to revoke as non-admin
         vm.prank(fake);
@@ -382,11 +597,9 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.revokeSubmission("test");
 
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
+        _registerSubmission("test", recipient);
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof("test", 40, reviewer2Nullifier1);
         vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
 
@@ -394,97 +607,179 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.revokeSubmission("test");
     }
 
+    // ================================== updateEmailVerifier ==================================
+
+    function test_updateEmailVerifier() public {
+        address newVerifier = vm.randomAddress();
+        vm.prank(admin);
+        royaltyAutoClaim.updateEmailVerifier(IEmailVerifier(newVerifier));
+        assertEq(royaltyAutoClaim.emailVerifier(), newVerifier);
+    }
+
+    function testCannot_updateEmailVerifier_if_not_admin() public {
+        address newVerifier = vm.randomAddress();
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.updateEmailVerifier(IEmailVerifier(newVerifier));
+    }
+
+    function testCannot_updateEmailVerifier_if_zero_address() public {
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.ZeroAddress.selector));
+        royaltyAutoClaim.updateEmailVerifier(IEmailVerifier(address(0)));
+    }
+
+    // ================================== revokeEmail ==================================
+
+    function test_revokeEmail() public {
+        uint256 emailNumber = 12345;
+
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit IRoyaltyAutoClaim.EmailRevoked(emailNumber);
+        royaltyAutoClaim.revokeEmail(emailNumber);
+
+        assertTrue(royaltyAutoClaim.isEmailRevoked(emailNumber));
+    }
+
+    function testCannot_revokeEmail_if_not_admin() public {
+        vm.prank(fake);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
+        royaltyAutoClaim.revokeEmail(12345);
+    }
+
+    function testCannot_registerSubmission_with_revoked_email() public {
+        uint256 emailNumber = 12345;
+
+        // Revoke email number
+        vm.prank(admin);
+        royaltyAutoClaim.revokeEmail(emailNumber);
+
+        // Create proof with revoked email number
+        TitleHashVerifierLib.EmailProof memory proof = _createEmailProofWithNumber(
+            recipient,
+            bytes32(vm.randomUint()),
+            TitleHashVerifierLib.OperationType.REGISTRATION,
+            bytes32(0),
+            emailNumber
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.RevokedEmail.selector, emailNumber));
+        royaltyAutoClaim.registerSubmission("test", proof);
+    }
+
+    function testCannot_updateRoyaltyRecipient_with_revoked_email() public {
+        // First register
+        _registerSubmission("test", recipient);
+
+        uint256 emailNumber = 67890;
+
+        // Revoke email number
+        vm.prank(admin);
+        royaltyAutoClaim.revokeEmail(emailNumber);
+
+        // Try to update with revoked email
+        TitleHashVerifierLib.EmailProof memory proof = _createEmailProofWithNumber(
+            vm.randomAddress(),
+            bytes32(vm.randomUint()),
+            TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE,
+            bytes32(0),
+            emailNumber
+        );
+
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.RevokedEmail.selector, emailNumber));
+        royaltyAutoClaim.updateRoyaltyRecipient("test", proof);
+    }
+
+    function test_isEmailRevoked() public view {
+        assertFalse(royaltyAutoClaim.isEmailRevoked(12345));
+    }
+
+    function test_revokeEmail_via_erc4337() public {
+        uint256 emailNumber = 99999;
+
+        PackedUserOperation memory userOp = _buildUserOp(
+            adminKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.revokeEmail, (emailNumber))
+        );
+
+        vm.expectEmit(true, false, false, false);
+        emit IRoyaltyAutoClaim.EmailRevoked(emailNumber);
+        _handleUserOp(userOp);
+
+        assertTrue(royaltyAutoClaim.isEmailRevoked(emailNumber));
+    }
+
     // ======================================== Reviewer Functions ========================================
 
-    function test_reviewSubmission() public {
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+    function test_reviewSubmission_with_semaphore_proof() public {
+        _registerSubmission("test", recipient);
 
-        // Add more reviewers for testing
-        uint256 randomUint = vm.randomUint();
-        address[] memory testReviewers = new address[](4);
-        bool[] memory status = new bool[](4);
-        for (uint256 i = 0; i < 4; i++) {
-            testReviewers[i] = vm.addr(randomUint + i);
-            status[i] = true;
-        }
-        vm.prank(admin);
-        royaltyAutoClaim.updateReviewers(testReviewers, status);
-
-        // Test all valid royalty levels with different reviewers
+        // Test with different royalty levels
         uint16[] memory validLevels = new uint16[](4);
-        validLevels[0] = 20;
-        validLevels[1] = 40;
-        validLevels[2] = 60;
-        validLevels[3] = 80;
+        validLevels[0] = royaltyAutoClaim.ROYALTY_LEVEL_20();
+        validLevels[1] = royaltyAutoClaim.ROYALTY_LEVEL_40();
+        validLevels[2] = royaltyAutoClaim.ROYALTY_LEVEL_60();
+        validLevels[3] = royaltyAutoClaim.ROYALTY_LEVEL_80();
 
-        uint256 expectedTotalLevel = 0;
         for (uint256 i = 0; i < validLevels.length; i++) {
-            vm.prank(testReviewers[i]);
-            royaltyAutoClaim.reviewSubmission("test", validLevels[i]);
+            string memory title = string(abi.encodePacked("test", vm.toString(i)));
+            _registerSubmission(title, recipient);
 
-            expectedTotalLevel += validLevels[i];
+            ISemaphore.SemaphoreProof memory proof =
+                _createSemaphoreProof(reviewer1Nullifier1 + i, validLevels[i], title);
 
-            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
-            assertEq(submission.reviewCount, i + 1, "Review count should increment");
-            assertEq(submission.totalRoyaltyLevel, expectedTotalLevel, "Total royalty level should be cumulative");
+            royaltyAutoClaim.reviewSubmission(title, validLevels[i], proof);
 
-            // Verify hasReviewed is set to true for the reviewer
-            assertTrue(
-                royaltyAutoClaim.hasReviewed("test", testReviewers[i]), "hasReviewed should be true for reviewer"
-            );
-
-            // Verify hasReviewed is still false for unused reviewers
-            for (uint256 j = i + 1; j < testReviewers.length; j++) {
-                assertFalse(
-                    royaltyAutoClaim.hasReviewed("test", testReviewers[j]),
-                    "hasReviewed should be false for unused reviewers"
-                );
-            }
+            RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions(title);
+            assertEq(submission.reviewCount, 1);
+            assertEq(submission.totalRoyaltyLevel, validLevels[i]);
+            assertTrue(royaltyAutoClaim.hasReviewed(title, reviewer1Nullifier1 + i));
         }
     }
 
     function testCannot_reviewSubmission_if_the_submission_is_claimed_or_not_exist() public {
         // Test non-existent submission
-        vm.prank(reviewer1);
+        ISemaphore.SemaphoreProof memory proof = _createSemaphoreProof(reviewer1Nullifier1, 20, "test");
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
-        royaltyAutoClaim.reviewSubmission("test", 20);
+        royaltyAutoClaim.reviewSubmission("test", 20, proof);
 
         // Setup a submission and get it to claimed state
         address recipient = vm.randomAddress();
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        _registerSubmission("test", recipient);
 
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof("test", 40, reviewer2Nullifier1);
 
         // Claim the royalty
         vm.prank(recipient);
         royaltyAutoClaim.claimRoyalty("test");
 
         // Test reviewing a claimed submission
-        vm.prank(reviewer1);
+        ISemaphore.SemaphoreProof memory proof2 = _createSemaphoreProof(reviewer1Nullifier2, 20, "test");
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionStatusNotRegistered.selector));
-        royaltyAutoClaim.reviewSubmission("test", 20);
+        royaltyAutoClaim.reviewSubmission("test", 20, proof2);
     }
 
-    function testCannot_reviewSubmission_if_not_reviewer() public {
-        // Register submission
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+    function testCannot_reviewSubmission_with_invalid_semaphore_proof() public {
+        _registerSubmission("test", recipient);
 
-        // Try to review as non-reviewer
-        vm.prank(fake);
-        vm.expectRevert();
-        royaltyAutoClaim.reviewSubmission("test", 20);
+        // Set mock to return false
+        MockSemaphore(address(mockSemaphore)).setMockVerifyResult(false);
+
+        ISemaphore.SemaphoreProof memory proof = _createSemaphoreProof(reviewer1Nullifier1, 20, "test");
+
+        vm.expectRevert(IRoyaltyAutoClaim.InvalidSemaphoreProof.selector);
+        royaltyAutoClaim.reviewSubmission("test", 20, proof);
+
+        // Reset mock
+        MockSemaphore(address(mockSemaphore)).setMockVerifyResult(true);
     }
 
     function testCannot_reviewSubmission_with_invalid_royalty_level() public {
         // Register submission
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        _registerSubmission("test", vm.randomAddress());
 
         // Try invalid royalty levels
         uint16[] memory invalidLevels = new uint16[](4);
@@ -494,25 +789,25 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         invalidLevels[3] = 255;
 
         for (uint256 i = 0; i < invalidLevels.length; i++) {
-            vm.prank(reviewer1);
+            ISemaphore.SemaphoreProof memory proof =
+                _createSemaphoreProof(reviewer1Nullifier1 + i, invalidLevels[i], "test");
             vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidRoyaltyLevel.selector, invalidLevels[i]));
-            royaltyAutoClaim.reviewSubmission("test", invalidLevels[i]);
+            royaltyAutoClaim.reviewSubmission("test", invalidLevels[i], proof);
         }
     }
 
     function testCannot_reviewSubmission_multiple_times() public {
-        // Register submission
-        vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", vm.randomAddress());
+        _registerSubmission("test", recipient);
 
-        // First review should succeed
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
+        uint256 nullifier = reviewer1Nullifier1;
 
-        // Second review from same reviewer should fail
-        vm.prank(reviewer1);
-        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.AlreadyReviewed.selector));
-        royaltyAutoClaim.reviewSubmission("test", 40);
+        // First review succeeds
+        _reviewSubmissionWithProof("test", 20, nullifier);
+
+        // Second review with same nullifier fails
+        ISemaphore.SemaphoreProof memory proof = _createSemaphoreProof(nullifier, 40, "test");
+        vm.expectRevert(IRoyaltyAutoClaim.AlreadyReviewed.selector);
+        royaltyAutoClaim.reviewSubmission("test", 40, proof);
     }
 
     // ======================================== Recipient Functions ========================================
@@ -524,11 +819,9 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
         // Setup submission and reviews
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
+        _registerSubmission("test", recipient);
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof("test", 40, reviewer2Nullifier1);
 
         // Should fail if not recipient
         vm.prank(fake);
@@ -550,7 +843,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function testCannot_claimRoyalty_if_not_recipient() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        _registerSubmission("test", recipient);
 
         vm.prank(fake);
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.Unauthorized.selector, fake));
@@ -568,11 +861,9 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
         // Setup submission and reviews
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
+        _registerSubmission("test", recipient);
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof("test", 40, reviewer2Nullifier1);
 
         // First claim should succeed
         vm.prank(recipient);
@@ -586,9 +877,8 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function testCannot_claimRoyalty_if_not_enough_reviews() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
+        _registerSubmission("test", recipient);
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
 
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
         vm.prank(recipient);
@@ -597,7 +887,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function testCannot_claimRoyalty_if_zero_royalty() public {
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        _registerSubmission("test", recipient);
 
         vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
         vm.prank(recipient);
@@ -612,21 +902,19 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
         // Case 2: Submission is registered but has no reviews
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test", recipient);
+        _registerSubmission("test", recipient);
         assertFalse(
             royaltyAutoClaim.isSubmissionClaimable("test"), "Submission with no reviews should not be claimable"
         );
 
         // Case 3: Submission has one review (not enough)
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission("test", 20);
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
         assertFalse(
             royaltyAutoClaim.isSubmissionClaimable("test"), "Submission with one review should not be claimable"
         );
 
         // Case 4: Submission has enough reviews (two or more)
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission("test", 40);
+        _reviewSubmissionWithProof("test", 40, reviewer2Nullifier1);
         assertTrue(royaltyAutoClaim.isSubmissionClaimable("test"), "Submission with two reviews should be claimable");
 
         // Case 5: Submission is claimed (should not be claimable)
@@ -636,21 +924,17 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
         // Case 6: Submission is revoked
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission("test2", recipient);
+        _registerSubmission("test2", recipient);
         vm.prank(admin);
         royaltyAutoClaim.revokeSubmission("test2");
         assertFalse(royaltyAutoClaim.isSubmissionClaimable("test2"), "Revoked submission should not be claimable");
-    }
-
-    function test_entryPoint() public view {
-        assertEq(royaltyAutoClaim.entryPoint(), 0x0000000071727De22E5E9d8BAf0edAc6f37da032);
     }
 
     function test_isRecipient() public {
         string memory title = "test";
         address recipient = recipient;
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission(title, recipient);
+        _registerSubmission(title, recipient);
         assertTrue(royaltyAutoClaim.isRecipient(title, recipient));
         assertFalse(royaltyAutoClaim.isRecipient(title, fake));
     }
@@ -658,12 +942,10 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     function test_getRoyalty() public {
         string memory title = "test";
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission(title, recipient);
+        _registerSubmission(title, recipient);
 
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission(title, 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission(title, 40);
+        _reviewSubmissionWithProof(title, 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof(title, 40, reviewer2Nullifier1);
 
         // Expected: (20 + 40) / 2 = 30 ether
         assertEq(royaltyAutoClaim.getRoyalty(title), 30 ether, "Should calculate average of two reviews correctly");
@@ -671,22 +953,11 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         // Case 2: Three reviews with same level (all 20)
         string memory title2 = "test2";
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission(title2, recipient);
+        _registerSubmission(title2, recipient);
 
-        // Add a third reviewer
-        address[] memory newReviewers = new address[](1);
-        bool[] memory status = new bool[](1);
-        newReviewers[0] = vm.randomAddress();
-        status[0] = true;
-        vm.prank(admin);
-        royaltyAutoClaim.updateReviewers(newReviewers, status);
-
-        vm.prank(reviewer1);
-        royaltyAutoClaim.reviewSubmission(title2, 20);
-        vm.prank(reviewer2);
-        royaltyAutoClaim.reviewSubmission(title2, 20);
-        vm.prank(newReviewers[0]);
-        royaltyAutoClaim.reviewSubmission(title2, 20);
+        _reviewSubmissionWithProof(title2, 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof(title2, 20, reviewer2Nullifier1);
+        _reviewSubmissionWithProof(title2, 20, reviewer1Nullifier2);
 
         // Expected: (20 + 20 + 20) / 3 = 20 ether
         assertEq(
@@ -698,7 +969,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         // Case 3: No reviews (should return 0)
         string memory title3 = "test3";
         vm.prank(admin);
-        royaltyAutoClaim.registerSubmission(title3, recipient);
+        _registerSubmission(title3, recipient);
         assertEq(royaltyAutoClaim.getRoyalty(title3), 0, "Should return 0 for submission with no reviews");
 
         // Case 4: Claimed submission (should still calculate correctly)
@@ -710,25 +981,75 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertEq(royaltyAutoClaim.getRoyalty("nonexistent"), 0, "Should return 0 for non-existent submission");
     }
 
+    // ======================================== Semaphore-Specific Tests ========================================
+
+    function test_reviewSubmission_same_identity_different_submissions() public {
+        // Same reviewer can review different submissions (different scopes)
+        _registerSubmission("test1", recipient);
+        _registerSubmission("test2", recipient);
+
+        // Review both with same identity but different nullifiers
+        _reviewSubmissionWithProof("test1", 20, reviewer1Nullifier1);
+        _reviewSubmissionWithProof("test2", 40, reviewer1Nullifier2);
+
+        assertTrue(royaltyAutoClaim.hasReviewed("test1", reviewer1Nullifier1));
+        assertTrue(royaltyAutoClaim.hasReviewed("test2", reviewer1Nullifier2));
+    }
+
+    function testCannot_reviewSubmission_with_message_mismatch() public {
+        _registerSubmission("test", recipient);
+
+        ISemaphore.SemaphoreProof memory proof = _createSemaphoreProof(reviewer1Nullifier1, 20, "test");
+
+        // Tamper with message
+        proof.message = 40;
+
+        vm.expectRevert(IRoyaltyAutoClaim.MessageMismatch.selector);
+        royaltyAutoClaim.reviewSubmission("test", 20, proof);
+    }
+
+    function testCannot_reviewSubmission_with_scope_mismatch() public {
+        _registerSubmission("test", recipient);
+
+        ISemaphore.SemaphoreProof memory proof = _createSemaphoreProof(reviewer1Nullifier1, 20, "test");
+
+        // Tamper with scope
+        proof.scope = uint256(keccak256(abi.encodePacked("wrong_title")));
+
+        vm.expectRevert(IRoyaltyAutoClaim.ScopeMismatch.selector);
+        royaltyAutoClaim.reviewSubmission("test", 20, proof);
+    }
+
+    function testCannot_reviewSubmission_if_not_called_by_entrypoint() public {
+        _registerSubmission("test", recipient);
+
+        // Try to call the onlyEntryPoint version directly
+        vm.expectRevert(IRoyaltyAutoClaim.NotFromEntryPoint.selector);
+        royaltyAutoClaim.reviewSubmission4337("test", 20, reviewer1Nullifier1);
+    }
+
+    function test_hasReviewed() public {
+        _registerSubmission("test", recipient);
+
+        // Before review
+        assertFalse(royaltyAutoClaim.hasReviewed("test", reviewer1Nullifier1));
+
+        // After review
+        _reviewSubmissionWithProof("test", 20, reviewer1Nullifier1);
+        assertTrue(royaltyAutoClaim.hasReviewed("test", reviewer1Nullifier1));
+
+        // Different nullifier not marked
+        assertFalse(royaltyAutoClaim.hasReviewed("test", reviewer2Nullifier1));
+    }
+
+    function test_semaphore() public view {
+        assertEq(address(royaltyAutoClaim.semaphore()), address(mockSemaphore));
+    }
+
+    function test_reviewerGroupId() public view {
+        uint256 groupId = royaltyAutoClaim.reviewerGroupId();
+        assertGt(groupId, 0, "Group ID should be set");
+    }
+
     // ======================================== Internal Functions ========================================
-
-    function test_getUserOpSigner() public {
-        address expectedSigner = vm.randomAddress();
-
-        // Set up the test conditions
-        vm.prank(ENTRY_POINT);
-        harness.setTransientSigner(expectedSigner);
-
-        // Test the function when called from EntryPoint
-        vm.prank(ENTRY_POINT);
-        address actualSigner = harness.exposed_getUserOpSigner();
-        assertEq(actualSigner, expectedSigner, "Should return the correct signer address");
-    }
-
-    function testCannot_getUserOpSigner_if_signer_is_zero() public {
-        // Don't set any signer, so it defaults to address(0)
-        vm.prank(ENTRY_POINT);
-        vm.expectRevert(IRoyaltyAutoClaim.ZeroAddress.selector);
-        harness.exposed_getUserOpSigner();
-    }
 }

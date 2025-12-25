@@ -1,11 +1,10 @@
-import { fetchExistingSubmissions } from '@/lib/fetchExistingSubmissions'
-import { RoyaltyAutoClaim4337 } from '@/lib/RoyaltyAutoClaim4337'
 import { normalizeError } from '@/lib/error'
-import { RoyaltyAutoClaim__factory } from '@/typechain-types'
-import { JsonRpcSigner } from 'ethers'
+import { fetchExistingSubmissions } from '@/lib/fetchExistingSubmissions'
+import { fetchReviewerGroupMembers, SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
+import { RoyaltyAutoClaim__factory } from '@/typechain-v2'
+import { TENDERLY_RPC_URL } from '@/config'
 import { defineStore } from 'pinia'
 import { useBlockchainStore } from './useBlockchain'
-import { useEOAStore } from './useEOA'
 
 export type Submission = {
 	title: string
@@ -22,27 +21,27 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 		return RoyaltyAutoClaim__factory.connect(blockchainStore.royaltyAutoClaimProxyAddress, blockchainStore.client)
 	})
 
-	const royaltyAutoClaim4337 = computed(() => {
-		const eoaStore = useEOAStore()
-
-		if (eoaStore.signer) {
-			return new RoyaltyAutoClaim4337({
-				sender: blockchainStore.royaltyAutoClaimProxyAddress,
-				client: blockchainStore.client,
-				bundler: blockchainStore.bundler,
-				signer: eoaStore.signer as JsonRpcSigner,
-			})
-		}
-
-		return null
-	})
-
 	const submissions = ref<Submission[]>([])
 	const isLoadingBasicSubmissions = ref(false)
 	const isLoadingSubmissionData = ref(false)
 	const isLoading = computed(() => isLoadingBasicSubmissions.value || isLoadingSubmissionData.value)
 
+	// Semaphore-related state
+	const semaphoreAddress = ref<string | null>(null)
+	const reviewerGroupId = ref<bigint | null>(null)
+	const reviewerMembers = ref<bigint[]>([])
+	const isLoadingReviewerMembers = ref(false)
+
 	async function fetchSubmissions() {
+		submissions.value = []
+		await _fetchSubmissions()
+	}
+
+	async function updateSubmissions() {
+		await _fetchSubmissions()
+	}
+
+	async function _fetchSubmissions() {
 		try {
 			isLoadingBasicSubmissions.value = true
 
@@ -79,13 +78,45 @@ export const useRoyaltyAutoClaimStore = defineStore('useRoyaltyAutoClaimStore', 
 		}
 	}
 
+	async function fetchReviewerMembers() {
+		try {
+			isLoadingReviewerMembers.value = true
+
+			// Get semaphore address and reviewer group ID from contract
+			semaphoreAddress.value = await royaltyAutoClaim.value.semaphore()
+			reviewerGroupId.value = await royaltyAutoClaim.value.reviewerGroupId()
+
+			// Get the RPC URL for SemaphoreEthers
+			const rpcUrl = TENDERLY_RPC_URL[blockchainStore.chainId]
+			if (!rpcUrl) {
+				throw new Error(`RPC URL not configured for chain ID: ${blockchainStore.chainId}`)
+			}
+
+			// Fetch reviewer members using SemaphoreEthers
+			reviewerMembers.value = await fetchReviewerGroupMembers({
+				rpcUrl,
+				semaphoreAddress: SEMAPHORE_ADDRESS,
+				groupId: reviewerGroupId.value.toString(),
+			})
+		} catch (err: unknown) {
+			throw new Error('Failed to fetch reviewer members', { cause: normalizeError(err) })
+		} finally {
+			isLoadingReviewerMembers.value = false
+		}
+	}
+
 	return {
 		royaltyAutoClaim,
-		royaltyAutoClaim4337,
 		submissions,
 		isLoadingBasicSubmissions,
 		isLoadingSubmissionData,
 		isLoading,
 		fetchSubmissions,
+		updateSubmissions,
+		semaphoreAddress,
+		reviewerGroupId,
+		reviewerMembers,
+		isLoadingReviewerMembers,
+		fetchReviewerMembers,
 	}
 })

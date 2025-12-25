@@ -1,0 +1,14 @@
+{
+	"RoyaltyAutoClaim": {
+		"owner": "0x0F0356aE7f7e1c0e812f5fB672B9D5557aB0Bf86",
+		"admin": "0x0F0356aE7f7e1c0e812f5fB672B9D5557aB0Bf86",
+		"token": "0x718cEb04a9E8b3430E832cc2c8222F384bc6fd72",
+		"dkimRegistry": "0x3D3935B3C030893f118a84C92C66dF1B9E4169d6",
+		"emailFromAddress": "johnson86tw@gmail.com",
+		"semaphore": "0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D"
+	},
+	"EmailVerifier": {
+		"dkimRegistry": "0x3D3935B3C030893f118a84C92C66dF1B9E4169d6",
+		"emailFromAddress": "johnson86tw@gmail.com"
+	}
+}

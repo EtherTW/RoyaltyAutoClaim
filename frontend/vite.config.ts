@@ -5,7 +5,8 @@ import tailwind from 'tailwindcss'
 import { defineConfig } from 'vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import NotificationsResolver from '@kyvg/vue3-notification/auto-import-resolver'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import wasm from 'vite-plugin-wasm'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -17,15 +18,17 @@ export default defineConfig({
 	},
 	plugins: [
 		vue(),
+		wasm(),
+		nodePolyfills(),
 		AutoImport({
 			dts: 'src/auto-import.d.ts',
-			imports: ['vue', 'vue-router', 'pinia'],
+			imports: ['vue', 'vue-router', 'pinia', '@vueuse/core'],
 			eslintrc: {
 				enabled: true,
 			},
 		}),
 		Components({
-			resolvers: [NotificationsResolver()],
+			dts: 'src/components.d.ts',
 		}),
 	],
 	resolve: {
@@ -33,4 +36,29 @@ export default defineConfig({
 			'@': fileURLToPath(new URL('./src', import.meta.url)),
 		},
 	},
+	build: {
+		rollupOptions: {
+			external: (id) => {
+				// Externalize all vite-plugin-node-polyfills shims
+				if (id.startsWith('vite-plugin-node-polyfills/shims/')) {
+					return true
+				}
+				return false
+			},
+		},
+	},
+	/* -------------------------------------------------------------------------- */
+	/*                              For zkemail proof                             */
+	/* -------------------------------------------------------------------------- */
+	worker: {
+		format: 'es',
+		plugins: () => [wasm()],
+	},
+	optimizeDeps: {
+		exclude: ['@aztec/bb.js', '@noir-lang/noir_js', '@noir-lang/acvm_js', '@noir-lang/noirc_abi'],
+		esbuildOptions: {
+			target: 'esnext',
+		},
+	},
+	assetsInclude: ['**/*.wasm'],
 })

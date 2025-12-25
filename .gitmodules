@@ -10,3 +10,9 @@
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/vectorized/solady
+[submodule "lib/zk-email-verify"]
+	path = lib/zk-email-verify
+	url = https://github.com/zkemail/zk-email-verify
+[submodule "lib/semaphore"]
+	path = lib/semaphore
+	url = https://github.com/semaphore-protocol/semaphore

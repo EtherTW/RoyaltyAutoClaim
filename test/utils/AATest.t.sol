@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "forge-std/Test.sol";
 import {EntryPoint} from "@account-abstraction/contracts/core/EntryPoint.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {PackedUserOperation} from "@account-abstraction/contracts/interfaces/PackedUserOperation.sol";
 import {UserOperationLib} from "@account-abstraction/contracts/core/UserOperationLib.sol";
-import {ECDSA} from "solady/utils/ECDSA.sol";
-
-import "forge-std/Test.sol";
 
 abstract contract AATest is Test {
     using UserOperationLib for PackedUserOperation;
+
+    address public constant ENTRY_POINT = 0x4337084D9E255Ff0702461CF8895CE9E3b5Ff108;
 
     IEntryPoint entryPoint;
 
     function setUp() public virtual {
         EntryPoint ep = new EntryPoint();
-        vm.etch(0x0000000071727De22E5E9d8BAf0edAc6f37da032, address(ep).code);
-        entryPoint = IEntryPoint(0x0000000071727De22E5E9d8BAf0edAc6f37da032);
+        vm.etch(ENTRY_POINT, address(ep).code);
+        entryPoint = IEntryPoint(ENTRY_POINT);
     }
 
     function _signUserOp(uint256 privateKey, PackedUserOperation memory userOp, address claimedSigner)
@@ -25,13 +25,13 @@ abstract contract AATest is Test {
         view
         returns (bytes memory)
     {
-        (uint8 v, bytes32 r, bytes32 s) =
-            vm.sign(privateKey, ECDSA.toEthSignedMessageHash(entryPoint.getUserOpHash(userOp)));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, entryPoint.getUserOpHash(userOp));
         return abi.encodePacked(r, s, v, claimedSigner);
     }
 
     function _buildUserOp(uint256 privateKey, address sender, bytes memory callData)
         internal
+        view
         returns (PackedUserOperation memory)
     {
         PackedUserOperation memory userOp = _createUserOp();
@@ -39,6 +39,18 @@ abstract contract AATest is Test {
         userOp.nonce = entryPoint.getNonce(sender, 0);
         userOp.callData = callData;
         userOp.signature = _signUserOp(privateKey, userOp, vm.addr(privateKey));
+        return userOp;
+    }
+
+    function _buildUserOpWithoutSignature(address sender, bytes memory callData)
+        internal
+        view
+        returns (PackedUserOperation memory)
+    {
+        PackedUserOperation memory userOp = _createUserOp();
+        userOp.sender = sender;
+        userOp.nonce = entryPoint.getNonce(sender, 0);
+        userOp.callData = callData;
         return userOp;
     }
 

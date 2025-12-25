@@ -1,25 +1,130 @@
-import { MockToken__factory, RoyaltyAutoClaim__factory } from '@/typechain-types'
-import { Interface } from 'ethers'
-import { isError, ErrorCode } from 'ethers'
 import type { ethers } from 'ethers'
+import { ErrorCode, Interface, isError } from 'ethers'
+import { ERC4337Error, extractHexString } from 'sendop'
+import { MockToken__factory, EmailVerifier__factory, RoyaltyAutoClaim__factory } from '../typechain-v2'
+
+/**
+ * Checks if an error indicates a user rejection from browser wallet or passkey.
+ */
+export function isUserRejectedError(error: unknown): boolean {
+	if (error instanceof Error) {
+		if (isEthersError(error)) {
+			if (isError(error, 'ACTION_REJECTED')) {
+				return true
+			}
+		}
+		if (
+			// desktop chrome error
+			error.message.includes('The operation either timed out or was not allowed') ||
+			// mobile chrome error
+			error.message.includes(
+				'The request is not allowed by the user agent or the platform in the current context, possibly because the user denied permission.',
+			)
+		) {
+			return true
+		}
+	}
+
+	return false
+}
+
+export function isEthersError(error: unknown): error is EthersError {
+	const validErrorCodes: ErrorCode[] = [
+		'UNKNOWN_ERROR',
+		'NOT_IMPLEMENTED',
+		'UNSUPPORTED_OPERATION',
+		'NETWORK_ERROR',
+		'SERVER_ERROR',
+		'TIMEOUT',
+		'BAD_DATA',
+		'CANCELLED',
+		'BUFFER_OVERRUN',
+		'NUMERIC_FAULT',
+		'INVALID_ARGUMENT',
+		'MISSING_ARGUMENT',
+		'UNEXPECTED_ARGUMENT',
+		'VALUE_MISMATCH',
+		'CALL_EXCEPTION',
+		'INSUFFICIENT_FUNDS',
+		'NONCE_EXPIRED',
+		'REPLACEMENT_UNDERPRICED',
+		'TRANSACTION_REPLACED',
+		'UNCONFIGURED_NAME',
+		'OFFCHAIN_FAULT',
+		'ACTION_REJECTED',
+	]
+
+	if (typeof error === 'object' && error !== null && 'code' in error && typeof error.code === 'string') {
+		return validErrorCodes.includes(error.code as ErrorCode)
+	}
+
+	return false
+}
+
+export function extractAndParseRevert(err: ERC4337Error, interfaces: Record<string, Interface>): string {
+	// Alchemy format: structured revertData property
+	if (err.data?.revertData) {
+		return parseContractRevert(err.data.revertData, interfaces)
+	}
+
+	// Pimlico format: hex string embedded in error message
+	const revertData = extractHexString(err.message)
+	if (revertData) {
+		return parseContractRevert(revertData, interfaces)
+	}
+
+	return ''
+}
+
+export function handleUserOpError(e: unknown) {
+	const revert = extractHexString((e as Error).message) || ''
+	const customError = parseContractRevert(revert, {
+		RoyaltyAutoClaim: RoyaltyAutoClaim__factory.createInterface(),
+		EmailVerifier: EmailVerifier__factory.createInterface(),
+	})
+	if (customError) {
+		console.log('\nContract revert:')
+		console.log({
+			[revert]: customError,
+		})
+	}
+	throw e
+}
+
+export function parseContractRevert(
+	revert: string,
+	interfaces: Record<string, Interface>,
+	nameOnly: boolean = true,
+): string {
+	if (!revert) return ''
+
+	for (const [name, iface] of Object.entries(interfaces)) {
+		try {
+			const decodedError = iface.parseError(revert)
+
+			if (decodedError) {
+				const errorArgs = decodedError.args.length > 0 ? `(${decodedError.args.join(', ')})` : ''
+
+				if (nameOnly) {
+					return `${decodedError.name}${errorArgs}`
+				}
+				return `${name}.${decodedError.name}${errorArgs} (Note: The prefix "${name}" may not correspond to the actual contract that triggered the revert.)`
+			}
+		} catch {
+			// Continue to next interface if parsing fails
+			continue
+		}
+	}
+
+	return ''
+}
 
 // Returned error is used for console.error
 export function normalizeError(unknownError: unknown): Error {
-	let err: Error
 	if (unknownError instanceof Error) {
-		if (EthersError.isEthersError(unknownError)) {
-			err = new EthersError(unknownError.message, { cause: unknownError })
-
-			if (err.message.includes('user rejected action')) {
-				err = new UserRejectedActionError(err.message, { cause: err })
-			}
-		} else {
-			err = unknownError
-		}
-	} else {
-		err = new Error(String(unknownError))
+		return unknownError
 	}
-	return err
+	return new Error(JSON.stringify(unknownError))
 }
 
 // Returned string is used for UI notification

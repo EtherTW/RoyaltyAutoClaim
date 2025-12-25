@@ -4,5 +4,14 @@ out = "out"
 libs = ["lib"]
 optimizer = true
 optimizer-runs = 200
+fs_permissions = [
+    { access = "read", path = "./registration-proof.json" },
+    { access = "read", path = "./recipient-update-proof.json" },
+    { access = "read", path = "./deploy.json" },
+]
+
+[lint]
+ignore = ["test/**/*", "script/**/*"]
+exclude_lints = ["asm-keccak256", "unwrapped-modifier-logic"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

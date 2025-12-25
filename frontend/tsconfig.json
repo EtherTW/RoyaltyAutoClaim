@@ -1,7 +1,29 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+	"compilerOptions": {
+		"target": "ESNext",
+		"useDefineForClassFields": true,
+		"module": "ESNext",
+		"lib": ["ESNext", "DOM", "DOM.Iterable"],
+		"skipLibCheck": true,
+
+		"moduleResolution": "bundler",
+		"esModuleInterop": true,
+		"allowImportingTsExtensions": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"jsx": "preserve",
+
+		/* Linting */
+		"strict": true,
+		"noUnusedLocals": false, // allow unused locals
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"paths": {
+			"@/*": ["./src/*"]
+		},
+		"noImplicitAny": false, // prevents error in router.ts when importing component
+		"types": ["vitest/globals", "bun"]
+	},
+	"include": ["src/**/*.ts", "src/**/*.vue", "test/**/*.test.ts", "scripts/**/*.ts"]
 }
