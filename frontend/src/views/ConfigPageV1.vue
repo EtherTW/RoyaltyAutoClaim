@@ -11,9 +11,12 @@ import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { useThrottleFn } from '@vueuse/core'
 import { Contract, formatEther, parseEther } from 'ethers'
 import { ArrowLeft } from 'lucide-vue-next'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
+const blockchainStore = useBlockchainStore()
+const router = useRouter()
 
 const isBtnDisabled = computed(
 	() =>
@@ -31,6 +34,12 @@ const currentAdmin = ref('')
 const currentToken = ref('')
 
 onMounted(async () => {
+	// Check if proxy address is valid, redirect to home if not
+	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
+		router.push({ name: 'v1' })
+		return
+	}
+
 	currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
 	currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
 })

@@ -14,12 +14,14 @@ import { Contract, ContractTransactionResponse, formatEther, Interface, parseEth
 import { ArrowLeft, UserCircle } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
 import { h } from 'vue'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 const iface = RoyaltyAutoClaim__factory.createInterface()
 const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 const blockchainStore = useBlockchainStore()
 const eoaStore = useEOAStore()
+const router = useRouter()
 const { chainId: walletChainId, connector } = useVueDapp()
 const { isPollingForSubmissionUpdate, pollForSubmissionUpdate } = useSubmissionPolling()
 
@@ -79,6 +81,12 @@ const currentAdmin = ref('')
 const currentToken = ref('')
 
 onMounted(async () => {
+	// Check if proxy address is valid, redirect to home if not
+	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
+		router.push({ name: 'v2' })
+		return
+	}
+
 	currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
 	currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
 	reviewerGroupId.value = await royaltyAutoClaimStore.royaltyAutoClaim.reviewerGroupId()

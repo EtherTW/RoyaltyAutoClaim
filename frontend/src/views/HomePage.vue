@@ -10,6 +10,7 @@ import { Edit, Loader2, Settings, X } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
 import { toast } from 'vue-sonner'
 import { parseEmail } from '@/lib/circuit-utils'
+import { IS_DEV } from '@/config'
 
 const router = useRouter()
 const globalLoaderStore = useGlobalLoaderStore()
@@ -24,12 +25,16 @@ const blockchainStore = useBlockchainStore()
 
 onMounted(async () => {
 	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
+		// on v2 home page, if address is missing, try setting to testnet
 		console.error('RoyaltyAutoClaim address not set')
 		blockchainStore.setIsTestnet(true)
 		if (!blockchainStore.royaltyAutoClaimProxyAddress) {
+			// v2 testnet address also missing, redirect to v1
 			console.error('RoyaltyAutoClaim address not set after setting to testnet, redirecting to v1')
-			toast.info('v2 is not ready yet, redirecting to v1')
+			// if in dev, set to testnet; otherwise go to v1 mainnet
+			blockchainStore.setIsTestnet(IS_DEV ? true : false)
 			router.replace({ name: 'v1' })
+			toast.info('v2 is not ready yet, redirecting to v1')
 		} else {
 			window.location.reload()
 		}
