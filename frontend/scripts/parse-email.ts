@@ -5,7 +5,7 @@ bun run scripts/parse-email.ts registration
 */
 import fs from 'fs/promises'
 import path from 'path'
-import { parseEmail } from '../../circuits/script/utils'
+import { parseEmail } from '../src/lib/circuit-utils'
 
 const emailFile = process.argv[2]
 if (!emailFile) {

@@ -1,10 +1,10 @@
-import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import autoprefixer from 'autoprefixer'
+import { fileURLToPath, URL } from 'node:url'
 import tailwind from 'tailwindcss'
-import { defineConfig } from 'vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
+import { defineConfig } from 'vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import wasm from 'vite-plugin-wasm'
 
@@ -34,17 +34,6 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			'@': fileURLToPath(new URL('./src', import.meta.url)),
-		},
-	},
-	build: {
-		rollupOptions: {
-			external: (id) => {
-				// Externalize all vite-plugin-node-polyfills shims
-				if (id.startsWith('vite-plugin-node-polyfills/shims/')) {
-					return true
-				}
-				return false
-			},
 		},
 	},
 	/* -------------------------------------------------------------------------- */

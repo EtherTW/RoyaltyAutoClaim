@@ -2,18 +2,18 @@ import { TitleHashVerifierLib } from '@/typechain-v2/out/RoyaltyAutoClaim.sol/Ro
 import { UltraHonkBackend } from '@aztec/bb.js'
 import { Noir } from '@noir-lang/noir_js'
 import { abiEncode, zeroBytes } from 'sendop'
-import {
-	parseEmail,
-	prepareCircuitInputs,
-	prepareCircuitOutput,
-	TitleHashCircuitOutput,
-} from '../../../circuits/script/utils'
+import { prepareCircuitInputs, prepareCircuitOutput, TitleHashCircuitOutput } from './circuit-utils'
 import { initializeWasm } from './wasmLoader'
 
 export const DKIM_REGISTRY_ADDRESS = '0x3D3935B3C030893f118a84C92C66dF1B9E4169d6'
 export const CIRCUIT_PATH = '/RoyaltyAutoClaim/title_hash.json'
 
-export type ParsedEmailData = Awaited<ReturnType<typeof parseEmail>>
+export type ParsedEmailData = {
+	title: string
+	recipient: string
+	nullifier: string
+	operationType: number
+}
 
 // Circuit and backend cache
 let cachedCircuit: Record<string, unknown> | null = null

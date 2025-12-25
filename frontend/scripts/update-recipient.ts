@@ -16,7 +16,7 @@ import {
 	prepareCircuitOutput,
 	splitHashToFields,
 	TitleHashCircuitOutput,
-} from '../../circuits/script/utils'
+} from '../src/lib/circuit-utils'
 import { BUNDLER_URL, RPC_URL } from '../src/config'
 import { buildUserOp, setFixedVerificationGasLimitForZkProof } from '../src/lib/erc4337-utils'
 import { handleUserOpError } from '../src/lib/error'

@@ -9,7 +9,7 @@ import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoCla
 import { Edit, Loader2, Settings, X } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
 import { toast } from 'vue-sonner'
-import { parseEmail } from '../../../circuits/script/utils'
+import { parseEmail } from '@/lib/circuit-utils'
 
 const router = useRouter()
 const globalLoaderStore = useGlobalLoaderStore()
