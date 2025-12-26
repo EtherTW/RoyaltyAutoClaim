@@ -5,28 +5,69 @@ This is the README for v2. For v1, please check out git commit 851b67b5849ab983d
 -   [[TEM] 去中心化領稿費機制實驗 1](https://hackmd.io/@nic619/SkZDIp2GJl)
 -   [[TEM] 去中心化領稿費機制實驗 2](https://hackmd.io/@nic619/ryKXwRXmge)
 
+### Deployment Guide
+
+1. Copy `.env.example` to `.env` and fill in:
+
+    - `PRIVATE_KEY`
+    - `ETHERSCAN_API_KEY`
+
+2. Create `RoyaltyAutoClaim.json`:
+
+```json
+{
+	"owner": "",
+	"admin": "",
+	"token": "",
+	"dkimRegistry": "0x3D3935B3C030893f118a84C92C66dF1B9E4169d6",
+	"emailFromAddress": "eth.taipei@gmail.com",
+	"semaphore": "0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D"
+}
+```
+
+3. Deploy to Testnet
+
+```bash
+forge script script/deployRoyaltyAutoClaim.s.sol \
+ --rpc-url https://sepolia.base.org \
+ --broadcast --verify
+```
+
+4. Deploy to Mainnet
+
+```bash
+forge script script/deployRoyaltyAutoClaim.s.sol \
+ --rpc-url https://mainnet.base.org \
+ --broadcast --verify
+```
+
 ### Dev Flow
 
 circuits
 
 ```
+
 cd circuits/title_hash
 nargo compile
 bun run script/genProofTitleHash.ts ../emails/registration.eml
 bun run script/genVerifier.ts title_hash
+
 ```
 
 contract
 
 ```
+
 forge build
 forge test
 forge fmt
+
 ```
 
 frontend
 
 ```
+
 make gen-types
 make deploy
 make prepare-circuit
@@ -38,27 +79,34 @@ bun run scripts/update-recipient.ts test-update 0x43024C2e168E4554d71A93e1F8d1a0
 
 (Update frontend .env for VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA)
 bun run dev
+
 ```
 
 ## Contract Development
 
 ```
+
 forge test
 forge coverage
 forge coverage --report lcov
 forge test --gas-report
+
 ```
 
 -   Ensure the storage layout is empty to avoid storage collision during future upgrades
 
 ```
+
 forge inspect ./src/RoyaltyAutoClaim.sol:RoyaltyAutoClaim storage
+
 ```
 
 -   If `Error: failed to read artifact source file for...` appears, you need to clean and recompile
 
 ```
+
 forge clean
+
 ```
 
 ### Deployment
@@ -66,7 +114,9 @@ forge clean
 Check out `deploy.json` to update the parameters of the deploy script.
 
 ```
+
 forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url https://sepolia.base.org --broadcast --verify
+
 ```
 
 Deployed Addresses
@@ -99,3 +149,7 @@ Deployed Addresses
 -   Remember to set up `.env` in frontend
 -   If the contract has been updated, remember to run `forge build` before `bun run gen-types`
 -   Don’t use the alias @ in .ts files, because some scripts depend on functions from the src directory, and running those scripts directly won’t recognize @.
+
+```
+
+```

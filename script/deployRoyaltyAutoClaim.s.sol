@@ -19,13 +19,13 @@ contract DeployRoyaltyAutoClaimScript is Script {
         address deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
         console.log("Deployer", deployer);
 
-        string memory json = vm.readFile(string.concat(vm.projectRoot(), "/deploy.json"));
-        address owner = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.owner");
-        address admin = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.admin");
-        address token = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.token");
-        address dkimRegistryAddr = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.dkimRegistry");
-        string memory emailFromAddress = vm.parseJsonString(json, ".RoyaltyAutoClaim.emailFromAddress");
-        address semaphoreAddr = vm.parseJsonAddress(json, ".RoyaltyAutoClaim.semaphore");
+        string memory json = vm.readFile(string.concat(vm.projectRoot(), "/RoyaltyAutoClaim.json"));
+        address owner = vm.parseJsonAddress(json, ".owner");
+        address admin = vm.parseJsonAddress(json, ".admin");
+        address token = vm.parseJsonAddress(json, ".token");
+        address dkimRegistryAddr = vm.parseJsonAddress(json, ".dkimRegistry");
+        string memory emailFromAddress = vm.parseJsonString(json, ".emailFromAddress");
+        address semaphoreAddr = vm.parseJsonAddress(json, ".semaphore");
 
         vm.startBroadcast(deployer);
 

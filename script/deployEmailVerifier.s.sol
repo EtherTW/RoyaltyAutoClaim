@@ -19,11 +19,11 @@ contract DeployEmailVerifierScript is Script {
         console.log("Deployer", deployer);
 
         string memory root = vm.projectRoot();
-        string memory path = string.concat(root, "/deploy.json");
+        string memory path = string.concat(root, "/EmailVerifier.json");
         string memory json = vm.readFile(path);
 
-        address dkimRegistryAddr = vm.parseJsonAddress(json, ".EmailVerifier.dkimRegistry");
-        string memory emailFromAddress = vm.parseJsonString(json, ".EmailVerifier.emailFromAddress");
+        address dkimRegistryAddr = vm.parseJsonAddress(json, ".dkimRegistry");
+        string memory emailFromAddress = vm.parseJsonString(json, ".emailFromAddress");
 
         vm.startBroadcast(deployer);
 

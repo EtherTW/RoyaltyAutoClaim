@@ -5,9 +5,8 @@ libs = ["lib"]
 optimizer = true
 optimizer-runs = 200
 fs_permissions = [
-    { access = "read", path = "./registration-proof.json" },
-    { access = "read", path = "./recipient-update-proof.json" },
-    { access = "read", path = "./deploy.json" },
+    { access = "read", path = "./RoyaltyAutoClaim.json" },
+    { access = "read", path = "./EmailVerifier.json" },
 ]
 
 [lint]

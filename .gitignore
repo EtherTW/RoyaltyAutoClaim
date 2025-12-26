@@ -19,3 +19,6 @@ broadcast
 
 node_modules
 .claude
+
+/RoyaltyAutoClaim.json
+/EmailVerifier.json
