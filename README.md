@@ -1,11 +1,11 @@
-## RoyaltyAutoClaim
+# RoyaltyAutoClaim
 
-This is the README for v2. For v1, please check out git commit 851b67b5849ab983d183a8808531b7d80ca5862c
+This is the v2 implementation. For v1, please see the [tag v1](https://github.com/EtherTW/RoyaltyAutoClaim/tree/v1)
 
 -   [[TEM] 去中心化領稿費機制實驗 1](https://hackmd.io/@nic619/SkZDIp2GJl)
 -   [[TEM] 去中心化領稿費機制實驗 2](https://hackmd.io/@nic619/ryKXwRXmge)
 
-### Deployment Guide
+## Deployment Guide
 
 1. Copy `.env.example` to `.env` and fill in:
 
@@ -25,15 +25,7 @@ This is the README for v2. For v1, please check out git commit 851b67b5849ab983d
 }
 ```
 
-3. Deploy to Testnet
-
-```bash
-forge script script/deployRoyaltyAutoClaim.s.sol \
- --rpc-url https://sepolia.base.org \
- --broadcast --verify
-```
-
-4. Deploy to Mainnet
+3. Deploy to Base
 
 ```bash
 forge script script/deployRoyaltyAutoClaim.s.sol \
@@ -41,7 +33,7 @@ forge script script/deployRoyaltyAutoClaim.s.sol \
  --broadcast --verify
 ```
 
-### Dev Flow
+## Development Flow
 
 circuits
 
@@ -109,26 +101,15 @@ forge clean
 
 ```
 
-### Deployment
+### Deployed Addresses
 
-Check out `deploy.json` to update the parameters of the deploy script.
+-   v1 Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
+-   v1 Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
 
-```
+### ZK Email Integration
 
-forge script script/deployRoyaltyAutoClaim.s.sol --rpc-url https://sepolia.base.org --broadcast --verify
-
-```
-
-Deployed Addresses
-
--   Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
--   Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
-
-### ZK Email Integration (Circuits)
-
--   UserOverrideableDKIMRegistry
-    -   [contract](https://vscode.blockscan.com/8453/0x0537487ff990df53b29bd3e4b4a4c5c80c17f958)
-    -   [address on base](https://basescan.org/address/0x3D3935B3C030893f118a84C92C66dF1B9E4169d6#readProxyContract)
+-   UserOverrideableDKIMRegistry: [0x3D3935B3C030893f118a84C92C66dF1B9E4169d6](https://basescan.org/address/0x3D3935B3C030893f118a84C92C66dF1B9E4169d6)
+    -   ZK Email [Deployed Contracts](https://docs.zk.email/account-recovery/deployed-contracts)
 -   Remember to use the correct version when compiling and generating proofs.
     ```
     Noir version: 1.0.0-beta.5+c651df6e2bf5db3966aa0c95abea2fc4c69d4513
@@ -137,19 +118,15 @@ Deployed Addresses
     ```
 -   The frontend scripts currently only implement the title_hash circuit.
 -   The integration is inspired by the design of [mintmarks.fun](https://github.com/trionlabs/mintmarks.fun)
+-   For the legacy Circom implementation, please refer to the [zkemail-circom tag](https://github.com/EtherTW/RoyaltyAutoClaim/tree/zkemail-circom).
 
 ### Semaphore Integration
 
--   Semaphore v2 Verifier
-    -   [contract](https://vscode.blockscan.com/8453/0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D)
-    -   [address on base](https://basescan.org/address/0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D#readProxyContract)
+-   Semaphore: [0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D](https://basescan.org/address/0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D)
+    -   Semaphore [Deployed Contracts](https://docs.semaphore.pse.dev/deployed-contracts)
 
 ## Frontend Development
 
 -   Remember to set up `.env` in frontend
 -   If the contract has been updated, remember to run `forge build` before `bun run gen-types`
 -   Don’t use the alias @ in .ts files, because some scripts depend on functions from the src directory, and running those scripts directly won’t recognize @.
-
-```
-
-```
