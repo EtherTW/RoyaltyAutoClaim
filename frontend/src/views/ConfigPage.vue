@@ -638,7 +638,7 @@ const displayTokenAmount = computed(() => {
 </script>
 
 <template>
-	<div class="container mx-auto p-8 max-w-2xl">
+	<div class="container mx-auto p-8 pt-4 max-w-2xl">
 		<div class="flex justify-between items-center mb-2">
 			<RouterLink
 				:to="{

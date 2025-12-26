@@ -229,7 +229,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 </script>
 
 <template>
-	<div class="container mx-auto p-8 max-w-2xl">
+	<div class="container mx-auto p-8 pt-4 max-w-2xl">
 		<div class="flex justify-between items-center mb-2">
 			<Button
 				v-if="!showUploadCard"
