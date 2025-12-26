@@ -42,7 +42,7 @@ const mode = useColorMode()
 [data-sonner-toast][data-styled='true'] [data-close-button] {
 	/* Moves the close button to align with the right edge of 300px toast */
 	/* translateX(285px) positions it at the right, translateY(-6px) moves it up slightly */
-	--toast-close-button-transform: translate(285px, -6px);
+	--toast-close-button-transform: translate(285px, -6px) !important;
 }
 
 /* Fix close button background color for light theme toast */
@@ -69,14 +69,14 @@ const mode = useColorMode()
 
 /* Set a fixed toast width instead of using the default 356px */
 [data-sonner-toast] {
-	width: 300px; /* Custom width for each individual toast */
+	width: 300px !important; /* Custom width for each individual toast */
 }
 
 /* Control the toaster container positioning from the right edge */
 [data-sonner-toaster][data-x-position='right'] {
 	/* This acts as the right margin/offset from the viewport edge */
 	/* The actual toast will appear 280px from the right edge of the screen */
-	width: 280px;
+	width: 280px !important;
 }
 
 /* ============================================
@@ -86,20 +86,20 @@ const mode = useColorMode()
 @media (max-width: 600px) {
 	[data-sonner-toaster] {
 		/* Remove the default left positioning that centers toasts on mobile */
-		left: auto;
+		left: auto !important;
 		/* Keep toasts 32px from the right edge on mobile devices */
-		right: 32px;
+		right: 32px !important;
 	}
 
 	[data-sonner-toaster][data-y-position='bottom'] {
 		/* Position toasts 32px from the bottom on mobile (default is 20px) */
-		bottom: 32px;
+		bottom: 32px !important;
 	}
 
 	[data-sonner-toaster] [data-sonner-toast] {
 		/* Override the default mobile full-width behavior */
 		/* Keep the same 300px width as desktop instead of calc(100% - 32px) */
-		width: 300px;
+		width: 300px !important;
 	}
 }
 
