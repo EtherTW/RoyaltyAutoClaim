@@ -5,7 +5,25 @@ This is the v2 implementation. For v1, please see the [tag v1](https://github.co
 -   [[TEM] 去中心化領稿費機制實驗 1](https://hackmd.io/@nic619/SkZDIp2GJl)
 -   [[TEM] 去中心化領稿費機制實驗 2](https://hackmd.io/@nic619/ryKXwRXmge)
 
-## Deployment Guide
+### Deployed Addresses
+
+-   v1 Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
+-   v1 Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
+
+## Quick Start
+
+The following steps will allow you to run this project’s frontend on localhost.
+
+1. Clone the repository
+2. Navigate to the frontend directory
+3. Copy the .env file from frontend/.env.example to frontend/.env
+4. Install dependencies by running `bun i`
+5. Set up deployer private key in .env `VITE_TEST_PRIVATE_KEY`
+6. Deploy contracts by running `bun run scripts/deploy.ts` or `bun run deploy`
+7. Configure deployed contract address in .env `VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA`
+8. Start the dev server by running `bun run dev`
+
+## Deploy the production contracts
 
 1. Copy `.env.example` to `.env` and fill in:
 
@@ -34,6 +52,8 @@ forge script script/deployRoyaltyAutoClaim.s.sol \
 ```
 
 ## Development Flow
+
+If the circuit code has been modified, we need to run the following scripts to verify that the functionality is working correctly.
 
 circuits
 
@@ -101,11 +121,6 @@ forge clean
 
 ```
 
-### Deployed Addresses
-
--   v1 Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
--   v1 Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
-
 ### ZK Email Integration
 
 -   UserOverrideableDKIMRegistry: [0x3D3935B3C030893f118a84C92C66dF1B9E4169d6](https://basescan.org/address/0x3D3935B3C030893f118a84C92C66dF1B9E4169d6)
@@ -127,6 +142,5 @@ forge clean
 
 ## Frontend Development
 
--   Remember to set up `.env` in frontend
 -   If the contract has been updated, remember to run `forge build` before `bun run gen-types`
 -   Don’t use the alias @ in .ts files, because some scripts depend on functions from the src directory, and running those scripts directly won’t recognize @.
