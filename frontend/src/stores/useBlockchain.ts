@@ -4,6 +4,7 @@ import {
 	CHAIN_ID,
 	EXPLORER_URL,
 	IS_DEV,
+	PIMLICO_API_KEY,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA,
 	ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET,
@@ -121,7 +122,7 @@ export const useBlockchainStore = defineStore(
 		})
 
 		const pimlicoUrl = computed(() => {
-			return pimlico(Number(chainId.value) as PimlicoChain, 'pim_nDodV8Xhz7bXSEoeL9UbGh')
+			return pimlico(Number(chainId.value) as PimlicoChain, PIMLICO_API_KEY)
 		})
 
 		return {

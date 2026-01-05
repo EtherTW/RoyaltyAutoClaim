@@ -10,6 +10,15 @@ This is the v2 implementation. For v1, please see the [tag v1](https://github.co
 -   v1 Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
 -   v1 Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
 
+### RPC Providers
+
+This project uses Tenderly to fetch on-chain contract events because it has fewer limitations. Other RPC calls are handled via Alchemy.
+
+For the ERC-4337 bundler:
+
+-   v1 uses Alchemy with Entrypoint v0.7
+-   v2 uses Pimlico with Entrypoint v0.8
+
 ## Quick Start
 
 The following steps will allow you to run this project’s frontend on localhost.

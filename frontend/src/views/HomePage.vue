@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { useCountdownTimer } from '@/lib/useCountdownTimer'
+import { IS_DEV } from '@/config'
+import { parseEmail } from '@/lib/circuit-utils'
 import { useSubmissionPolling } from '@/lib/submission-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
+import { useCountdownTimer } from '@/lib/useCountdownTimer'
 import { ParsedEmailData } from '@/lib/zkemail-utils'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useGlobalLoaderStore } from '@/stores/useGlobalLoader'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
-import { Edit, Loader2, Settings, X } from 'lucide-vue-next'
+import { AlertCircle, Edit, Loader2, Settings, X } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
 import { toast } from 'vue-sonner'
-import { parseEmail } from '@/lib/circuit-utils'
-import { IS_DEV } from '@/config'
 
 const router = useRouter()
 const globalLoaderStore = useGlobalLoaderStore()
@@ -334,6 +334,12 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 							&nbsp;{{ updateRecipientTimerDisplay }}
 						</span>
 					</Button>
+					<div
+						class="flex gap-1.5 items-start justify-start text-sm p-3 bg-yellow-500/20 rounded-lg break-words"
+					>
+						<span class="mt-0.5"><AlertCircle class="w-4 h-4" /></span>
+						<span>Proof generation may take up to 1 minute.</span>
+					</div>
 				</div>
 			</CardContent>
 		</Card>
