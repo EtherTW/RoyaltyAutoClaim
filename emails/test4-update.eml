@@ -1,0 +1,105 @@
+Delivered-To: chnejohnson@gmail.com
+Received: by 2002:a05:7022:217:b0:121:8fb7:5bb3 with SMTP id 23csp1048515dll;
+        Mon, 5 Jan 2026 00:35:24 -0800 (PST)
+X-Received: by 2002:a2e:a913:0:b0:37b:a395:fd68 with SMTP id 38308e7fff4ca-3812158e20fmr144311011fa.10.1767602124619;
+        Mon, 05 Jan 2026 00:35:24 -0800 (PST)
+ARC-Seal: i=1; a=rsa-sha256; t=1767602124; cv=none;
+        d=google.com; s=arc-20240605;
+        b=SjFYqxoh2KFypob1+bP0/AVOmjV5jSLGpEbEeCks2t26UFggppblyQ1T/y2o0PwYsa
+         CTxMYqFyHD75RgmBxznHQhfmsc9FNd9nthqyOH2mVhkEiXZgYaZq4rIdTWb1WsbjMr2M
+         tjjFWxC4TZv5smNOCOND2fzoqjLw7nY4U/tpYhGvpoTj9xR2IxvK+3NcjPcsDvxGOp4U
+         Xo+++n+kBFkz/kOGd5pnTgtzDMbWgW1aeXwqzKXlI8UL8PlI4/mWk9H+/VxyaQhZaBhg
+         7RifnYnxBEaNJ1AyS010k+Hi4B/QEdf2rpjy9oS7mn22PtwvQ1uxh0uJzY8FaRN+WCeB
+         onVg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=+5okxWJ7+LsyYpkPh6f1BNljXDn/BBJJ/AaADIZzX9c=;
+        fh=T7nKoZxbjFeqY0YU6esvoK9zrDLdOlSPtvjkKN1NpMs=;
+        b=Crw3MvP2Umtk6NGXN9gLb3U51N3/xlnO7k5qW3i/v0WQFQOLLoa7dB7btt9vTiGnon
+         +YTt14KkLhkuXSy+XF0aG/VtWQ8zZzz7dwUYzWPq+zKTNh9NnAs/dXf1Ul//Y86oN1Ld
+         y18i7Kc1IK0RH65YyQ4vjpJpz+nbSYuujPvTXH7rZEqi77fIXXIZD5X5r064gnNxXMvL
+         6Ei5gqAcr75pPG530Ih2sU17fZHlTUdU00U+SvqXY+xYsFnZkFvHAs2AsG5OzzqRH/yI
+         cRZIj/AW1Z3jps0rWJJcU1kO3d5Y/zaLkiDepg84hQ/TKG54pZ7XnPk+uXO/B4+tgRCA
+         jD2Q==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=eY+UpqXx;
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <johnson86tw@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 38308e7fff4ca-38288f302cbsor27617881fa.12.2026.01.05.00.35.24
+        for <chnejohnson@gmail.com>
+        (Google Transport Security);
+        Mon, 05 Jan 2026 00:35:24 -0800 (PST)
+Received-SPF: pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=eY+UpqXx;
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1767602124; x=1768206924; dara=google.com;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=+5okxWJ7+LsyYpkPh6f1BNljXDn/BBJJ/AaADIZzX9c=;
+        b=eY+UpqXxENdP3fhnMEimlthiI4gyJWsPAF02nGuAxc5PACPwTBNMcAuvlPCIyJVdoT
+         cHmTpP+j8O1ilYOg5QzH1o3EYF0wF6R5Ur6ASzRRjoHgKLQfnAs8RXoTzFcpMBJLJlB1
+         mRyVtUJ0ZLLxzpKuz71DCVhJCrU8CqPQ3pQyP0lDvwNCGHvp62vF8uqeQ2iDmqpQMRIm
+         gT7L8sWwEtuSaKjMWTcQb7E2ZJQTVeNLsAlKS2PXqvxvy50QDNMlmasz3UhTTzyZjPMV
+         R3yyYGVT1+AMO6thBREtEDz9hfnFdnppRkCnlhOaT1MIS5dJcHvqNWkIn4JMfxgVvtk7
+         iv0g==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1767602124; x=1768206924;
+        h=to:subject:message-id:date:from:mime-version:x-gm-gg
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=+5okxWJ7+LsyYpkPh6f1BNljXDn/BBJJ/AaADIZzX9c=;
+        b=E2du94fowNsqUGIeP7ljBDsKFnw+8SzInj5yzlzjmg4SYpccmVT7D2aoZuHv28WmPH
+         2mFSShWiYOq2+bW9WzyIcMTChLSbh/uvwVOEjPIWFRUOGSM5WANWs+2PAT505hRgjUJO
+         HmGsq4oNEwYXQbaHJorCk71LflTDYY+qNwi8feUsfYXGgcq5zRSIZ2izXVisg5S+1pIS
+         jtTMHMhCprDT5KzNLg62hYFWYlqvMoUk1LNcTCNydM4LQwyOeyiBBZhHSCHaQkc3V0ei
+         nJN+t2Me8Jo0nxw47IFNZczfp4pNcvdswPqWROM5YpdRqhMAei3EiNmKgEO2K3+NgVXe
+         cAew==
+X-Gm-Message-State: AOJu0YyHLt/ZpulDKBWZLh0vQtfVm5C28dWAHISotFa1ZJjslRxFY/I+
+	RlCrQbiC1MfEwSymngug9SJAMGgKvIuNY0Wjr3MxzVY+ynWvvYK7pGY5eCwkBkN2Tfhu60s3W/I
+	Txyy4HFXZlPWWSP9lmvCvfj5HS5JmlYC1e2zR
+X-Gm-Gg: AY/fxX5sedHlJuA/2BzeTNfOoK5E3I0cs6rvii4sIQz6dyR4CERSGgVhAL9OyOrIcLj
+	5SNBT8l/JBnzdt9WDTjrubIQIBmp1CTx+g9T5jIBzhGMScvUp0x90CflcurWdFSGEtV8/4ladjv
+	WCvnlntLbjEP0DjeBJ6GINg1Q4HU5o+QaOaRw/E8Yt+SZdTx21C5v3JjWgEKtUnLy/KvnHQ3h7E
+	sNMHrKtafSu0rGyri05xbenb2h2nLm0yFaKnzIn9Ck9Tib3BW9iIGPSe8+2bEZtAHWRG1hX
+X-Google-Smtp-Source: AGHT+IGPMFdecEq6UeV/pKtTyGNaa/RI3K2l55MNuOakuXohyYxrCElXSQU4colZBxbkr5pG3f8i27spMo8b/ecP7sQ=
+X-Received: by 2002:a2e:a913:0:b0:37b:a395:fd68 with SMTP id
+ 38308e7fff4ca-3812158e20fmr144310871fa.10.1767602123628; Mon, 05 Jan 2026
+ 00:35:23 -0800 (PST)
+MIME-Version: 1.0
+From: Johnson <johnson86tw@gmail.com>
+Date: Mon, 5 Jan 2026 16:35:12 +0800
+X-Gm-Features: AQt7F2rc4dPSuO7NtEjBZ_Qqw_dm6n18NX-g63hM0KDZ3PyT_Pkej5wd7bWJ9fM
+Message-ID: <CAAcMZv_515_w1HCSuvpU+snFqs7f=8N+w7YtitcimiYvq2-V4A@mail.gmail.com>
+Subject: =?UTF-8?B?56K66KqN5q2k5oqV56i/5pu05pS556i/6LK75pS25Y+W5Zyw5Z2AOiBaSyBFbWFpbCA=?=
+	=?UTF-8?B?5pW05ZCI57aT6amX5YiG5LqrIGJ5IEpvaG5zb24=?=
+To: chnejohnson@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000aee2e406479ff006"
+
+--000000000000aee2e406479ff006
+Content-Type: text/plain; charset="UTF-8"
+
+No: 43
+ID: 0x7ee763eea0ea7a22047dde49051d6bf43658b7d1c788667eac0db4914be2a97c
+Recipient: 0xd78B5013757Ea4A7841811eF770711e6248dC282
+Memo: Lorem Ipsum
+
+--000000000000aee2e406479ff006
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><div style=3D"font-family:Arial,sans-serif;font-size:14px"=
+>No: 43</div><div style=3D"font-family:Arial,sans-serif;font-size:14px">ID:=
+=C2=A0<span style=3D"font-family:Arial,Helvetica,sans-serif;font-size:small=
+">0x7ee763eea0ea7a22047dde49051d6bf43658b7d1c788667eac0db4914be2a97c</span>=
+</div><div style=3D"font-family:Arial,sans-serif;font-size:14px">Recipient:=
+=C2=A00xd78B5013757Ea4A7841811eF770711e6248dC282</div><div style=3D"font-fa=
+mily:Arial,sans-serif;font-size:14px">Memo: Lorem Ipsum</div></div>
+
+--000000000000aee2e406479ff006--

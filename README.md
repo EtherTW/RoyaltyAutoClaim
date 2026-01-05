@@ -106,28 +106,26 @@ bun run dev
 ## Contract Development
 
 ```
-
 forge test
-forge coverage
-forge coverage --report lcov
 forge test --gas-report
-
 ```
 
--   Ensure the storage layout is empty to avoid storage collision during future upgrades
+When used with the VS Code extension `ryanluker.vscode-coverage-gutters`, running `Coverage Gutters: Display Coverage` lets you see which functions are not yet covered by tests on the RoyaltyAutoClaim.sol.
 
 ```
+forge coverage --report lcov
+```
 
+Ensure the storage layout is empty to avoid storage collision during future upgrades
+
+```
 forge inspect ./src/RoyaltyAutoClaim.sol:RoyaltyAutoClaim storage
-
 ```
 
--   If `Error: failed to read artifact source file for...` appears, you need to clean and recompile
+If `Error: failed to read artifact source file for...` appears, you need to clean and recompile
 
 ```
-
 forge clean
-
 ```
 
 ### ZK Email Integration
