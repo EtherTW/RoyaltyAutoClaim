@@ -46,7 +46,7 @@ abstract contract BaseTest is AATest {
     uint256 reviewer2Nullifier1 = uint256(keccak256("reviewer2_nullifier_1"));
     uint256 reviewer2Nullifier2 = uint256(keccak256("reviewer2_nullifier_2"));
 
-    IEmailVerifier public mockEmailVerifier;
+    MockEmailVerifier public mockEmailVerifier;
     IDKIMRegistry public mockDKIMRegistry;
 
     RoyaltyAutoClaim impl;

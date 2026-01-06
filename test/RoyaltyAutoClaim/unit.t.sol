@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import "./BaseTest.t.sol";
 import "../utils/MockV2.sol";
+import {RejectEther} from "../utils/RejectEther.sol";
 
 /*
 
@@ -99,13 +100,13 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
 
     function testCannot_registerSubmission_invalid_proof() public {
         // Set mock to return false
-        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(false);
+        mockEmailVerifier.setMockVerifyResult(false);
 
         vm.expectRevert(IRoyaltyAutoClaim.InvalidProof.selector);
         _registerSubmission("test", recipient);
 
         // Reset mock
-        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(true);
+        mockEmailVerifier.setMockVerifyResult(true);
     }
 
     function testCannot_registerSubmission_if_the_submission_already_exists_or_is_claimed() public {
@@ -155,6 +156,14 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         royaltyAutoClaim.registerSubmission("test2", newProof);
     }
 
+    function testCannot_registerSubmission_with_invalid_operation_type() public {
+        TitleHashVerifierLib.EmailProof memory proof = _createEmailProof(
+            recipient, bytes32(vm.randomUint()), TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, bytes32(0)
+        );
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidOperationType.selector));
+        royaltyAutoClaim.registerSubmission("test", proof);
+    }
+
     function testCannot_registerSubmission_if_not_called_by_entrypoint(
         address caller,
         address recipientAddress,
@@ -188,13 +197,13 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         _registerSubmission("test", originalRecipient);
 
         // Set mock to return false
-        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(false);
+        mockEmailVerifier.setMockVerifyResult(false);
 
         vm.expectRevert(IRoyaltyAutoClaim.InvalidProof.selector);
         _updateRoyaltyRecipient("test", newRecipient);
 
         // Reset mock
-        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(true);
+        mockEmailVerifier.setMockVerifyResult(true);
     }
 
     function testCannot_updateRoyaltyRecipient_if_the_submission_is_claimed_or_not_exist() public {
@@ -216,8 +225,6 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     }
 
     function testCannot_updateRoyaltyRecipient_with_same_address() public {
-        address recipient = vm.randomAddress();
-
         vm.prank(admin);
         _registerSubmission("test", recipient);
 
@@ -227,7 +234,7 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
     }
 
     function testCannot_updateRoyaltyRecipient_with_used_email_proof() public {
-        bytes32 emailNullifier = bytes32(uint256(54321));
+        bytes32 emailNullifier = bytes32(vm.randomUint());
 
         // First registration with the email nullifier
         TitleHashVerifierLib.EmailProof memory regProof =
@@ -252,6 +259,17 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
             bytes32(0)
         );
         royaltyAutoClaim.updateRoyaltyRecipient("test", newProof);
+    }
+
+    function testCannot_updateRoyaltyRecipient_with_invalid_operation_type() public {
+        vm.prank(admin);
+        _registerSubmission("test", recipient);
+
+        TitleHashVerifierLib.EmailProof memory updateProof = _createEmailProof(
+            vm.randomAddress(), bytes32(vm.randomUint()), TitleHashVerifierLib.OperationType.REGISTRATION, bytes32(0)
+        );
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.InvalidOperationType.selector));
+        royaltyAutoClaim.updateRoyaltyRecipient("test", updateProof);
     }
 
     function testCannot_updateRoyaltyRecipient_if_not_called_by_entrypoint(
@@ -397,6 +415,20 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         vm.prank(owner);
         vm.expectRevert();
         royaltyAutoClaim.emergencyWithdraw(address(0), 1 ether);
+    }
+
+    function testCannot_emergencyWithdraw_NATIVE_TOKEN_if_transfer_fails() public {
+        // Deploy a contract that rejects ETH transfers as the new owner
+        RejectEther rejectContract = new RejectEther();
+
+        // Transfer ownership to the reject contract
+        vm.prank(owner);
+        royaltyAutoClaim.transferOwnership(address(rejectContract));
+
+        // Try to emergency withdraw - should fail because the owner cannot receive ETH
+        vm.prank(address(rejectContract));
+        vm.expectRevert(); // The require(success) will cause a revert
+        royaltyAutoClaim.emergencyWithdraw(NATIVE_TOKEN, 1 ether);
     }
 
     // ======================================== Admin Functions ========================================
@@ -930,6 +962,11 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertFalse(royaltyAutoClaim.isSubmissionClaimable("test2"), "Revoked submission should not be claimable");
     }
 
+    function test_isAdmin() public view {
+        assertTrue(royaltyAutoClaim.isAdmin(admin));
+        assertFalse(royaltyAutoClaim.isAdmin(fake));
+    }
+
     function test_isRecipient() public {
         string memory title = "test";
         address recipient = recipient;
@@ -1051,5 +1088,8 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertGt(groupId, 0, "Group ID should be set");
     }
 
-    // ======================================== Internal Functions ========================================
+    function test_entryPoint() public view {
+        assertEq(address(royaltyAutoClaim.entryPoint()), address(ENTRY_POINT));
+    }
 }
+

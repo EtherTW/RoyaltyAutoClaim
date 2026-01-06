@@ -354,13 +354,33 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         userOp.signature = abi.encode(proof);
 
         // Set mock to return false (invalid proof)
-        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(false);
+        mockEmailVerifier.setMockVerifyResult(false);
 
         vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
         _handleUserOp(userOp);
 
         // Reset mock
-        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(true);
+        mockEmailVerifier.setMockVerifyResult(true);
+    }
+
+    function testCannot_registerSubmission4337_with_invalid_userOpHash() public {
+        bytes32 nullifier = bytes32(vm.randomUint());
+        address testRecipient = vm.randomAddress();
+
+        bytes memory callData =
+            abi.encodeCall(IRoyaltyAutoClaim.registerSubmission4337, (testSubmissionTitle, testRecipient, nullifier));
+
+        PackedUserOperation memory userOp = _buildUserOpWithoutSignature(address(royaltyAutoClaim), callData);
+
+        bytes32 fakeUserOpHash = bytes32(vm.randomBytes(32)); // Invalid userOpHash
+        TitleHashVerifierLib.EmailProof memory proof = _createEmailProof(
+            testRecipient, nullifier, TitleHashVerifierLib.OperationType.REGISTRATION, fakeUserOpHash
+        );
+
+        userOp.signature = abi.encode(proof);
+
+        vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
+        _handleUserOp(userOp);
     }
 
     function testCannot_registerSubmission4337_with_recipient_mismatch() public {
@@ -467,13 +487,13 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         userOp.signature = abi.encode(proof);
 
         // Set mock to return false (invalid proof)
-        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(false);
+        mockEmailVerifier.setMockVerifyResult(false);
 
         vm.expectRevert(abi.encodeWithSelector(IEntryPoint.FailedOp.selector, 0, "AA24 signature error"));
         _handleUserOp(userOp);
 
         // Reset mock
-        MockEmailVerifier(address(mockEmailVerifier)).setMockVerifyResult(true);
+        mockEmailVerifier.setMockVerifyResult(true);
     }
 
     function testCannot_updateRoyaltyRecipient4337_with_recipient_mismatch() public {
