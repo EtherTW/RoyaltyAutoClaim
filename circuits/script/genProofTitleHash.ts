@@ -63,6 +63,10 @@ async function main(emlPath: string) {
 		ignoreBodyHashCheck: false,
 		extractFrom: true,
 	})
+	console.log('Header original length:', +emailInputs.header.len)
+	console.log('Header storage length:', emailInputs.header.storage.length)
+	console.log('Body original length:', +emailInputs.body!.len)
+	console.log('Body storage length:', emailInputs.body!.storage.length)
 
 	/* -------------------------------------------------------------------------- */
 	/*                           Subject Prefix Extraction                        */

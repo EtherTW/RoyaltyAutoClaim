@@ -5,8 +5,8 @@ Script to generate email verifier inputs from a .eml file.
 */
 import { generateEmailVerifierInputs } from '@zk-email/zkemail-nr'
 import fs from 'fs'
+import { TITLE_HASH_MAX_EMAIL_BODY_LENGTH, TITLE_HASH_MAX_EMAIL_HEADER_LENGTH } from './utils'
 
-const MAX_EMAIL_HEADER_LENGTH = 1088
 const emlPath = process.argv[2]
 
 if (!emlPath) {
@@ -32,11 +32,10 @@ async function main(emlPath: string) {
 
 	// Generate base inputs (header, pubkey, signature)
 	const emailInputs = await generateEmailVerifierInputs(email, {
-		maxHeadersLength: MAX_EMAIL_HEADER_LENGTH,
+		maxHeadersLength: TITLE_HASH_MAX_EMAIL_HEADER_LENGTH,
+		maxBodyLength: TITLE_HASH_MAX_EMAIL_BODY_LENGTH,
 		ignoreBodyHashCheck: false,
 	})
-
-	console.log('emailInputs', emailInputs)
 
 	/* -------------------------------------------------------------------------- */
 	/*                                   Header                                   */
@@ -44,7 +43,9 @@ async function main(emlPath: string) {
 	const headerBuf = Buffer.from(
 		emailInputs.header.storage.slice(0, Number(emailInputs.header.len)).map(b => Number(b)),
 	)
-	console.log('Header Length:', headerBuf.length)
+	console.log('Header original length:', +emailInputs.header.len)
+	console.log('Header storage length:', emailInputs.header.storage.length)
+
 	console.log('\nHeader:')
 	console.log(headerBuf.toString())
 	console.log('\nHeader Storage Bytes:')
@@ -67,7 +68,10 @@ async function main(emlPath: string) {
 	/*                                    Body                                    */
 	/* -------------------------------------------------------------------------- */
 	const bodyBuf = Buffer.from(emailInputs.body!.storage.slice(0, Number(emailInputs.body!.len)).map(b => Number(b)))
-	console.log('Body Length:', bodyBuf.length)
+
+	console.log('Body original length:', +emailInputs.body!.len)
+	console.log('Body storage length:', emailInputs.body!.storage.length)
+
 	console.log('\nBody:')
 	console.log(bodyBuf.toString())
 	console.log('\nBody Storage Bytes:')
