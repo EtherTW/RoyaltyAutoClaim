@@ -262,7 +262,7 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 			<CardContent class="pt-6">
 				<div class="flex flex-col gap-3">
 					<div class="flex items-center">
-						<div class="flex items-center gap-3 flex-1">
+						<div class="flex items-center gap-3 flex-1 min-w-0">
 							<input
 								ref="fileInputRef"
 								type="file"
@@ -278,7 +278,11 @@ const reversedSubmissions = computed(() => [...royaltyAutoClaimStore.submissions
 							>
 								Upload Email
 							</Button>
-							<span v-if="uploadedFile" class="text-sm text-muted-foreground truncate">
+							<span
+								v-if="uploadedFile"
+								class="text-sm text-muted-foreground truncate min-w-0"
+								:title="uploadedFile.name"
+							>
 								Filename: {{ uploadedFile.name }}
 							</span>
 						</div>
