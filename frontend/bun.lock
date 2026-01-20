@@ -8,7 +8,7 @@
         "@aztec/bb.js": "0.84.0",
         "@noir-lang/noir_js": "1.0.0-beta.5",
         "@semaphore-protocol/data": "^4.14.0",
-        "@semaphore-protocol/group": "^4.14.0",
+        "@semaphore-protocol/group": "^4.14.1",
         "@semaphore-protocol/identity": "^4.14.0",
         "@semaphore-protocol/proof": "^4.14.0",
         "@vue-dapp/core": "^1.5.9",
@@ -359,7 +359,7 @@
 
     "@semaphore-protocol/data": ["@semaphore-protocol/data@4.14.0", "", { "dependencies": { "@semaphore-protocol/utils": "4.14.0", "@zk-kit/utils": "1.3.0", "axios": "1.6.6", "ethers": "6.13.4", "viem": "2.23.7" } }, "sha512-oquGqcUq2OCBHdyPN2hhtDZ2UUfwAw3jchvT8Um8VTbNvYS+KZXIwDolWJTNvYwykiYriPaSUlFOFfeCGveP/A=="],
 
-    "@semaphore-protocol/group": ["@semaphore-protocol/group@4.14.0", "", { "dependencies": { "@zk-kit/lean-imt": "2.2.4", "@zk-kit/utils": "1.3.0", "poseidon-lite": "0.3.0" } }, "sha512-MEWbcmfd+cqNC+wLOUSIIH/1WxgNsELSHZ8h/qaTCKl7Yn8u1XjvjpZt6QdJ/R74a8fcZYL2N9KyyHXq0VIwag=="],
+    "@semaphore-protocol/group": ["@semaphore-protocol/group@4.14.1", "", { "dependencies": { "@zk-kit/lean-imt": "2.2.4", "@zk-kit/utils": "1.3.0", "poseidon-lite": "0.3.0" } }, "sha512-tGcBe2SVj2gxQ/mGv6a4LVLvit9rIEgEuJZBhiYhdylvq/kZpM7LXxZnOd4Q7U/+hB3LKg8FPWCZjQk5IH+Ssw=="],
 
     "@semaphore-protocol/identity": ["@semaphore-protocol/identity@4.14.0", "", { "dependencies": { "@zk-kit/baby-jubjub": "1.0.3", "@zk-kit/eddsa-poseidon": "1.0.4", "@zk-kit/utils": "1.3.0", "poseidon-lite": "0.3.0" } }, "sha512-6WmYL28hLy6Xi6wmsiWer6rNrtEqE8Mw+6hG6Vw4M3z+MRZaf3KM1JOEtiDPZrLXAtg910ZhgPlUHsM0XrBQ7w=="],
 
