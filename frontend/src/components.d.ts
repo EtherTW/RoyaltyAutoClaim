@@ -24,6 +24,7 @@ declare module 'vue' {
     FooterMeta: typeof import('./components/app/FooterMeta.vue')['default']
     Header: typeof import('./components/app/Header.vue')['default']
     Input: typeof import('./components/ui/input/Input.vue')['default']
+    KeccakHashCard: typeof import('./components/KeccakHashCard.vue')['default']
     Label: typeof import('./components/ui/label/Label.vue')['default']
     NetworkSelector: typeof import('./components/NetworkSelector.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

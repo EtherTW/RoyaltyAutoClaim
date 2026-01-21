@@ -143,13 +143,10 @@ function copyToClipboard(text: string, type: 'subject' | 'body') {
 					<p v-if="memoError" class="text-sm text-destructive">{{ memoError }}</p>
 				</div>
 
-				<hr class="border-border" />
-
 				<!-- Subject Section -->
 				<div v-if="emailSubject && !hasValidationErrors" class="space-y-2 text-xs bg-muted px-3 py-3 rounded">
 					<div class="flex items-center justify-between gap-2">
 						<div>
-							<span class="text-muted-foreground">Subject: </span>
 							<span class="text-foreground">{{ emailSubject }}</span>
 						</div>
 						<Button
@@ -194,10 +191,6 @@ function copyToClipboard(text: string, type: 'subject' | 'body') {
 				>
 					<span class="mt-0.5"><AlertCircle class="w-4 h-4" /></span>
 					<span>Remember to enable "plain text mode" when composing the email.</span>
-				</div>
-
-				<div v-if="!emailSubject || !emailBody || hasValidationErrors" class="text-sm text-muted-foreground">
-					Fill in the title, number, and recipient to generate the email content.
 				</div>
 			</div>
 		</CardContent>

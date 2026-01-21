@@ -930,5 +930,7 @@ const displayTokenAmount = computed(() => {
 		</Card>
 
 		<EmailGeneratorCard class="mt-8" />
+
+		<KeccakHashCard class="mt-8" />
 	</div>
 </template>
