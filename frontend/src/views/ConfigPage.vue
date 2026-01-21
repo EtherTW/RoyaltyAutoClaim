@@ -635,6 +635,7 @@ const displayTokenAmount = computed(() => {
 		return '0'
 	}
 })
+
 </script>
 
 <template>
@@ -927,5 +928,7 @@ const displayTokenAmount = computed(() => {
 				</div>
 			</CardContent>
 		</Card>
+
+		<EmailGeneratorCard class="mt-8" />
 	</div>
 </template>

@@ -1,0 +1,108 @@
+Delivered-To: chnejohnson@gmail.com
+Received: by 2002:a05:7022:e04:b0:123:2d65:3222 with SMTP id dx4csp256995dlb;
+        Wed, 21 Jan 2026 01:04:32 -0800 (PST)
+X-Received: by 2002:ac2:4e0b:0:b0:59b:679b:2149 with SMTP id 2adb3069b0e04-59baeef1589mr6019363e87.24.1768986272011;
+        Wed, 21 Jan 2026 01:04:32 -0800 (PST)
+ARC-Seal: i=2; a=rsa-sha256; t=1768986272; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=Fs92RWQ+vVS+ipmbuJiJ0XpALG7N7sBtYk2XBvCgnymUYumSJmwdD6xl9qmpqsBSgZ
+         vfJAAe047FKzNNjnRUX0G7REqKMMkbg9Afz5QoyeiAafEtMatmnC1gBDM1l36FkIN0Hv
+         p9gzhD1V1pbtmiCgdYzJ92kQXnM5/iLCusf3A/sdHtiGlkC8GJrP0F42KbL6R0IQV607
+         T7Wy+OumiCVjMUUffX6S7m18RNkLuhpKOOgU9rBtDsw8lU1EtxMHjD+hkAncfUOEh1+V
+         v5FzD5VkKUYtWYPRVEyqoofdEA1diFFXxWNO8pNUiuzwSjNaviubnhqNvzzgmyYNwlDs
+         mqrw==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=K2gLto3/nRLpSiRxwZ9DsFp9Ay3paDcVXxvH2K7LOHI=;
+        fh=T7nKoZxbjFeqY0YU6esvoK9zrDLdOlSPtvjkKN1NpMs=;
+        b=DViThMQBsBcZfGAsmDNZ1bVB3aRg+HLBR4VH63ZGJKcdV2AabpkHH6Ty88vxy8t+ZX
+         6cr/Zjr2vcO9r9tXNNjYC77Kcg0OQsck6BOocQr2kQroVe8afEZFqm6qfkQFpU8UCxTR
+         FTVE7KHORkZItnkTY37uDLMYgh250kjytb3dN3wXHNcSzk9TfGORoMlC0ppzVO+0K7SQ
+         hsNRNeDelPX260iBAStTflEDmWOuzRHm33No3Bcq9ioQaI72eoQvEjSX7STsNemP6SIU
+         qQdHZcyRgH2AHk+tcHOhjIIoq/dbBICo93HSeMBmdJ+w5RyntbO1Kkbvw+Kcct/MrV5E
+         g2/g==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=fQ399L1U;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <johnson86tw@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 2adb3069b0e04-59dd54d2d28sor7746e87.19.2026.01.21.01.04.31
+        for <chnejohnson@gmail.com>
+        (Google Transport Security);
+        Wed, 21 Jan 2026 01:04:32 -0800 (PST)
+Received-SPF: pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20230601 header.b=fQ399L1U;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of johnson86tw@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=johnson86tw@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+ARC-Seal: i=1; a=rsa-sha256; t=1768986271; cv=none;
+        d=google.com; s=arc-20240605;
+        b=BdoU86D7c3mC8e9UnMqmSWXd2bCYbrT5yMR7pesLcObZqTTtY/GdytVQZNTYmpCcTf
+         KgsPaQxum2K1bEa09AIH0Lqbr4hIhJigsyzT4QBU/Ya4tDkbeB/bhasf5iQU/oCyS+32
+         lbLkBit5kbYFYsJe8i2dRULZdxntW2rHgHramebuqyn0cBS6+Q5tWdTeZlRg9git/XLY
+         BJ5CpEV7mZBGja8tC7DgRzZ0Mvzi+YZQE7YD+IeqXU43LgsHayH2CHZr3JcXv8ovVna+
+         ADaIK6V9a2frfKYJWSpxpr2aHb7KH2jVfzcu8ZyfUj0FRmjVsMajKIncU3TKxWRuORb5
+         Eheg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:mime-version:dkim-signature;
+        bh=K2gLto3/nRLpSiRxwZ9DsFp9Ay3paDcVXxvH2K7LOHI=;
+        fh=T7nKoZxbjFeqY0YU6esvoK9zrDLdOlSPtvjkKN1NpMs=;
+        b=Bllw45U7jgvHZWLCymRakH+scHGuKia7Bf/xZYNvKHMgeu4VnapmZq0UtrwisQf6ny
+         ApU65XFmw8Paqcm59r8DTegkjP4ipTe34keaOzbK17UXJw3a8She5m415lBKPPtgCqHj
+         I0GyTqbWwE8K6LS4vA0n6uCp31cpK/cWjrBSLCQkGFUXGFCeiMbGKBnDErXqqAMB7/NC
+         oZB+mlq4A/KtE9tTls3dn6JZ5IYh/k8NHid5Zn63lE05HcBxydUGI+4PAV4Ni+vPTTEo
+         rC0UZnnccj1yZfFYZnmxKqyMbtOBGO0A5lz0htRiAvyyZph+WMuh3+U1raEV0R9Mo8Mn
+         5/FA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20230601; t=1768986271; x=1769591071; dara=google.com;
+        h=to:subject:message-id:date:from:mime-version:from:to:cc:subject
+         :date:message-id:reply-to;
+        bh=K2gLto3/nRLpSiRxwZ9DsFp9Ay3paDcVXxvH2K7LOHI=;
+        b=fQ399L1UHQqPhf64bhCNTeQ6Eyi/F4OoxgGSyHeTrSSEVnoaeOJphEMUv/DVUg23I/
+         lgKqZMHFYc6MmbXU6HAN8cE2QmxdgW7l3g3rVVZQbZNXxRsuFBDm1kjiiOMslHCtCBRd
+         4ecel0WYXWJxK5mtNgifukWZop8ruvgrwAwI+hlyH/2+GYMFkmCjRlWw1DL7mLkqA+Ea
+         fsEDklbjsJsRlo8+l67BZjEaxeQnGt93LYVp2P2TtAeT9dAKd0ImKK/FJhZPB987KMUC
+         r9zJkEL6mEjydGEdROqmDcetB2+f/ElMRA6keF8XH1bjC+JdFF6mNX135IYTOXvqz9ZW
+         a1eg==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20230601; t=1768986271; x=1769591071;
+        h=to:subject:message-id:date:from:mime-version:x-gm-gg
+         :x-gm-message-state:from:to:cc:subject:date:message-id:reply-to;
+        bh=K2gLto3/nRLpSiRxwZ9DsFp9Ay3paDcVXxvH2K7LOHI=;
+        b=joRQy0m85ddQBfHnH8WyY1uRCwrPncltmCl7G9wrRf2MHl4paXOUFqAI0ZZqLAJB4/
+         lrjGETgcEXQLEh3VH/Ay9Zw/54LXVrTtCL0z/Tnwcu4DEkEMV/K9gEqFXJMlIZNWNr9a
+         e+ctATnnqtTNX4xfoMI/pcMrTpRnJnOIEGRY2YV2Xvwr6sS9YnbJLaZ+NK3KmJhNn2vS
+         uDlK64ifY+gAuSuEwnFrlnVVp1mOFpPNZWR8THG83/OPXjwmlzgGAy/qIjfRHXX8dmEw
+         1mbl2mat4I1adedgSegzynlrMwOa3bpm4sHDwBBmdfQIfrLLMcBEzeFZfpR/4cubcS5F
+         BYCQ==
+X-Gm-Message-State: AOJu0Yy68rgLGnLbnMZkH7/dqtyxg3PGEsIUgCPIOn2CSQNB+Focninz
+	JFcFRk7hRJUGaXe9K+5MHu1BEKkoW0CcPVAqzZUU4mE1eqxU7mMkhsT6JLEF2rfrYrQP2grNJR5
+	UPA8iSI7TPCid3akMwiDNeS4GA5DQpy0GZuqk
+X-Gm-Gg: AZuq6aJvhXprk0bGXyFEtoDZtmQdwGC0StVV3y9XVvhYEwflwU1UL2mCb73kHGNj+vY
+	I7YusMuvoWdggisn/Ijr1M/OC5SEzWZ/XOLhHe54UP6a4x6Jizl9ATPkrKWXrhI/OkhbDVBdXaK
+	youkT7QG56Bhr6NWv2balqhSZ2L+kue2i0W/mDTbqQdHhybVRrSkvlHMn0au8uxz+nzm1FXhCw2
+	GjhCJDINBRoK0VXgtOKrlUC30l/RZlwR1tuGkucgUN0OolOi6qzBVnsXN1SvqLhTic3PQZc7kJ9
+	ZYFx4kNmPUlsgfUNEkDqyUrpQdvJ
+X-Received: by 2002:a05:6512:23a7:b0:595:8311:dc80 with SMTP id
+ 2adb3069b0e04-59baeed4237mr6555938e87.20.1768986271018; Wed, 21 Jan 2026
+ 01:04:31 -0800 (PST)
+MIME-Version: 1.0
+From: Johnson <johnson86tw@gmail.com>
+Date: Wed, 21 Jan 2026 17:04:20 +0800
+X-Gm-Features: AZwV_QgdI2OyVB6VViB1dpWsGgiIFZ2kQCX3LuyxUORuYCdvxo_xn_OTXuBblvs
+Message-ID: <CAAcMZv97Un+a4t__D0JGSk_j+iSdTSacc0j_SoRW9RT=uYU0Tw@mail.gmail.com>
+Subject: =?UTF-8?B?56K66KqN5bey5pS25Yiw5oqV56i/OiBUZXN0IGJ5IEFsaWNl?=
+To: chnejohnson@gmail.com
+Content-Type: text/plain; charset="UTF-8"
+
+No: 3
+ID: 0xaa85f8f1638dee2775f69142859953cc57ef25045e26d66af25421fbbc404c43
+Recipient: 0x0F0356aE7f7e1c0e812f5fB672B9D5557aB0Bf86
