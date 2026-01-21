@@ -20,7 +20,6 @@ declare module 'vue' {
     ConnectButton: typeof import('./components/ConnectButton.vue')['default']
     CopyButton: typeof import('./components/CopyButton.vue')['default']
     EmailGeneratorCard: typeof import('./components/EmailGeneratorCard.vue')['default']
-    EmailWritingCard: typeof import('./components/EmailWritingCard.vue')['default']
     FooterMeta: typeof import('./components/app/FooterMeta.vue')['default']
     Header: typeof import('./components/app/Header.vue')['default']
     Input: typeof import('./components/ui/input/Input.vue')['default']

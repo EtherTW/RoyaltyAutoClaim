@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { keccak256, toUtf8Bytes } from 'ethers'
+import { isAddress, keccak256, toUtf8Bytes } from 'ethers'
 import { AlertCircle, Check, Copy } from 'lucide-vue-next'
 
 type OperationType = 'registration' | 'update-recipient'
@@ -36,7 +36,7 @@ const numError = computed(() => {
 
 const recipientError = computed(() => {
 	if (!recipient.value) return ''
-	if (!/^0x[a-fA-F0-9]{40}$/.test(recipient.value)) return 'Invalid Ethereum address'
+	if (!isAddress(recipient.value)) return 'Invalid Ethereum address'
 	return ''
 })
 
@@ -100,7 +100,7 @@ function copyToClipboard(text: string, type: 'subject' | 'body') {
 		<CardContent>
 			<div class="grid w-full items-center gap-4">
 				<div class="flex flex-col space-y-1.5">
-					<Label>Operation Type</Label>
+					<Label>Type</Label>
 					<Select v-model="operationType">
 						<SelectTrigger>
 							<SelectValue />

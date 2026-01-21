@@ -10,7 +10,7 @@ import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { ISemaphore__factory, ISemaphoreGroups__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
 import { Group } from '@semaphore-protocol/group'
 import { useVueDapp } from '@vue-dapp/core'
-import { Contract, ContractTransactionResponse, formatEther, Interface, parseEther } from 'ethers'
+import { Contract, ContractTransactionResponse, formatEther, Interface, isAddress, parseEther } from 'ethers'
 import { ArrowLeft, UserCircle } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
 import { h } from 'vue'
@@ -73,6 +73,7 @@ const isBtnDisabled = computed(
 		isChangeAdminLoading.value ||
 		isChangeTokenLoading.value ||
 		isEmergencyWithdrawLoading.value ||
+		isUpdateEmailVerifierLoading.value ||
 		isAnyReviewerLoading.value ||
 		isPollingForSubmissionUpdate.value,
 )
@@ -89,6 +90,7 @@ onMounted(async () => {
 
 	currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
 	currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
+	currentEmailVerifier.value = await royaltyAutoClaimStore.royaltyAutoClaim.emailVerifier()
 	reviewerGroupId.value = await royaltyAutoClaimStore.royaltyAutoClaim.reviewerGroupId()
 
 	// Load members list
@@ -120,7 +122,7 @@ const { isLoading: isAdminRegisterLoading, send: onClickAdminRegister } = useCon
 	errorTitle: 'Error Registering Submission',
 	onBeforeCall: async () => {
 		// Validate address format
-		if (!/^0x[a-fA-F0-9]{40}$/i.test(recipientAddress.value)) {
+		if (!isAddress(recipientAddress.value)) {
 			throw new Error('Invalid recipient address format')
 		}
 		// Check if submission already exists
@@ -148,7 +150,7 @@ const { isLoading: isAdminUpdateRecipientLoading, send: onClickAdminUpdateRecipi
 	errorTitle: 'Error Updating Recipient',
 	onBeforeCall: async () => {
 		// Validate address format
-		if (!/^0x[a-fA-F0-9]{40}$/i.test(recipientAddress.value)) {
+		if (!isAddress(recipientAddress.value)) {
 			throw new Error('Invalid recipient address format')
 		}
 		// Check submission exists
@@ -540,6 +542,8 @@ async function onClickRemoveMember() {
 
 const newAdmin = ref('')
 const newToken = ref('')
+const newEmailVerifier = ref('')
+const currentEmailVerifier = ref('')
 
 // Change Admin
 const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContractCallV2({
@@ -568,6 +572,25 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 	},
 	onAfterCall: async () => {
 		currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
+	},
+})
+
+// Update Email Verifier
+const { isLoading: isUpdateEmailVerifierLoading, send: onClickUpdateEmailVerifier } = useContractCallV2({
+	getCalldata: () => iface.encodeFunctionData('updateEmailVerifier', [newEmailVerifier.value]),
+	successTitle: 'Successfully Updated Email Verifier',
+	errorTitle: 'Error Updating Email Verifier',
+	onBeforeCall: async () => {
+		if (!isAddress(newEmailVerifier.value)) {
+			throw new Error('Invalid email verifier address format')
+		}
+		if (newEmailVerifier.value.toLowerCase() === currentEmailVerifier.value.toLowerCase()) {
+			throw new Error('New email verifier is the same as the current one')
+		}
+	},
+	onAfterCall: async () => {
+		currentEmailVerifier.value = await royaltyAutoClaimStore.royaltyAutoClaim.emailVerifier()
+		newEmailVerifier.value = ''
 	},
 })
 
@@ -635,7 +658,6 @@ const displayTokenAmount = computed(() => {
 		return '0'
 	}
 })
-
 </script>
 
 <template>
@@ -924,6 +946,35 @@ const displayTokenAmount = computed(() => {
 						@click="onClickEmergencyWithdraw"
 					>
 						Emergency Withdraw
+					</Button>
+				</div>
+			</CardContent>
+		</Card>
+
+		<Card class="mt-8">
+			<CardHeader>
+				<div class="flex items-center justify-between">
+					<CardTitle>Update Email Verifier</CardTitle>
+				</div>
+				<CardDescription>onlyAdmin</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div class="grid w-full items-center gap-4">
+					<div class="flex flex-col space-y-1.5">
+						<div class="flex items-center gap-2">
+							<Label>Current Email Verifier:</Label>
+							<Address :address="currentEmailVerifier" class="text-muted-foreground" />
+						</div>
+
+						<Label for="emailVerifier" class="mt-4">New Email Verifier</Label>
+						<Input id="emailVerifier" v-model="newEmailVerifier" placeholder="0x..." />
+					</div>
+					<Button
+						:loading="isUpdateEmailVerifierLoading"
+						:disabled="isBtnDisabled || !newEmailVerifier"
+						@click="onClickUpdateEmailVerifier"
+					>
+						Update Email Verifier
 					</Button>
 				</div>
 			</CardContent>
