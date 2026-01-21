@@ -72,6 +72,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				/* -------------------------------------------------------------------------- */
 				/*                              Email Operations                              */
 				/* -------------------------------------------------------------------------- */
+				const operationStartTime = performance.now()
 				const emailOperation = options.getEmailOperation(...args)
 
 				if (!emailOperation.parsedEmailData) {
@@ -130,7 +131,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				const proofStartTime = performance.now()
 				const encodedProof = await generateEmailProof(emailOperation.eml, op.hash())
 				const proofEndTime = performance.now()
-				const proofDuration = ((proofEndTime - proofStartTime) / 1000).toFixed(2)
+				const proofDuration = Math.ceil((proofEndTime - proofStartTime) / 1000).toString()
 				console.info(`Email proof generation took ${proofDuration}s`)
 
 				op.setSignature(encodedProof)
@@ -138,11 +139,12 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				toast.dismiss(genProofToast)
 
 				// send
-				await sendAndWaitForUserOp(op, options.successTitle, proofDuration)
+				await sendAndWaitForUserOp(op, options.successTitle, proofDuration, operationStartTime)
 			} else if (options.getSemaphoreOperation) {
 				/* -------------------------------------------------------------------------- */
 				/*                                  Semaphore                                 */
 				/* -------------------------------------------------------------------------- */
+				const operationStartTime = performance.now()
 				const semaphoreOperation = options.getSemaphoreOperation(...args)
 
 				if (!eoaStore.signer) {
@@ -187,7 +189,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 					royaltyLevel: semaphoreOperation.royaltyLevel,
 				})
 				const proofEndTime = performance.now()
-				const proofDuration = ((proofEndTime - proofStartTime) / 1000).toFixed(2)
+				const proofDuration = Math.ceil((proofEndTime - proofStartTime) / 1000).toString()
 				console.info(`Semaphore proof generation took ${proofDuration}s`)
 
 				toast.dismiss(genProofToast)
@@ -230,7 +232,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				op.setSignature(proofEncoded)
 
 				// send
-				await sendAndWaitForUserOp(op, options.successTitle, proofDuration)
+				await sendAndWaitForUserOp(op, options.successTitle, proofDuration, operationStartTime)
 			} else {
 				/* -------------------------------------------------------------------------- */
 				/*                             EOA signature flow                             */
@@ -315,7 +317,12 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 	}
 }
 
-async function sendAndWaitForUserOp(op: UserOpBuilder, successTitle: string, proofDurationSeconds?: string) {
+async function sendAndWaitForUserOp(
+	op: UserOpBuilder,
+	successTitle: string,
+	proofDurationSeconds?: string,
+	operationStartTime?: number,
+) {
 	const blockchainStore = useBlockchainStore()
 
 	try {
@@ -339,6 +346,10 @@ async function sendAndWaitForUserOp(op: UserOpBuilder, successTitle: string, pro
 		throw new Error('UserOp is failed')
 	}
 
+	const totalDuration = operationStartTime
+		? Math.ceil((performance.now() - operationStartTime) / 1000).toString()
+		: undefined
+
 	const txLink = receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0]?.transactionHash
 		? `${blockchainStore.explorerUrl}/tx/${
 				receipt.logs.filter(log => isSameAddress(log.address, op.preview().sender))[0].transactionHash
@@ -348,6 +359,7 @@ async function sendAndWaitForUserOp(op: UserOpBuilder, successTitle: string, pro
 	toast.success(successTitle, {
 		description: h('div', { class: 'flex flex-col gap-1' }, [
 			proofDurationSeconds ? h('span', `Proof generated in ${proofDurationSeconds}s`) : null,
+			totalDuration ? h('span', `Total time: ${totalDuration}s`) : null,
 			h(
 				'a',
 				{
