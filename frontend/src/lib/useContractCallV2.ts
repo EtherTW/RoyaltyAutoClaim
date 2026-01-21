@@ -138,7 +138,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				toast.dismiss(genProofToast)
 
 				// send
-				await sendAndWaitForUserOp(op, options.successTitle)
+				await sendAndWaitForUserOp(op, options.successTitle, proofDuration)
 			} else if (options.getSemaphoreOperation) {
 				/* -------------------------------------------------------------------------- */
 				/*                                  Semaphore                                 */
@@ -179,12 +179,16 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 					duration: Infinity,
 				})
 
+				const proofStartTime = performance.now()
 				const semaphoreProof = await generateSemaphoreProof({
 					identity,
 					group,
 					title: semaphoreOperation.title,
 					royaltyLevel: semaphoreOperation.royaltyLevel,
 				})
+				const proofEndTime = performance.now()
+				const proofDuration = ((proofEndTime - proofStartTime) / 1000).toFixed(2)
+				console.info(`Semaphore proof generation took ${proofDuration}s`)
 
 				toast.dismiss(genProofToast)
 
@@ -226,7 +230,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				op.setSignature(proofEncoded)
 
 				// send
-				await sendAndWaitForUserOp(op, options.successTitle)
+				await sendAndWaitForUserOp(op, options.successTitle, proofDuration)
 			} else {
 				/* -------------------------------------------------------------------------- */
 				/*                             EOA signature flow                             */
@@ -311,7 +315,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 	}
 }
 
-async function sendAndWaitForUserOp(op: UserOpBuilder, successTitle: string) {
+async function sendAndWaitForUserOp(op: UserOpBuilder, successTitle: string, proofDurationSeconds?: string) {
 	const blockchainStore = useBlockchainStore()
 
 	try {
@@ -342,15 +346,18 @@ async function sendAndWaitForUserOp(op: UserOpBuilder, successTitle: string) {
 		: '#'
 
 	toast.success(successTitle, {
-		description: h(
-			'a',
-			{
-				class: 'text-blue-700 hover:underline cursor-pointer',
-				href: txLink,
-				target: '_blank',
-			},
-			'View on Explorer',
-		),
+		description: h('div', { class: 'flex flex-col gap-1' }, [
+			proofDurationSeconds ? h('span', `Proof generated in ${proofDurationSeconds}s`) : null,
+			h(
+				'a',
+				{
+					class: 'text-blue-700 hover:underline cursor-pointer',
+					href: txLink,
+					target: '_blank',
+				},
+				'View on Explorer',
+			),
+		]),
 		duration: Infinity,
 	})
 }
