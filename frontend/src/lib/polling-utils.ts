@@ -2,6 +2,51 @@ import { ref } from 'vue'
 import { Submission, useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 
 /**
+ * Composable for polling contract state updates after operations
+ */
+export function useContractStatePolling() {
+	const isPollingForStateUpdate = ref(false)
+
+	/**
+	 * Poll for contract state updates after operations
+	 * @param fetchFn - Function to fetch the current state from the contract
+	 * @param verifyFn - Function to verify if the expected state is reflected
+	 * @returns The updated value if found, null otherwise
+	 */
+	async function pollForStateUpdate<T>(
+		fetchFn: () => Promise<T>,
+		verifyFn: (value: T) => boolean,
+	): Promise<T | null> {
+		const maxAttempts = 10
+		const delayMs = 500
+
+		isPollingForStateUpdate.value = true
+
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			const value = await fetchFn()
+
+			if (verifyFn(value)) {
+				isPollingForStateUpdate.value = false
+				return value
+			}
+
+			if (attempt < maxAttempts - 1) {
+				await new Promise(resolve => setTimeout(resolve, delayMs))
+			}
+		}
+
+		console.warn('Contract state update not reflected after polling, but transaction succeeded')
+		isPollingForStateUpdate.value = false
+		return null
+	}
+
+	return {
+		isPollingForStateUpdate,
+		pollForStateUpdate,
+	}
+}
+
+/**
  * Composable for polling submission updates after operations
  */
 export function useSubmissionPolling() {

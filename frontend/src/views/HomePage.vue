@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { IS_DEV } from '@/config'
 import { parseEmail } from '@/lib/circuit-utils'
-import { useSubmissionPolling } from '@/lib/submission-utils'
+import { useSubmissionPolling } from '@/lib/polling-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { useCountdownTimer } from '@/lib/useCountdownTimer'
 import { ParsedEmailData } from '@/lib/zkemail-utils'

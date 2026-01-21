@@ -2,7 +2,7 @@
 import { TENDERLY_RPC_URL } from '@/config'
 import { formatErrMsg, isUserRejectedError, normalizeError, parseContractRevert } from '@/lib/error'
 import { fetchReviewerGroupMembers, SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
-import { useSubmissionPolling } from '@/lib/submission-utils'
+import { useContractStatePolling, useSubmissionPolling } from '@/lib/polling-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useEOAStore } from '@/stores/useEOA'
@@ -24,6 +24,7 @@ const eoaStore = useEOAStore()
 const router = useRouter()
 const { chainId: walletChainId, connector } = useVueDapp()
 const { isPollingForSubmissionUpdate, pollForSubmissionUpdate } = useSubmissionPolling()
+const { isPollingForStateUpdate, pollForStateUpdate } = useContractStatePolling()
 
 // Semaphore contract instance
 const semaphoreContract = computed(() => {
@@ -75,7 +76,8 @@ const isBtnDisabled = computed(
 		isEmergencyWithdrawLoading.value ||
 		isUpdateEmailVerifierLoading.value ||
 		isAnyReviewerLoading.value ||
-		isPollingForSubmissionUpdate.value,
+		isPollingForSubmissionUpdate.value ||
+		isPollingForStateUpdate.value,
 )
 
 const currentAdmin = ref('')
@@ -556,7 +558,13 @@ const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContrac
 		}
 	},
 	onAfterCall: async () => {
-		currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
+		const expectedAdmin = newAdmin.value
+		const newValue = await pollForStateUpdate(
+			() => royaltyAutoClaimStore.royaltyAutoClaim.admin(),
+			value => value.toLowerCase() === expectedAdmin.toLowerCase(),
+		)
+		if (newValue) currentAdmin.value = newValue
+		newAdmin.value = ''
 	},
 })
 
@@ -571,7 +579,13 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 		}
 	},
 	onAfterCall: async () => {
-		currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
+		const expectedToken = newToken.value
+		const newValue = await pollForStateUpdate(
+			() => royaltyAutoClaimStore.royaltyAutoClaim.token(),
+			value => value.toLowerCase() === expectedToken.toLowerCase(),
+		)
+		if (newValue) currentToken.value = newValue
+		newToken.value = ''
 	},
 })
 
@@ -589,7 +603,12 @@ const { isLoading: isUpdateEmailVerifierLoading, send: onClickUpdateEmailVerifie
 		}
 	},
 	onAfterCall: async () => {
-		currentEmailVerifier.value = await royaltyAutoClaimStore.royaltyAutoClaim.emailVerifier()
+		const expectedVerifier = newEmailVerifier.value
+		const newValue = await pollForStateUpdate(
+			() => royaltyAutoClaimStore.royaltyAutoClaim.emailVerifier(),
+			value => value.toLowerCase() === expectedVerifier.toLowerCase(),
+		)
+		if (newValue) currentEmailVerifier.value = newValue
 		newEmailVerifier.value = ''
 	},
 })
