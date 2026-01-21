@@ -144,7 +144,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				/* -------------------------------------------------------------------------- */
 				/*                                  Semaphore                                 */
 				/* -------------------------------------------------------------------------- */
-				const operationStartTime = performance.now()
+
 				const semaphoreOperation = options.getSemaphoreOperation(...args)
 
 				if (!eoaStore.signer) {
@@ -157,6 +157,8 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				})
 				const identity = await createSemaphoreIdentity(eoaStore.signer)
 				toast.dismiss(genIdentityToast)
+
+				const operationStartTime = performance.now()
 
 				// Fetch reviewer members from store
 				const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
