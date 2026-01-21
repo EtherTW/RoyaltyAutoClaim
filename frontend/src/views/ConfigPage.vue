@@ -914,6 +914,35 @@ const displayTokenAmount = computed(() => {
 			</CardContent>
 		</Card>
 
+		<Card class="mb-8">
+			<CardHeader>
+				<div class="flex items-center justify-between">
+					<CardTitle>Update Email Verifier</CardTitle>
+				</div>
+				<CardDescription>onlyAdmin</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div class="grid w-full items-center gap-4">
+					<div class="flex flex-col space-y-1.5">
+						<div class="flex items-center gap-2">
+							<Label>Current Email Verifier:</Label>
+							<Address :address="currentEmailVerifier" class="text-muted-foreground" />
+						</div>
+
+						<Label for="emailVerifier" class="mt-4">New Email Verifier</Label>
+						<Input id="emailVerifier" v-model="newEmailVerifier" placeholder="0x..." />
+					</div>
+					<Button
+						:loading="isUpdateEmailVerifierLoading"
+						:disabled="isBtnDisabled || !newEmailVerifier"
+						@click="onClickUpdateEmailVerifier"
+					>
+						Update Email Verifier
+					</Button>
+				</div>
+			</CardContent>
+		</Card>
+
 		<Card>
 			<CardHeader>
 				<div class="flex items-center justify-between">
@@ -946,35 +975,6 @@ const displayTokenAmount = computed(() => {
 						@click="onClickEmergencyWithdraw"
 					>
 						Emergency Withdraw
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
-
-		<Card class="mt-8">
-			<CardHeader>
-				<div class="flex items-center justify-between">
-					<CardTitle>Update Email Verifier</CardTitle>
-				</div>
-				<CardDescription>onlyAdmin</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<div class="grid w-full items-center gap-4">
-					<div class="flex flex-col space-y-1.5">
-						<div class="flex items-center gap-2">
-							<Label>Current Email Verifier:</Label>
-							<Address :address="currentEmailVerifier" class="text-muted-foreground" />
-						</div>
-
-						<Label for="emailVerifier" class="mt-4">New Email Verifier</Label>
-						<Input id="emailVerifier" v-model="newEmailVerifier" placeholder="0x..." />
-					</div>
-					<Button
-						:loading="isUpdateEmailVerifierLoading"
-						:disabled="isBtnDisabled || !newEmailVerifier"
-						@click="onClickUpdateEmailVerifier"
-					>
-						Update Email Verifier
 					</Button>
 				</div>
 			</CardContent>
