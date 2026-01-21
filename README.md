@@ -59,6 +59,29 @@ forge script script/deployRoyaltyAutoClaim.s.sol \
  --broadcast --verify
 ```
 
+## Deploy the Email Verifier contract
+
+1. Copy `.env.example` to `.env` and fill in:
+    - `PRIVATE_KEY`
+    - `ETHERSCAN_API_KEY`
+
+2. Create `EmailVerifier.json`:
+
+```json
+{
+	"dkimRegistry": "0x3D3935B3C030893f118a84C92C66dF1B9E4169d6",
+	"emailFromAddress": "eth.taipei@gmail.com"
+}
+```
+
+3. Deploy to Base
+
+```bash
+forge script script/deployEmailVerifier.s.sol \
+ --rpc-url https://mainnet.base.org \
+ --broadcast --verify
+```
+
 ## Development Flow
 
 If the circuit code has been modified, we need to run the following scripts to verify that the functionality is working correctly.
