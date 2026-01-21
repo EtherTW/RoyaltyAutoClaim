@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 
-const ESTIMATED_EMAIL_OPERATION_TIME = 45 // seconds
+const ESTIMATED_EMAIL_OPERATION_TIME = 30 // seconds
 
 export function useCountdownTimer(initialSeconds = ESTIMATED_EMAIL_OPERATION_TIME) {
 	const countdown = ref<number>(initialSeconds)

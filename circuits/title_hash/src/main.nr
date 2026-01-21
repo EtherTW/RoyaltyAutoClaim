@@ -13,7 +13,7 @@ use zkemail::{
 };
 
 global MAX_EMAIL_HEADER_LENGTH: u32 = 960;
-global MAX_EMAIL_BODY_LENGTH: u32 = 1280;
+global MAX_EMAIL_BODY_LENGTH: u32 = 256;
 
 fn main(
     // dkim verification

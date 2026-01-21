@@ -5,7 +5,7 @@ import type { BoundedVec, RSAPubkey, Sequence } from './types'
 import { REGISTRATION_PREFIX, RECIPIENT_UPDATE_PREFIX } from './constants'
 
 export const TITLE_HASH_MAX_EMAIL_HEADER_LENGTH = 960
-export const TITLE_HASH_MAX_EMAIL_BODY_LENGTH = 1280
+export const TITLE_HASH_MAX_EMAIL_BODY_LENGTH = 256
 
 export type TitleHashCircuitInputs = {
 	header: BoundedVec
