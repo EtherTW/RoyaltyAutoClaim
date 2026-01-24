@@ -10,7 +10,7 @@ import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { ISemaphore__factory, ISemaphoreGroups__factory, RoyaltyAutoClaim__factory } from '@/typechain-v2'
 import { Group } from '@semaphore-protocol/group'
 import { useVueDapp } from '@vue-dapp/core'
-import { Contract, ContractTransactionResponse, formatEther, Interface, isAddress, parseEther } from 'ethers'
+import { ContractTransactionResponse, Interface, isAddress } from 'ethers'
 import { ArrowLeft, UserCircle } from 'lucide-vue-next'
 import { isSameAddress } from 'sendop'
 import { h } from 'vue'
@@ -76,7 +76,6 @@ const isBtnDisabled = computed(
 		isRevokeEmailLoading.value ||
 		isChangeAdminLoading.value ||
 		isChangeTokenLoading.value ||
-		isEmergencyWithdrawLoading.value ||
 		isUpdateEmailVerifierLoading.value ||
 		isAnyReviewerLoading.value ||
 		isPollingForSubmissionUpdate.value ||
@@ -621,79 +620,6 @@ const { isLoading: isUpdateEmailVerifierLoading, send: onClickUpdateEmailVerifie
 		newEmailVerifier.value = ''
 	},
 })
-
-// ===================================== Emergency Withdraw =====================================
-
-const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
-const withdrawToken = ref(NATIVE_TOKEN)
-const withdrawAmount = ref<string>('0')
-
-// Emergency Withdraw
-const { isLoading: isEmergencyWithdrawLoading, send: onClickEmergencyWithdraw } = useContractCallV2({
-	getCalldata: () =>
-		iface.encodeFunctionData('emergencyWithdraw', [withdrawToken.value, withdrawAmount.value.toString()]),
-	successTitle: 'Successfully Withdrew Tokens',
-	errorTitle: 'Error Withdrawing Tokens',
-	onBeforeCall: async () => {
-		if (parseEther(withdrawAmount.value.toString()) <= 0) {
-			throw new Error('Amount must be greater than 0')
-		}
-	},
-})
-
-const isMaxBtnDisabled = ref(false)
-
-const onClickMax = useThrottleFn(async () => {
-	const blockchainStore = useBlockchainStore()
-	const client = blockchainStore.client
-
-	if (!withdrawToken.value) {
-		withdrawAmount.value = '0'
-		return
-	}
-
-	try {
-		isMaxBtnDisabled.value = true
-		if (withdrawToken.value === NATIVE_TOKEN) {
-			const balance = await client.getBalance(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
-			withdrawAmount.value = balance.toString()
-		} else {
-			const erc20 = new Contract(
-				withdrawToken.value,
-				['function balanceOf(address) view returns (uint256)'],
-				client,
-			)
-			const balance: bigint = await erc20.balanceOf(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
-			withdrawAmount.value = balance.toString()
-		}
-	} catch (e: unknown) {
-		withdrawAmount.value = '0'
-		const err = normalizeError(e)
-		console.error(err)
-		toast.error('Error Fetching Balance', {
-			description: formatErrMsg(err),
-			duration: Infinity,
-		})
-	} finally {
-		isMaxBtnDisabled.value = false
-	}
-}, 1000)
-
-const displayTokenAmount = computed(() => {
-	try {
-		return formatEther(BigInt(withdrawAmount.value))
-	} catch {
-		return '0'
-	}
-})
-
-const isWithdrawAmountValid = computed(() => {
-	try {
-		return BigInt(withdrawAmount.value || '0') > 0n
-	} catch {
-		return false
-	}
-})
 </script>
 
 <template>
@@ -1009,42 +935,7 @@ const isWithdrawAmountValid = computed(() => {
 			</CardContent>
 		</Card>
 
-		<Card>
-			<CardHeader>
-				<div class="flex items-center justify-between">
-					<CardTitle>Emergency Withdraw</CardTitle>
-				</div>
-				<CardDescription>onlyOwner</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<div class="grid w-full items-center gap-4">
-					<div class="flex flex-col space-y-1.5">
-						<Label for="withdrawToken">Token</Label>
-						<Input id="withdrawToken" v-model="withdrawToken" placeholder="0x..." />
-					</div>
-					<div class="flex flex-col space-y-1.5">
-						<Label for="amount">
-							Amount:
-							<span class="font-normal"> {{ displayTokenAmount }} </span>
-						</Label>
-						<div class="flex gap-2">
-							<Input id="amount" v-model="withdrawAmount" placeholder="wei" />
-							<Button variant="outline" class="h-10" :disabled="isMaxBtnDisabled" @click="onClickMax">
-								Max
-							</Button>
-						</div>
-					</div>
-					<Button
-						variant="destructive"
-						:loading="isEmergencyWithdrawLoading"
-						:disabled="isBtnDisabled || !isAddress(withdrawToken) || !isWithdrawAmountValid"
-						@click="onClickEmergencyWithdraw"
-					>
-						Emergency Withdraw
-					</Button>
-				</div>
-			</CardContent>
-		</Card>
+		<EmergencyWithdrawCard :royalty-auto-claim-token="currentToken" :disabled="isBtnDisabled" />
 
 		<EmailGeneratorCard class="mt-8" />
 
