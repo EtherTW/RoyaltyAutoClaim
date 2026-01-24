@@ -7,10 +7,10 @@
       "dependencies": {
         "@aztec/bb.js": "0.84.0",
         "@noir-lang/noir_js": "1.0.0-beta.5",
-        "@semaphore-protocol/data": "^4.14.0",
-        "@semaphore-protocol/group": "^4.14.1",
-        "@semaphore-protocol/identity": "^4.14.0",
-        "@semaphore-protocol/proof": "^4.14.0",
+        "@semaphore-protocol/data": "^4.14.2",
+        "@semaphore-protocol/group": "^4.14.2",
+        "@semaphore-protocol/identity": "^4.14.2",
+        "@semaphore-protocol/proof": "^4.14.2",
         "@vue-dapp/core": "^1.5.9",
         "@vue-dapp/modal": "^1.5.9",
         "@vueuse/core": "^14.0.0",
@@ -357,15 +357,15 @@
 
     "@scure/bip39": ["@scure/bip39@1.5.4", "", { "dependencies": { "@noble/hashes": "~1.7.1", "@scure/base": "~1.2.4" } }, "sha512-TFM4ni0vKvCfBpohoh+/lY05i9gRbSwXWngAsF4CABQxoaOHijxuaZ2R6cStDQ5CHtHO9aGJTr4ksVJASRRyMA=="],
 
-    "@semaphore-protocol/data": ["@semaphore-protocol/data@4.14.0", "", { "dependencies": { "@semaphore-protocol/utils": "4.14.0", "@zk-kit/utils": "1.3.0", "axios": "1.6.6", "ethers": "6.13.4", "viem": "2.23.7" } }, "sha512-oquGqcUq2OCBHdyPN2hhtDZ2UUfwAw3jchvT8Um8VTbNvYS+KZXIwDolWJTNvYwykiYriPaSUlFOFfeCGveP/A=="],
+    "@semaphore-protocol/data": ["@semaphore-protocol/data@4.14.2", "", { "dependencies": { "@semaphore-protocol/utils": "4.14.2", "@zk-kit/utils": "1.3.0", "axios": "1.6.6", "ethers": "6.13.4", "viem": "2.23.7" } }, "sha512-2MRvbJ1tjcrh/DKYi4dutTsvsTZ5a05YJKwgEo6RXxUzfyE7OqT9fLiVha/rlXWHTgWcQ0RhIRMYP7WPEI6fJA=="],
 
-    "@semaphore-protocol/group": ["@semaphore-protocol/group@4.14.1", "", { "dependencies": { "@zk-kit/lean-imt": "2.2.4", "@zk-kit/utils": "1.3.0", "poseidon-lite": "0.3.0" } }, "sha512-tGcBe2SVj2gxQ/mGv6a4LVLvit9rIEgEuJZBhiYhdylvq/kZpM7LXxZnOd4Q7U/+hB3LKg8FPWCZjQk5IH+Ssw=="],
+    "@semaphore-protocol/group": ["@semaphore-protocol/group@4.14.2", "", { "dependencies": { "@zk-kit/lean-imt": "2.2.4", "@zk-kit/utils": "1.3.0", "poseidon-lite": "0.3.0" } }, "sha512-6vlFJ5gANcbAkiRfW5ko8mkJtscGWHMI11Z0oljH9H2g4n8OQ5wSl1S6cBKfq1/uo5ppHUh0D8/azMOqNMSX5g=="],
 
-    "@semaphore-protocol/identity": ["@semaphore-protocol/identity@4.14.0", "", { "dependencies": { "@zk-kit/baby-jubjub": "1.0.3", "@zk-kit/eddsa-poseidon": "1.0.4", "@zk-kit/utils": "1.3.0", "poseidon-lite": "0.3.0" } }, "sha512-6WmYL28hLy6Xi6wmsiWer6rNrtEqE8Mw+6hG6Vw4M3z+MRZaf3KM1JOEtiDPZrLXAtg910ZhgPlUHsM0XrBQ7w=="],
+    "@semaphore-protocol/identity": ["@semaphore-protocol/identity@4.14.2", "", { "dependencies": { "@zk-kit/baby-jubjub": "1.0.3", "@zk-kit/eddsa-poseidon": "1.0.4", "@zk-kit/utils": "1.3.0", "poseidon-lite": "0.3.0" } }, "sha512-p01dXaGSztl796ENy3O+7Ab42HHcoJR5u171XNzoSSttlwQK3dz/2E7BsUYzs3f+DjmFktInhfQNWXV9/jsL5g=="],
 
-    "@semaphore-protocol/proof": ["@semaphore-protocol/proof@4.14.0", "", { "dependencies": { "@semaphore-protocol/utils": "4.14.0", "@zk-kit/artifacts": "2.0.1", "@zk-kit/utils": "1.3.0", "ethers": "6.13.4", "snarkjs": "0.7.5" }, "peerDependencies": { "@semaphore-protocol/group": "4.14.0", "@semaphore-protocol/identity": "4.14.0" } }, "sha512-qj26gguiNX//L77Rw2WE535e4s4bDV1ucb0njb7VawAgxhXNidI4gS7iGQ6D3ZhgAON89D4rQJM1AVw5p6Pn+g=="],
+    "@semaphore-protocol/proof": ["@semaphore-protocol/proof@4.14.2", "", { "dependencies": { "@semaphore-protocol/utils": "4.14.2", "@zk-kit/artifacts": "2.0.1", "@zk-kit/utils": "1.3.0", "ethers": "6.13.4", "snarkjs": "0.7.5" }, "peerDependencies": { "@semaphore-protocol/group": "4.14.2", "@semaphore-protocol/identity": "4.14.2" } }, "sha512-CWHR33W4OVkYfahnqFNaGK9XwvHV6tbTNN4rnXGn8KTWG8Gtt5n8klSxf6O3ULgW6SXzM8/pZoUfrrGE9xWbyA=="],
 
-    "@semaphore-protocol/utils": ["@semaphore-protocol/utils@4.14.0", "", { "dependencies": { "ethers": "^6.13.4" } }, "sha512-hYF2njhzQrMLbVLnx/9ZH8Lnedga1jhB2pbIVZTP5EZ6Re4aha1ELElVXGCVKADlexzNgOBSvRKY7zPOgEHk6w=="],
+    "@semaphore-protocol/utils": ["@semaphore-protocol/utils@4.14.2", "", { "dependencies": { "ethers": "^6.13.4" } }, "sha512-G2rKpODn8sc5nzWexfEcBWnegDJzirOUP9Du0Zav4DXRPa2Sae1FYJtSg/GlpQwC+RkxW0Z8I9qB6wuU0ywbCA=="],
 
     "@standard-schema/spec": ["@standard-schema/spec@1.0.0", "", {}, "sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA=="],
 

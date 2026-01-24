@@ -165,8 +165,6 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				await royaltyAutoClaimStore.fetchReviewerMembers()
 				const members = royaltyAutoClaimStore.reviewerMembers
 
-				console.log(members)
-
 				// Create off-chain group from members
 				const group = new Group(members)
 

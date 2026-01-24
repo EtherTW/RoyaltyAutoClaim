@@ -42,7 +42,6 @@ onMounted(async () => {
 	}
 
 	await royaltyAutoClaimStore.fetchSubmissions()
-	await royaltyAutoClaimStore.fetchReviewerMembers()
 })
 
 /* -------------------------------------------------------------------------- */

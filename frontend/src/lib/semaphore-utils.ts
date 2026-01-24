@@ -1,15 +1,10 @@
 import { SEMAPHORE_IDENTITY_MESSAGE } from '@/config'
-import { IRoyaltyAutoClaim__factory, ISemaphore, ISemaphoreGroups__factory } from '@/typechain-v2'
-import type {
-	MemberAddedEvent,
-	MembersAddedEvent,
-	MemberUpdatedEvent,
-	MemberRemovedEvent,
-} from '@/typechain-v2/frontend/abis/ISemaphoreGroups'
+import { IRoyaltyAutoClaim__factory, ISemaphore } from '@/typechain-v2'
+import { SemaphoreEthers } from '@semaphore-protocol/data'
 import { Group } from '@semaphore-protocol/group'
 import { Identity } from '@semaphore-protocol/identity'
 import { generateProof } from '@semaphore-protocol/proof'
-import { JsonRpcProvider, keccak256, Signer, toBeHex, toUtf8Bytes, ZeroAddress } from 'ethers'
+import { keccak256, Signer, toBeHex, toUtf8Bytes } from 'ethers'
 
 export const SEMAPHORE_ADDRESS = '0x8A1fd199516489B0Fb7153EB5f075cDAC83c693D'
 
@@ -113,120 +108,20 @@ export function makeDummySemaphoreProof(
 }
 
 /**
- * Fetches reviewer group members from the Semaphore contract.
- * This is a workaround for a bug in @semaphore-protocol/data's getGroupMembers
- * which incorrectly indexes MemberAdded events by array position instead of member index.
+ * Fetches reviewer group members from the Semaphore contract using SemaphoreEthers
  */
 export async function fetchReviewerGroupMembers(params: {
 	rpcUrl: string
 	semaphoreAddress: string
 	groupId: string
 }): Promise<bigint[]> {
+	console.log('Fetching reviewer group members from Semaphore contract...')
 	const { rpcUrl, semaphoreAddress, groupId } = params
 
-	const provider = new JsonRpcProvider(rpcUrl)
-	const contract = ISemaphoreGroups__factory.connect(semaphoreAddress, provider)
+	const semaphoreEthers = new SemaphoreEthers(rpcUrl, {
+		address: semaphoreAddress,
+	})
 
-	// Check if group exists
-	const groupAdmin = await contract.getGroupAdmin(groupId)
-	if (groupAdmin === ZeroAddress) {
-		throw new Error(`Group '${groupId}' not found`)
-	}
-
-	// Get the merkle tree size
-	const merkleTreeSize = await contract.getMerkleTreeSize(groupId)
-	const size = Number(merkleTreeSize)
-
-	if (size === 0) {
-		return []
-	}
-
-	// Fetch all relevant events
-	const memberAddedFilter = contract.filters.MemberAdded(groupId)
-	const membersAddedFilter = contract.filters.MembersAdded(groupId)
-	const memberUpdatedFilter = contract.filters.MemberUpdated(groupId)
-	const memberRemovedFilter = contract.filters.MemberRemoved(groupId)
-
-	const [memberAddedEvents, membersAddedEvents, memberUpdatedEvents, memberRemovedEvents] = await Promise.all([
-		contract.queryFilter(memberAddedFilter),
-		contract.queryFilter(membersAddedFilter),
-		contract.queryFilter(memberUpdatedFilter),
-		contract.queryFilter(memberRemovedFilter),
-	])
-
-	// Build a map from member index to identity commitment for single adds
-	// Key fix: map by the event's index field, not array position
-	const memberAddedMap = new Map<number, string>()
-	for (const event of memberAddedEvents) {
-		const log = event as unknown as MemberAddedEvent.Log
-		const index = Number(log.args.index)
-		const identityCommitment = log.args.identityCommitment.toString()
-		memberAddedMap.set(index, identityCommitment)
-	}
-
-	// Build a map from start index to identity commitments for batch adds
-	const membersAddedMap = new Map<number, string[]>()
-	for (const event of membersAddedEvents) {
-		const log = event as unknown as MembersAddedEvent.Log
-		const startIndex = Number(log.args.startIndex)
-		const identityCommitments = log.args.identityCommitments.map(c => c.toString())
-		membersAddedMap.set(startIndex, identityCommitments)
-	}
-
-	// Track updates and removals by index with block number for ordering
-	const memberUpdatesMap = new Map<number, { blockNumber: number; newCommitment: string }>()
-
-	for (const event of memberUpdatedEvents) {
-		const log = event as unknown as MemberUpdatedEvent.Log
-		const index = Number(log.args.index)
-		const newIdentityCommitment = log.args.newIdentityCommitment.toString()
-		const blockNumber = event.blockNumber
-
-		const existing = memberUpdatesMap.get(index)
-		if (!existing || blockNumber > existing.blockNumber) {
-			memberUpdatesMap.set(index, { blockNumber, newCommitment: newIdentityCommitment })
-		}
-	}
-
-	for (const event of memberRemovedEvents) {
-		const log = event as unknown as MemberRemovedEvent.Log
-		const index = Number(log.args.index)
-		const blockNumber = event.blockNumber
-
-		const existing = memberUpdatesMap.get(index)
-		if (!existing || blockNumber > existing.blockNumber) {
-			memberUpdatesMap.set(index, { blockNumber, newCommitment: '0' })
-		}
-	}
-
-	// Build the members array
-	const members: string[] = []
-	let i = 0
-
-	while (i < size) {
-		// Check batch adds first
-		const batchCommitments = membersAddedMap.get(i)
-		if (batchCommitments) {
-			members.push(...batchCommitments)
-			i += batchCommitments.length
-		} else {
-			// Look up single add by member index
-			const commitment = memberAddedMap.get(i)
-			if (commitment === undefined) {
-				throw new Error(`No MemberAdded event found for index ${i}`)
-			}
-			members.push(commitment)
-			i += 1
-		}
-	}
-
-	// Apply updates and removals
-	for (let j = 0; j < members.length; j++) {
-		const update = memberUpdatesMap.get(j)
-		if (update) {
-			members[j] = update.newCommitment
-		}
-	}
-
-	return members.map(m => BigInt(m))
+	const members = await semaphoreEthers.getGroupMembers(groupId)
+	return members.map(member => BigInt(member))
 }
