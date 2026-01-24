@@ -686,6 +686,14 @@ const displayTokenAmount = computed(() => {
 		return '0'
 	}
 })
+
+const isWithdrawAmountValid = computed(() => {
+	try {
+		return BigInt(withdrawAmount.value || '0') > 0n
+	} catch {
+		return false
+	}
+})
 </script>
 
 <template>
@@ -944,7 +952,11 @@ const displayTokenAmount = computed(() => {
 						<Label for="admin" class="mt-4">New Admin</Label>
 						<Input id="admin" v-model="newAdmin" placeholder="0x..." />
 					</div>
-					<Button :loading="isChangeAdminLoading" :disabled="isBtnDisabled" @click="onClickChangeAdmin">
+					<Button
+						:loading="isChangeAdminLoading"
+						:disabled="isBtnDisabled || !isAddress(newAdmin)"
+						@click="onClickChangeAdmin"
+					>
 						Change Admin
 					</Button>
 
@@ -957,7 +969,11 @@ const displayTokenAmount = computed(() => {
 						<Label for="token" class="mt-4">New Token</Label>
 						<Input id="token" v-model="newToken" placeholder="0x..." />
 					</div>
-					<Button :loading="isChangeTokenLoading" :disabled="isBtnDisabled" @click="onClickChangeToken">
+					<Button
+						:loading="isChangeTokenLoading"
+						:disabled="isBtnDisabled || !isAddress(newToken)"
+						@click="onClickChangeToken"
+					>
 						Change Token
 					</Button>
 				</div>
@@ -1021,7 +1037,7 @@ const displayTokenAmount = computed(() => {
 					<Button
 						variant="destructive"
 						:loading="isEmergencyWithdrawLoading"
-						:disabled="isBtnDisabled"
+						:disabled="isBtnDisabled || !isAddress(withdrawToken) || !isWithdrawAmountValid"
 						@click="onClickEmergencyWithdraw"
 					>
 						Emergency Withdraw
