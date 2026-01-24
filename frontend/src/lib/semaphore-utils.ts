@@ -115,7 +115,6 @@ export async function fetchReviewerGroupMembers(params: {
 	semaphoreAddress: string
 	groupId: string
 }): Promise<bigint[]> {
-	console.log('Fetching reviewer group members from Semaphore contract...')
 	const { rpcUrl, semaphoreAddress, groupId } = params
 
 	const semaphoreEthers = new SemaphoreEthers(rpcUrl, {

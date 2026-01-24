@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { TENDERLY_RPC_URL } from '@/config'
 import { formatErrMsg, isUserRejectedError, normalizeError, parseContractRevert } from '@/lib/error'
-import { fetchReviewerGroupMembers, SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
 import { useContractStatePolling, useSubmissionPolling } from '@/lib/polling-utils'
+import { fetchReviewerGroupMembers, SEMAPHORE_ADDRESS } from '@/lib/semaphore-utils'
 import { useContractCallV2 } from '@/lib/useContractCallV2'
 import { useBlockchainStore } from '@/stores/useBlockchain'
 import { useEOAStore } from '@/stores/useEOA'
@@ -36,6 +36,9 @@ const semaphoreContract = computed(() => {
 
 // Reviewer group ID
 const reviewerGroupId = ref<bigint | null>(null)
+
+// Semaphore group admin
+const semaphoreGroupAdmin = ref<string | null>(null)
 
 // Input refs for reviewer management
 const singleCommitment = ref('')
@@ -94,6 +97,12 @@ onMounted(async () => {
 	currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
 	currentEmailVerifier.value = await royaltyAutoClaimStore.royaltyAutoClaim.emailVerifier()
 	reviewerGroupId.value = await royaltyAutoClaimStore.royaltyAutoClaim.reviewerGroupId()
+
+	// Fetch Semaphore group admin
+	if (reviewerGroupId.value !== null) {
+		const semaphoreGroups = ISemaphoreGroups__factory.connect(SEMAPHORE_ADDRESS, blockchainStore.client)
+		semaphoreGroupAdmin.value = await semaphoreGroups.getGroupAdmin(reviewerGroupId.value)
+	}
 
 	// Load members list
 	try {
@@ -783,14 +792,36 @@ const displayTokenAmount = computed(() => {
 			</CardHeader>
 			<CardContent>
 				<div class="grid w-full items-center gap-6">
+					<!-- Semaphore Info -->
+					<div class="space-y-2">
+						<div class="flex items-center gap-2">
+							<Label>Semaphore:</Label>
+							<Address :address="SEMAPHORE_ADDRESS" class="text-muted-foreground" />
+						</div>
+						<div class="flex items-center gap-2">
+							<Label>Group Admin:</Label>
+							<Address
+								v-if="semaphoreGroupAdmin"
+								:address="semaphoreGroupAdmin"
+								class="text-muted-foreground"
+							/>
+							<span v-else class="text-muted-foreground text-sm">Loading...</span>
+						</div>
+						<div class="flex items-center gap-2">
+							<Label>Group ID:</Label>
+							<span class="text-muted-foreground text-sm">{{
+								reviewerGroupId !== null ? reviewerGroupId.toString() : 'Loading...'
+							}}</span>
+						</div>
+					</div>
+
 					<!-- Members List -->
 					<div class="space-y-2">
 						<div class="p-4 border rounded-md bg-muted/50">
 							<div class="flex items-center justify-between mb-2">
-								<Label class="text-base font-semibold">Current Members</Label>
-								<span class="text-sm text-muted-foreground">
-									{{ isFetchingMembers ? 'Loading...' : `${activeMembers.length} member(s)` }}
-								</span>
+								<Label class="text-base font-semibold">
+									{{ isFetchingMembers ? 'Loading...' : `${activeMembers.length} Member(s)` }}
+								</Label>
 							</div>
 							<div v-if="isFetchingMembers" class="text-sm text-muted-foreground">Loading members...</div>
 							<div v-else-if="activeMembers.length === 0" class="text-sm text-muted-foreground">
