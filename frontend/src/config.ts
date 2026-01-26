@@ -1,11 +1,12 @@
 // built-in constants: https://vite.dev/guide/env-and-mode#built-in-constants
 export const IS_DEV = !import.meta.env.PROD
 
-// Main Contract Address
-export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA = import.meta.env
-	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA as string
-export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET = import.meta.env
-	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET as string
+export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA =
+	(import.meta.env.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA as string) ||
+	'0x66ECf28b049f8b917C58B6e81a999CDF309283eA'
+export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET =
+	(import.meta.env.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET as string) ||
+	'0xf50b818138e3848C314783FA593fb39653FB0178'
 export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA =
 	(import.meta.env.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA as string) ||
 	'0xEb6cD8eac109FDD4cD69AB43AAfFa50eD885FF65'
@@ -13,16 +14,15 @@ export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE = import.meta.env
 	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE as string
 
 export const ALCHEMY_API_KEY = (import.meta.env.VITE_ALCHEMY_API_KEY as string) || 'zksW8JebAVSxyMzBCzhzNyNNx8P4J4Mi'
-if (!ALCHEMY_API_KEY) {
-	throw new Error('ALCHEMY_API_KEY is not set in .env')
-}
+export const PIMLICO_API_KEY = (import.meta.env.VITE_PIMLICO_API_KEY as string) || 'pim_nDodV8Xhz7bXSEoeL9UbGh'
 
-export const PIMLICO_API_KEY = 'pim_nDodV8Xhz7bXSEoeL9UbGh'
-
-export const TENDERLY_SEPOLIA_API_KEY = '5j2Bli4kdZh94hJp4Mg7x1'
-export const TENDERLY_MAINNET_API_KEY = '7SOJjmp7ir0NXhDU1IL29v'
-export const TENDERLY_BASE_SEPOLIA_API_KEY = '7VvN7z5fn1xVirOQsSzKD'
-export const TENDERLY_BASE_API_KEY = '7ku6af38xSIhnCo7IAEBQ6'
+export const TENDERLY_SEPOLIA_API_KEY =
+	(import.meta.env.VITE_TENDERLY_SEPOLIA_API_KEY as string) || '5j2Bli4kdZh94hJp4Mg7x1'
+export const TENDERLY_MAINNET_API_KEY =
+	(import.meta.env.VITE_TENDERLY_MAINNET_API_KEY as string) || '7SOJjmp7ir0NXhDU1IL29v'
+export const TENDERLY_BASE_SEPOLIA_API_KEY =
+	(import.meta.env.VITE_TENDERLY_BASE_SEPOLIA_API_KEY as string) || '7VvN7z5fn1xVirOQsSzKD'
+export const TENDERLY_BASE_API_KEY = (import.meta.env.VITE_TENDERLY_BASE_API_KEY as string) || '7ku6af38xSIhnCo7IAEBQ6'
 
 export enum CHAIN_ID {
 	SEPOLIA = '11155111',
@@ -64,9 +64,3 @@ export const GITHUB_REPO_NAME = 'RoyaltyAutoClaim'
 
 export const SEMAPHORE_IDENTITY_MESSAGE =
 	'Sign this message to generate your Semaphore identity for https://ethertw.github.io/RoyaltyAutoClaim\n\nThis signature creates a deterministic private key for anonymous proof generation.\n\nIMPORTANT: Never sign this exact message on other websites, as doing so would allow them to generate the same identity and compromise your privacy across platforms.'
-
-// Semaphore Subgraph Network Names
-export const SEMAPHORE_NETWORK: { [key: string]: string } = {
-	[CHAIN_ID.BASE_SEPOLIA]: 'base-sepolia',
-	[CHAIN_ID.BASE]: 'base',
-}

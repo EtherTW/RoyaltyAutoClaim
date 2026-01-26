@@ -48,6 +48,11 @@ jobs:
                   VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA }}
                   VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE: ${{ vars.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE }}
                   VITE_ALCHEMY_API_KEY: ${{ secrets.VITE_ALCHEMY_API_KEY }}
+                  VITE_PIMLICO_API_KEY: ${{ secrets.VITE_PIMLICO_API_KEY }}
+                  VITE_TENDERLY_SEPOLIA_API_KEY: ${{ secrets.VITE_TENDERLY_SEPOLIA_API_KEY }}
+                  VITE_TENDERLY_MAINNET_API_KEY: ${{ secrets.VITE_TENDERLY_MAINNET_API_KEY }}
+                  VITE_TENDERLY_BASE_SEPOLIA_API_KEY: ${{ secrets.VITE_TENDERLY_BASE_SEPOLIA_API_KEY }}
+                  VITE_TENDERLY_BASE_API_KEY: ${{ secrets.VITE_TENDERLY_BASE_API_KEY }}
 
             # Workaround for 404 error with vue-router: https://stackoverflow.com/a/65539760/10752354
             - name: Copy index.html to 404.html
