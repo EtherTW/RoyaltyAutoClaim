@@ -35,23 +35,8 @@ export const useBlockchainStore = defineStore(
 			return isTestnet.value ? CHAIN_ID.BASE_SEPOLIA : CHAIN_ID.BASE
 		})
 
-		const chainIds = computed(() => {
-			const ids = IS_DEV ? Object.values(CHAIN_ID) : Object.values(CHAIN_ID).filter(id => id !== CHAIN_ID.LOCAL)
-			return ids.filter(id => {
-				if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA && id === CHAIN_ID.SEPOLIA) {
-					return false
-				}
-				if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET && id === CHAIN_ID.MAINNET) {
-					return false
-				}
-				return true
-			})
-		})
-
 		const royaltyAutoClaimProxyAddress = computed(() => {
 			switch (chainId.value) {
-				// case CHAIN_ID.LOCAL:
-				// 	return ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_LOCAL
 				case CHAIN_ID.SEPOLIA:
 					if (!ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA) {
 						console.warn('royaltyAutoClaimProxyAddress: sepolia address is not set')
@@ -127,7 +112,6 @@ export const useBlockchainStore = defineStore(
 
 		return {
 			chainId,
-			chainIds,
 			royaltyAutoClaimProxyAddress,
 			rpcUrl,
 			explorerUrl,

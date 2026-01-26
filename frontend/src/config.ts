@@ -2,7 +2,6 @@
 export const IS_DEV = !import.meta.env.PROD
 
 // Main Contract Address
-export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_LOCAL = '0xa818cA7A4869c7C7101d0Ea5E4c455Ef00e698d5'
 export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA = import.meta.env
 	.VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA as string
 export const ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET = import.meta.env
@@ -26,7 +25,6 @@ export const TENDERLY_BASE_SEPOLIA_API_KEY = '7VvN7z5fn1xVirOQsSzKD'
 export const TENDERLY_BASE_API_KEY = '7ku6af38xSIhnCo7IAEBQ6'
 
 export enum CHAIN_ID {
-	LOCAL = '1337',
 	SEPOLIA = '11155111',
 	MAINNET = '1',
 	BASE_SEPOLIA = '84532',
@@ -35,7 +33,6 @@ export enum CHAIN_ID {
 export const DEFAULT_CHAIN_ID = IS_DEV ? CHAIN_ID.BASE_SEPOLIA : CHAIN_ID.MAINNET
 
 export const RPC_URL: { [key: string]: string } = {
-	[CHAIN_ID.LOCAL]: `http://localhost:8545`,
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 	[CHAIN_ID.BASE_SEPOLIA]: `https://base-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
@@ -43,7 +40,6 @@ export const RPC_URL: { [key: string]: string } = {
 }
 
 export const TENDERLY_RPC_URL: { [key: string]: string } = {
-	[CHAIN_ID.LOCAL]: `http://localhost:8545`,
 	[CHAIN_ID.SEPOLIA]: `https://sepolia.gateway.tenderly.co/${TENDERLY_SEPOLIA_API_KEY}`,
 	[CHAIN_ID.MAINNET]: `https://mainnet.gateway.tenderly.co/${TENDERLY_MAINNET_API_KEY}`,
 	[CHAIN_ID.BASE_SEPOLIA]: `https://base-sepolia.gateway.tenderly.co/${TENDERLY_BASE_SEPOLIA_API_KEY}`,
@@ -51,7 +47,6 @@ export const TENDERLY_RPC_URL: { [key: string]: string } = {
 }
 
 export const EXPLORER_URL: { [key: string]: string } = {
-	[CHAIN_ID.LOCAL]: 'http://localhost:3000',
 	[CHAIN_ID.SEPOLIA]: 'https://sepolia.etherscan.io',
 	[CHAIN_ID.MAINNET]: 'https://etherscan.io',
 	[CHAIN_ID.BASE_SEPOLIA]: 'https://sepolia.basescan.org',
@@ -59,7 +54,6 @@ export const EXPLORER_URL: { [key: string]: string } = {
 }
 
 export const BUNDLER_URL: { [key: string]: string } = {
-	[CHAIN_ID.LOCAL]: 'http://localhost:4337',
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 	[CHAIN_ID.BASE_SEPOLIA]: `https://api.pimlico.io/v2/84532/rpc?apikey=${PIMLICO_API_KEY}`,
