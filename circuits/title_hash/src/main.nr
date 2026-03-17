@@ -59,6 +59,9 @@ Field, // recipient
     let header_hash = pubkey.verify_dkim_signature(header, signature);
     let pubkey_hash = pubkey.hash(); // Poseidon hash of public key
     let nullifier = pedersen_hash(signature); // Pedersen hash of signature
+    // Note 1: The email provider is assumed to be trusted, so the signature hash can be used regardless of malleability concerns.
+    // Note 2: the hash function for the signature can be substituted with the more efficient Poseidon (similar to the pubkey_hash approach).
+    // The implementation references the Pedersen hash usage from: https://github.com/trionlabs/mintmarks.fun/blob/d4f15921d79df352133bdde209360a51a85cae1b/circuits/src/main.nr#L142
 
     /* -------------------------------------------------------------------------- */
     /*                           Body Hash Verification                           */
