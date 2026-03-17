@@ -13,6 +13,8 @@ docs/
 # Dotenv file
 .env
 
+.DS_Store
+
 report
 lcov.info
 broadcast

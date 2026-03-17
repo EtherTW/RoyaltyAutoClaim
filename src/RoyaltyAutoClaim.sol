@@ -167,13 +167,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     receive() external payable {}
 
-    function initialize(
-        address _owner,
-        address _admin,
-        address _token,
-        IEmailVerifier _verifier,
-        ISemaphore _semaphore
-    ) public initializer {
+    function initialize(address _owner, address _admin, address _token, IEmailVerifier _verifier, ISemaphore _semaphore)
+        public
+        initializer
+    {
         require(_owner != address(0), ZeroAddress());
         require(_admin != address(0), ZeroAddress());
         require(_token != address(0), ZeroAddress());
@@ -352,6 +349,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     function _registerSubmission(string memory title, address recipient, bytes32 nullifier) internal {
+        // Re-check in execution phase: validation and execution are separate loops in handleOps,
+        // so state may have changed between them when multiple UserOps are bundled together
+        require(submissions(title).status == SubmissionStatus.NotExist, AlreadyRegistered());
+
         MainStorage storage $ = _getMainStorage();
         $.emailNullifierUsed[nullifier] = true;
         $.submissions[title].royaltyRecipient = recipient;
@@ -380,6 +381,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
         returns (bool)
     {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
+        require(proof.recipient() != address(0), ZeroAddress());
         require(proof.recipient() != submissions(title).royaltyRecipient, SameAddress());
         require(!isEmailProofUsed(proof.nullifier()), EmailProofUsed());
         require(proof.operationType() == TitleHashVerifierLib.OperationType.RECIPIENT_UPDATE, InvalidOperationType());
@@ -392,6 +394,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     function _updateRoyaltyRecipient(string memory title, address recipient, bytes32 nullifier) internal {
+        // Re-check in execution phase: validation and execution are separate loops in handleOps,
+        // so state may have changed between them when multiple UserOps are bundled together
+        require(recipient != address(0), ZeroAddress());
+
         MainStorage storage $ = _getMainStorage();
         $.emailNullifierUsed[nullifier] = true;
         address oldRecipient = $.submissions[title].royaltyRecipient;
@@ -452,6 +458,11 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function _reviewSubmission(string memory title, uint16 royaltyLevel, uint256 nullifierHash) internal {
         MainStorage storage $ = _getMainStorage();
+
+        // Re-check in execution phase: validation and execution are separate loops in handleOps,
+        // so state may have changed between them when multiple UserOps are bundled together
+        require(!$.hasReviewed[title][nullifierHash], AlreadyReviewed());
+
         $.hasReviewed[title][nullifierHash] = true;
         $.submissions[title].reviewCount++;
         $.submissions[title].totalRoyaltyLevel += royaltyLevel;
@@ -476,6 +487,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     function _claimRoyalty(string memory title) internal {
+        // Re-check in execution phase: validation and execution are separate loops in handleOps,
+        // so state may have changed between them when multiple UserOps are bundled together
+        require(isSubmissionClaimable(title), SubmissionNotClaimable());
+
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
         address recipient = $.submissions[title].royaltyRecipient;
