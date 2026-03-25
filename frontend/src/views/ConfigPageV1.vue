@@ -7,14 +7,12 @@ import { formatErrMsg, normalizeError } from '@/lib/error'
 import { useContractCall } from '@/lib/useContractCall'
 import { RAC_V1_INTERFACE } from '@/lib/v1-interface'
 import { useBlockchainStore } from '@/stores/useBlockchain'
-import { useRoyaltyAutoClaimStore } from '@/stores/useRoyaltyAutoClaim'
 import { useThrottleFn } from '@vueuse/core'
 import { Contract, formatEther, parseEther } from 'ethers'
 import { ArrowLeft } from 'lucide-vue-next'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
-const royaltyAutoClaimStore = useRoyaltyAutoClaimStore()
 const blockchainStore = useBlockchainStore()
 const router = useRouter()
 
@@ -33,6 +31,10 @@ const isBtnDisabled = computed(
 const currentAdmin = ref('')
 const currentToken = ref('')
 
+const v1Contract = computed(
+	() => new Contract(blockchainStore.royaltyAutoClaimProxyAddress, RAC_V1_INTERFACE, blockchainStore.client),
+)
+
 onMounted(async () => {
 	// Check if proxy address is valid, redirect to home if not
 	if (!blockchainStore.royaltyAutoClaimProxyAddress) {
@@ -40,8 +42,8 @@ onMounted(async () => {
 		return
 	}
 
-	currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
-	currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
+	currentAdmin.value = await v1Contract.value.admin()
+	currentToken.value = await v1Contract.value.token()
 })
 
 // ===================================== Submission Management =====================================
@@ -84,8 +86,7 @@ const { isLoading: isAddReviewerLoading, send: onClickAddReviewer } = useContrac
 	waitingTitle: 'Waiting to Add Reviewer',
 	errorTitle: 'Error Adding Reviewer',
 	onBeforeCall: async () => {
-		// @ts-ignore - v1 contract method not in v2 types
-		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
+		const isReviewer = await v1Contract.value.isReviewer(reviewer.value)
 		if (isReviewer) {
 			throw new Error('Reviewer already exists')
 		}
@@ -99,8 +100,7 @@ const { isLoading: isRemoveReviewerLoading, send: onClickRemoveReviewer } = useC
 	waitingTitle: 'Waiting to Remove Reviewer',
 	errorTitle: 'Error Removing Reviewer',
 	onBeforeCall: async () => {
-		// @ts-ignore - v1 contract method not in v2 types
-		const isReviewer = await royaltyAutoClaimStore.royaltyAutoClaim.isReviewer(reviewer.value)
+		const isReviewer = await v1Contract.value.isReviewer(reviewer.value)
 		if (!isReviewer) {
 			throw new Error('Reviewer does not exist')
 		}
@@ -124,7 +124,7 @@ const { isLoading: isChangeAdminLoading, send: onClickChangeAdmin } = useContrac
 		}
 	},
 	onAfterCall: async () => {
-		currentAdmin.value = await royaltyAutoClaimStore.royaltyAutoClaim.admin()
+		currentAdmin.value = await v1Contract.value.admin()
 	},
 })
 
@@ -140,7 +140,7 @@ const { isLoading: isChangeTokenLoading, send: onClickChangeToken } = useContrac
 		}
 	},
 	onAfterCall: async () => {
-		currentToken.value = await royaltyAutoClaimStore.royaltyAutoClaim.token()
+		currentToken.value = await v1Contract.value.token()
 	},
 })
 
@@ -181,7 +181,7 @@ const onClickMax = useThrottleFn(async () => {
 	try {
 		isMaxBtnDisabled.value = true
 		if (withdrawToken.value === NATIVE_TOKEN) {
-			const balance = await client.getBalance(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
+			const balance = await client.getBalance(v1Contract.value.getAddress())
 			withdrawAmount.value = balance.toString()
 		} else {
 			const erc20 = new Contract(
@@ -189,7 +189,7 @@ const onClickMax = useThrottleFn(async () => {
 				['function balanceOf(address) view returns (uint256)'],
 				client,
 			)
-			const balance: bigint = await erc20.balanceOf(royaltyAutoClaimStore.royaltyAutoClaim.getAddress())
+			const balance: bigint = await erc20.balanceOf(v1Contract.value.getAddress())
 			withdrawAmount.value = balance.toString()
 		}
 	} catch (e: unknown) {
