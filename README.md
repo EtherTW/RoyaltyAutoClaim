@@ -7,6 +7,8 @@ This is the v2 implementation. For v1, please see the [tag v1](https://github.co
 
 ### Deployed Addresses
 
+- v2 Base Mainnet: [0x3991CB2b0744AEDb8F985E0d1C74d8dAe6a30433](https://basescan.org/address/0x3991cb2b0744aedb8f985e0d1c74d8dae6a30433)
+- v2 Base Sepolia: [0xEb6cD8eac109FDD4cD69AB43AAfFa50eD885FF65](https://sepolia.basescan.org/address/0xEb6cD8eac109FDD4cD69AB43AAfFa50eD885FF65#readProxyContract)
 - v1 Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
 - v1 Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
 
@@ -56,8 +58,20 @@ The following steps will allow you to run this project’s frontend on localhost
 ```bash
 forge script script/deployRoyaltyAutoClaim.s.sol \
  --rpc-url https://mainnet.base.org \
- --broadcast --verify
+ --broadcast --verify \
+ --verifier-url https://api.etherscan.io/v2/api?chainid=8453
 ```
+
+4. Verify contracts (if `--verify` was not used during deployment)
+
+```bash
+forge verify-contract <CONTRACT_ADDRESS> \
+ --rpc-url https://mainnet.base.org \
+ --etherscan-api-key $ETHERSCAN_API_KEY \
+ --verifier-url https://api.etherscan.io/v2/api?chainid=8453
+```
+
+> Note: Basescan now uses the Etherscan V2 API. The `--verifier-url` must point to `https://api.etherscan.io/v2/api?chainid=8453` instead of the legacy `https://api.basescan.org/api`.
 
 ## Deploy the Email Verifier contract
 
@@ -79,7 +93,8 @@ forge script script/deployRoyaltyAutoClaim.s.sol \
 ```bash
 forge script script/deployEmailVerifier.s.sol \
  --rpc-url https://mainnet.base.org \
- --broadcast --verify
+ --broadcast --verify \
+ --verifier-url https://api.etherscan.io/v2/api?chainid=8453
 ```
 
 ## Development Flow
