@@ -139,8 +139,22 @@ bun run scripts/update-recipient.ts test-update 0x43024C2e168E4554d71A93e1F8d1a0
 
 (Update frontend .env for VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA)
 bun run dev
+```
+
+### Estimating verificationGasLimit (vgl)
+
+The UserOp signature is a ZK proof, but the bundler's estimateGas runs with a
+dummy proof, so verificationGasLimit must be pinned as a constant. The two
+constants live in frontend/src/config.ts
+
+Re-estimate whenever the circuit changes:
 
 ```
+make estimate-vgl-base-sepolia EMAIL=test RAC=0xfDDbc7f5D726B20C0F89Aa44C5B03FC71cC035e8
+make estimate-vgl-base EMAIL=test_prod RAC=0x3991CB2b0744AEDb8F985E0d1C74d8dAe6a30433
+```
+
+Then copy the printed verificationGasLimit into the matching constant.
 
 ## Contract Development
 

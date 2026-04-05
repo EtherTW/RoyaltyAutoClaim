@@ -1,9 +1,7 @@
 import { randomBytes } from 'crypto'
 import { hexlify, JsonRpcProvider } from 'ethers'
 import { ENTRY_POINT_V08_ADDRESS, EntryPointV08__factory, fetchGasPricePimlico, UserOpBuilder } from 'sendop'
-import { BUNDLER_URL } from '../config'
-
-const FIXED_VERIFICATION_GAS_LIMIT = 4_000_000
+import { BUNDLER_URL, CHAIN_ID, PREDEFINED_VGL_BASE, PREDEFINED_VGL_BASE_SEPOLIA } from '../config'
 
 export async function buildUserOp({ royaltyAutoClaimAddress, chainId, client, bundler, callData }) {
 	const ep8 = EntryPointV08__factory.connect(ENTRY_POINT_V08_ADDRESS, client)
@@ -14,10 +12,12 @@ export async function buildUserOp({ royaltyAutoClaimAddress, chainId, client, bu
 		.setGasPrice(await fetchGasPricePimlico(BUNDLER_URL[chainId]))
 }
 
-export function setFixedVerificationGasLimitForZkProof(op: UserOpBuilder) {
-	op.setGasValue({
-		verificationGasLimit: FIXED_VERIFICATION_GAS_LIMIT,
-	})
+export function setPredefinedVglForZkProof(op: UserOpBuilder, chainId: string) {
+	let vgl: number
+	if (chainId === CHAIN_ID.BASE_SEPOLIA) vgl = PREDEFINED_VGL_BASE_SEPOLIA
+	else if (chainId === CHAIN_ID.BASE) vgl = PREDEFINED_VGL_BASE
+	else throw new Error(`No PREDEFINED_VGL for chainId ${chainId}`)
+	op.setGasValue({ verificationGasLimit: vgl })
 }
 
 export async function getNonceV08(senderAddress: string, client: JsonRpcProvider) {

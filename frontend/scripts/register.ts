@@ -18,7 +18,7 @@ import {
 	TitleHashCircuitOutput,
 } from '../src/lib/circuit-utils'
 import { BUNDLER_URL, RPC_URL } from '../src/config'
-import { buildUserOp, setFixedVerificationGasLimitForZkProof } from '../src/lib/erc4337-utils'
+import { buildUserOp, setPredefinedVglForZkProof } from '../src/lib/erc4337-utils'
 import { handleUserOpError } from '../src/lib/error'
 import { IRoyaltyAutoClaim__factory, RoyaltyAutoClaim__factory } from '../src/typechain-v2'
 
@@ -142,7 +142,7 @@ if (isDirect) {
 		handleUserOpError(e)
 	}
 
-	setFixedVerificationGasLimitForZkProof(op)
+	setPredefinedVglForZkProof(op, CHAIN_ID)
 
 	const opHash = op.hash()
 	console.log('opHash', opHash)

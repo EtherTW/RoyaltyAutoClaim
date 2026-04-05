@@ -53,6 +53,13 @@ export const EXPLORER_URL: { [key: string]: string } = {
 	[CHAIN_ID.BASE]: 'https://basescan.org',
 }
 
+// Predefined verificationGasLimit (vgl) used when the real UserOp signature
+// is a ZK proof. The bundler's estimateGas sees a dummy proof, so we override
+// with a value estimated by `make estimate-vgl-base-sepolia` / `make estimate-vgl-base`.
+// Re-estimate and update whenever the circuit changes.
+export const PREDEFINED_VGL_BASE_SEPOLIA = 4_000_000
+export const PREDEFINED_VGL_BASE = 4_000_000 // TODO: run `make estimate-vgl-base` and update
+
 export const BUNDLER_URL: { [key: string]: string } = {
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
