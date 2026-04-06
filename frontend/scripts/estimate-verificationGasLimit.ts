@@ -92,6 +92,10 @@ try {
 	handleUserOpError(e)
 }
 
-console.log('verificationGasLimit', op.preview().verificationGasLimit)
-console.log('→ Update PREDEFINED_VGL_BASE_SEPOLIA (or PREDEFINED_VGL_BASE) in frontend/src/config.ts')
+const rawVgl = BigInt(op.preview().verificationGasLimit)
+const bufferedVgl = (rawVgl * 15n) / 10n // 1.5x safety buffer
+
+console.log('verificationGasLimit (raw)', rawVgl)
+console.log('verificationGasLimit (1.5x)', bufferedVgl)
+console.log('→ Update PREDEFINED_VGL_BASE_SEPOLIA (or PREDEFINED_VGL_BASE) in frontend/src/config.ts with the 1.5x value')
 process.exit(0)
