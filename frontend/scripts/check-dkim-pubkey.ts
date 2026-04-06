@@ -30,6 +30,26 @@ const emlPath = path.join(__dirname, '..', '..', 'emails', `${emailFile}.eml`)
 const emlBuf = await fs.readFile(emlPath)
 
 /* -------------------------------------------------------------------------- */
+/*                      Extract DKIM selector from email                      */
+/* -------------------------------------------------------------------------- */
+
+const emailStr = emlBuf.toString()
+const headerPart = emailStr.split(/\r?\n\r?\n/)[0] || ''
+const dkimMatch = headerPart.match(/^dkim-signature:\s*(.+?)(?=\r?\n[^\s])/ims)
+if (!dkimMatch) {
+	console.error('DKIM-Signature header not found in email')
+	process.exit(1)
+}
+const dkimHeader = dkimMatch[1]!.replace(/\r?\n\s+/g, '').replace(/\s+/g, '')
+const selectorMatch = dkimHeader.match(/s=([^;]+)/i)
+if (!selectorMatch) {
+	console.error('DKIM selector (s=) not found in DKIM-Signature header')
+	process.exit(1)
+}
+const selector = selectorMatch[1]!
+console.log(`selector: ${selector}`)
+
+/* -------------------------------------------------------------------------- */
 /*                      Compute pubkey_hash from email                        */
 /* -------------------------------------------------------------------------- */
 

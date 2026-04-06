@@ -156,6 +156,23 @@ make estimate-vgl-base EMAIL=test_prod RAC=0x3991CB2b0744AEDb8F985E0d1C74d8dAe6a
 
 Then copy the printed verificationGasLimit into the matching constant.
 
+### DKIM Public Key Management
+
+Check whether an email's DKIM public key hash is registered in the DKIMRegistry:
+
+```
+make check-dkim EMAIL=test4
+```
+
+Set a DKIM public key hash in the registry (`PRIVATE_KEY` is read from `.env`):
+
+```
+make set-dkim EMAIL=test_prod
+make set-dkim EMAIL=test_prod CHAIN=base
+```
+
+`CHAIN` defaults to `base-sepolia` if not provided. Valid values: `base-sepolia`, `base`.
+
 ## Contract Development
 
 ```
