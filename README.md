@@ -97,6 +97,24 @@ forge script script/deployEmailVerifier.s.sol \
  --verifier-url https://api.etherscan.io/v2/api?chainid=8453
 ```
 
+## Check DKIM Registration
+
+After deployment, verify that the email sender's DKIM public key hash is registered in the on-chain DKIMRegistry. Without this, ZK email proof verification will fail.
+
+The `EMAIL` parameter refers to a `.eml` file (without extension) in the `emails/` directory. These are raw email files from the sender whose DKIM key needs to be registered. To use your own emails, download the `.eml` file from your email client and place it in `emails/`.
+
+```bash
+make check-dkim EMAIL=<email_filename>
+```
+
+If the key is not registered, set it. The `PRIVATE_KEY` in `.env` must belong to the **owner of the EmailVerifier contract**, as the registry scopes user-authorized records to that address (see [docs/dkim-registry.md](docs/dkim-registry.md) for details).
+
+```bash
+make set-dkim EMAIL=<email_filename> CHAIN=base
+```
+
+See the [DKIM Public Key Management](#dkim-public-key-management) section for more details.
+
 ## Development Flow
 
 If the circuit code has been modified, we need to run the following scripts to verify that the functionality is working correctly.
@@ -158,13 +176,17 @@ Then copy the printed verificationGasLimit into the matching constant.
 
 ### DKIM Public Key Management
 
+For a detailed explanation of how the DKIMRegistry works and how our EmailVerifier interacts with it, see [docs/dkim-registry.md](docs/dkim-registry.md).
+
+The `EMAIL` parameter refers to a `.eml` file (without extension) in the `emails/` directory. Download raw `.eml` files from your email client and place them there.
+
 Check whether an email's DKIM public key hash is registered in the DKIMRegistry:
 
 ```
 make check-dkim EMAIL=test4
 ```
 
-Set a DKIM public key hash in the registry (`PRIVATE_KEY` is read from `.env`):
+Set a DKIM public key hash in the registry. The `PRIVATE_KEY` in `.env` must belong to the **owner of the EmailVerifier contract**:
 
 ```
 make set-dkim EMAIL=test_prod
