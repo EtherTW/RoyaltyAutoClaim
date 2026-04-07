@@ -18,7 +18,7 @@ import {
 import { h } from 'vue'
 import { toast } from 'vue-sonner'
 import { useBlockchainStore } from '../stores/useBlockchain'
-import { getNonceV08, setFixedVerificationGasLimitForZkProof } from './erc4337-utils'
+import { getNonceV08, setPredefinedVglForZkProof } from './erc4337-utils'
 import { extractAndParseRevert, isUserRejectedError, normalizeError } from './error'
 import {
 	createSemaphoreIdentity,
@@ -121,7 +121,7 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 				}
 
 				// Set fixed verification gas limit for ZK proof
-				setFixedVerificationGasLimitForZkProof(op)
+				setPredefinedVglForZkProof(op, chainId)
 
 				// Generate proof
 				const genProofToast = toast.info('Generating proof...', {

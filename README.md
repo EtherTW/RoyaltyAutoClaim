@@ -7,7 +7,11 @@ This is the v2 implementation. For v1, please see the [tag v1](https://github.co
 
 ### Deployed Addresses
 
-- v1 Mainnet: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
+Note: v2 is currently only deployed on Base because it uses the DKIM Registry (maintained by ZK Email team) which is only available on Base.
+
+- v2 Base: [0x3991CB2b0744AEDb8F985E0d1C74d8dAe6a30433](https://basescan.org/address/0x3991cb2b0744aedb8f985e0d1c74d8dae6a30433)
+- v2 Base Sepolia: [0xEb6cD8eac109FDD4cD69AB43AAfFa50eD885FF65](https://sepolia.basescan.org/address/0xEb6cD8eac109FDD4cD69AB43AAfFa50eD885FF65#readProxyContract)
+- v1 Ethereum: [0xf50b818138e3848C314783FA593fb39653FB0178](https://etherscan.io/address/0xf50b818138e3848C314783FA593fb39653FB0178)
 - v1 Sepolia: [0x66ECf28b049f8b917C58B6e81a999CDF309283eA](https://sepolia.etherscan.io/address/0x66ECf28b049f8b917C58B6e81a999CDF309283eA)
 
 ### RPC Providers
@@ -56,8 +60,20 @@ The following steps will allow you to run this project’s frontend on localhost
 ```bash
 forge script script/deployRoyaltyAutoClaim.s.sol \
  --rpc-url https://mainnet.base.org \
- --broadcast --verify
+ --broadcast --verify \
+ --verifier-url https://api.etherscan.io/v2/api?chainid=8453
 ```
+
+4. Verify contracts (if `--verify` was not used during deployment)
+
+```bash
+forge verify-contract <CONTRACT_ADDRESS> \
+ --rpc-url https://mainnet.base.org \
+ --etherscan-api-key $ETHERSCAN_API_KEY \
+ --verifier-url https://api.etherscan.io/v2/api?chainid=8453
+```
+
+> Note: Basescan now uses the Etherscan V2 API. The `--verifier-url` must point to `https://api.etherscan.io/v2/api?chainid=8453` instead of the legacy `https://api.basescan.org/api`.
 
 ## Deploy the Email Verifier contract
 
@@ -79,8 +95,27 @@ forge script script/deployRoyaltyAutoClaim.s.sol \
 ```bash
 forge script script/deployEmailVerifier.s.sol \
  --rpc-url https://mainnet.base.org \
- --broadcast --verify
+ --broadcast --verify \
+ --verifier-url https://api.etherscan.io/v2/api?chainid=8453
 ```
+
+## Check DKIM Registration
+
+After deployment, verify that the email sender's DKIM public key hash is registered in the on-chain DKIMRegistry. Without this, ZK email proof verification will fail.
+
+The `EMAIL` parameter refers to a `.eml` file (without extension) in the `emails/` directory. These are raw email files from the sender whose DKIM key needs to be registered. To use your own emails, download the `.eml` file from your email client and place it in `emails/`.
+
+```bash
+make check-dkim EMAIL=<email_filename>
+```
+
+If the key is not registered, set it. The `PRIVATE_KEY` in `.env` must belong to the **owner of the EmailVerifier contract**, as the registry scopes user-authorized records to that address (see [docs/dkim-registry.md](docs/dkim-registry.md) for details).
+
+```bash
+make set-dkim EMAIL=<email_filename> CHAIN=base
+```
+
+See the [DKIM Public Key Management](#dkim-public-key-management) section for more details.
 
 ## Development Flow
 
@@ -94,7 +129,7 @@ cd circuits/title_hash
 nargo compile
 
 cd circuits
-bun run script/genProofTitleHash.ts ../emails/registration.eml
+bun run script/genProofTitleHash.ts ../emails/test.eml
 bun run script/genVerifier.ts title_hash
 
 ```
@@ -124,8 +159,43 @@ bun run scripts/update-recipient.ts test-update 0x43024C2e168E4554d71A93e1F8d1a0
 
 (Update frontend .env for VITE_ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_BASE_SEPOLIA)
 bun run dev
+```
+
+### Estimating verificationGasLimit (vgl)
+
+The UserOp signature is a ZK proof, but the bundler's estimateGas runs with a
+dummy proof, so verificationGasLimit must be pinned as a constant. The two
+constants live in frontend/src/config.ts
+
+Re-estimate whenever the circuit changes:
 
 ```
+make estimate-vgl-base-sepolia EMAIL=test RAC=0xfDDbc7f5D726B20C0F89Aa44C5B03FC71cC035e8
+make estimate-vgl-base EMAIL=test_prod RAC=0x3991CB2b0744AEDb8F985E0d1C74d8dAe6a30433
+```
+
+Then copy the printed verificationGasLimit into the matching constant.
+
+### DKIM Public Key Management
+
+For a detailed explanation of how the DKIMRegistry works and how our EmailVerifier interacts with it, see [docs/dkim-registry.md](docs/dkim-registry.md).
+
+The `EMAIL` parameter refers to a `.eml` file (without extension) in the `emails/` directory. Download raw `.eml` files from your email client and place them there.
+
+Check whether an email's DKIM public key hash is registered in the DKIMRegistry:
+
+```
+make check-dkim EMAIL=test4
+```
+
+Set a DKIM public key hash in the registry. The `PRIVATE_KEY` in `.env` must belong to the **owner of the EmailVerifier contract**:
+
+```
+make set-dkim EMAIL=test_prod
+make set-dkim EMAIL=test_prod CHAIN=base
+```
+
+`CHAIN` defaults to `base-sepolia` if not provided. Valid values: `base-sepolia`, `base`.
 
 ## Contract Development
 

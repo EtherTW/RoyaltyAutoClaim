@@ -7,17 +7,12 @@ cache/
 /broadcast/*/31337/
 /broadcast/**/dry-run/
 
-# Docs
-docs/
-
-# Dotenv file
 .env
 
 .DS_Store
 
 report
 lcov.info
-broadcast
 
 node_modules
 .claude

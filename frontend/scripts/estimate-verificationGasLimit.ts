@@ -1,6 +1,6 @@
 import { UltraHonkBackend } from '@aztec/bb.js'
 import { Noir } from '@noir-lang/noir_js'
-import { JsonRpcProvider } from 'ethers'
+import { JsonRpcProvider, zeroPadValue } from 'ethers'
 import { readFileSync } from 'fs'
 import path from 'path'
 import { abiEncode, ERC4337Bundler } from 'sendop'
@@ -12,13 +12,13 @@ import { IRoyaltyAutoClaim__factory } from '../src/typechain-v2'
 
 /*
 
-bun run scripts/estimate-verificationGasLimit.ts registration 0x0fBE11484edE83C904733f4b37B821C28a49f706
+bun run scripts/estimate-verificationGasLimit.ts test 0x0fBE11484edE83C904733f4b37B821C28a49f706 84532
 
 */
 
 const emailFileName = process.argv[2]
 if (!emailFileName) {
-	console.error('Please provide an email file name in emails folder as an argument (e.g. registration).')
+	console.error('Please provide an email file name in emails folder as an argument (e.g. test).')
 	process.exit(1)
 }
 
@@ -28,12 +28,18 @@ if (!racAddress) {
 	process.exit(1)
 }
 
+const chainIdArg = process.argv[4]
+if (chainIdArg !== '84532' && chainIdArg !== '8453') {
+	console.error('Please provide a chainId as the 3rd argument: 84532 (Base Sepolia) or 8453 (Base)')
+	process.exit(1)
+}
+
 const ARGS = {
 	racAddress,
 	eml: readFileSync(path.join(__dirname, '..', '..', 'emails', `${emailFileName}.eml`)),
 } as const
 
-const CHAIN_ID = '84532'
+const CHAIN_ID = chainIdArg
 const CIRCUIT_PATH = path.join(__dirname, '../../circuits/title_hash/target', 'title_hash.json')
 
 const client = new JsonRpcProvider(RPC_URL[CHAIN_ID])
@@ -64,6 +70,7 @@ const proveTime = ((Date.now() - startProve) / 1000).toFixed(2)
 
 console.log(`Proof generated in ${proveTime}s`)
 console.log(`Proof size: ${(proof.proof.length / 1024).toFixed(2)} KB`)
+console.log(`pubkey_hash: ${zeroPadValue(proof.publicInputs[0], 32)}`)
 
 op.setSignature(
 	abiEncode(
@@ -85,5 +92,12 @@ try {
 	handleUserOpError(e)
 }
 
-console.log('verificationGasLimit', op.preview().verificationGasLimit)
+const rawVgl = BigInt(op.preview().verificationGasLimit)
+const bufferedVgl = (rawVgl * 15n) / 10n // 1.5x safety buffer
+
+console.log('verificationGasLimit (raw)', rawVgl)
+console.log('verificationGasLimit (1.5x)', bufferedVgl)
+console.log(
+	'→ Update PREDEFINED_VGL_BASE_SEPOLIA (or PREDEFINED_VGL_BASE) in frontend/src/config.ts with the 1.5x value',
+)
 process.exit(0)

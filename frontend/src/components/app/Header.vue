@@ -53,7 +53,7 @@ const isDisabled = computed(() => useGlobalLoaderStore().isGlobalLoading)
 							'text-muted-foreground': !isV1Route,
 						}"
 					>
-						{{ mdSmallerOrEqual ? 'v1' : 'Version 1 (Mainnet)' }}
+						{{ mdSmallerOrEqual ? 'v1' : 'Version 1 (Ethereum)' }}
 					</div>
 				</RouterLink>
 			</div>

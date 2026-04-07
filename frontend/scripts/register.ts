@@ -1,7 +1,7 @@
 /*
 
-bun run scripts/register.ts registration <rac-address>
-bun run scripts/register.ts registration <rac-address> --direct
+bun run scripts/register.ts test <rac-address>
+bun run scripts/register.ts test <rac-address> --direct
 
 */
 import { UltraHonkBackend } from '@aztec/bb.js'
@@ -18,13 +18,13 @@ import {
 	TitleHashCircuitOutput,
 } from '../src/lib/circuit-utils'
 import { BUNDLER_URL, RPC_URL } from '../src/config'
-import { buildUserOp, setFixedVerificationGasLimitForZkProof } from '../src/lib/erc4337-utils'
+import { buildUserOp, setPredefinedVglForZkProof } from '../src/lib/erc4337-utils'
 import { handleUserOpError } from '../src/lib/error'
 import { IRoyaltyAutoClaim__factory, RoyaltyAutoClaim__factory } from '../src/typechain-v2'
 
 const emailFileName = process.argv[2]
 if (!emailFileName) {
-	console.error('Please provide an email file name in emails folder as an argument (e.g. registration).')
+	console.error('Please provide an email file name in emails folder as an argument (e.g. test).')
 	process.exit(1)
 }
 
@@ -142,7 +142,7 @@ if (isDirect) {
 		handleUserOpError(e)
 	}
 
-	setFixedVerificationGasLimitForZkProof(op)
+	setPredefinedVglForZkProof(op, CHAIN_ID)
 
 	const opHash = op.hash()
 	console.log('opHash', opHash)

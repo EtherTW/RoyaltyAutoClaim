@@ -53,6 +53,11 @@ export const EXPLORER_URL: { [key: string]: string } = {
 	[CHAIN_ID.BASE]: 'https://basescan.org',
 }
 
+// Predefined verificationGasLimit — re-estimate when the circuit changes.
+// See docs/vgl-estimation.md for details.
+export const PREDEFINED_VGL_BASE_SEPOLIA = 4_000_000
+export const PREDEFINED_VGL_BASE = 3_200_000
+
 export const BUNDLER_URL: { [key: string]: string } = {
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
 	[CHAIN_ID.MAINNET]: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,

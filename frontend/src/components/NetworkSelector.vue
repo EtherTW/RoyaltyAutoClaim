@@ -19,7 +19,7 @@ const items = computed(() => {
 	const availableItems: string[] = []
 
 	if (isV1.value) {
-		// v1 networks: Mainnet (Production) and Sepolia (Testing)
+		// v1 networks: Ethereum (Production) and Sepolia (Testing)
 		if (ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_MAINNET) availableItems.push('Production')
 		if (ROYALTY_AUTO_CLAIM_PROXY_ADDRESS_SEPOLIA) availableItems.push('Testing')
 	} else {

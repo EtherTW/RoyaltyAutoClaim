@@ -3,7 +3,7 @@ import fs from 'fs/promises'
 import path from 'path'
 
 const SLUG = 'johnson86tw/RoyaltyAutoClaim@v27'
-const EML = path.join(__dirname, '..', '..', 'emails', 'registration.eml')
+const EML = path.join(__dirname, '..', '..', 'emails', 'test.eml')
 
 const sdk = zkeSdk()
 const blueprint = await sdk.getBlueprint(SLUG)
