@@ -12,13 +12,13 @@ import { IRoyaltyAutoClaim__factory } from '../src/typechain-v2'
 
 /*
 
-bun run scripts/estimate-verificationGasLimit.ts registration 0x0fBE11484edE83C904733f4b37B821C28a49f706 84532
+bun run scripts/estimate-verificationGasLimit.ts test 0x0fBE11484edE83C904733f4b37B821C28a49f706 84532
 
 */
 
 const emailFileName = process.argv[2]
 if (!emailFileName) {
-	console.error('Please provide an email file name in emails folder as an argument (e.g. registration).')
+	console.error('Please provide an email file name in emails folder as an argument (e.g. test).')
 	process.exit(1)
 }
 
@@ -97,5 +97,7 @@ const bufferedVgl = (rawVgl * 15n) / 10n // 1.5x safety buffer
 
 console.log('verificationGasLimit (raw)', rawVgl)
 console.log('verificationGasLimit (1.5x)', bufferedVgl)
-console.log('→ Update PREDEFINED_VGL_BASE_SEPOLIA (or PREDEFINED_VGL_BASE) in frontend/src/config.ts with the 1.5x value')
+console.log(
+	'→ Update PREDEFINED_VGL_BASE_SEPOLIA (or PREDEFINED_VGL_BASE) in frontend/src/config.ts with the 1.5x value',
+)
 process.exit(0)

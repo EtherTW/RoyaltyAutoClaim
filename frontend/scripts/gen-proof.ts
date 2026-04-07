@@ -8,7 +8,7 @@ bun run scripts/gen-proof.ts <emailFilename> <emailVerifierAddress> <saveProof>
 
 example:
 bun run scripts/gen-proof.ts
-bun run scripts/gen-proof.ts registration
+bun run scripts/gen-proof.ts test
 bun run scripts/gen-proof.ts recipient-update 0x341015A264A75E824CB5F569E0170b5d7A48E3CF
 bun run scripts/gen-proof.ts recipient-update 0x341015A264A75E824CB5F569E0170b5d7A48E3CF true
 
@@ -29,7 +29,7 @@ const CIRCUIT_PATH = path.join(__dirname, '../../circuits/title_hash/target', 't
 /*                                Command Args                                */
 /* -------------------------------------------------------------------------- */
 
-const emailFilename = process.argv[2] || 'registration'
+const emailFilename = process.argv[2] || 'test'
 const emailVerifierAddress = process.argv[3] || '0x341015A264A75E824CB5F569E0170b5d7A48E3CF'
 const saveProof = process.argv[4] === 'true'
 

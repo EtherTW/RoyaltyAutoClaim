@@ -1,6 +1,6 @@
 /*
 
-bun run scripts/parse-email.ts registration
+bun run scripts/parse-email.ts test
 
 */
 import { Noir } from '@noir-lang/noir_js'
@@ -11,7 +11,7 @@ import { parseEmail, prepareCircuitInputs, type TitleHashCircuitOutput } from '.
 
 const emailFile = process.argv[2]
 if (!emailFile) {
-	console.error('Please provide an email file name in emails folder as an argument (e.g. registration).')
+	console.error('Please provide an email file name in emails folder as an argument (e.g. test).')
 	process.exit(1)
 }
 const emlPath = path.join(__dirname, '..', '..', 'emails', `${emailFile}.eml`)

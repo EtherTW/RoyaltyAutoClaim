@@ -24,7 +24,7 @@ import { IRoyaltyAutoClaim__factory, RoyaltyAutoClaim__factory } from '../src/ty
 
 const emailFileName = process.argv[2]
 if (!emailFileName) {
-	console.error('Please provide an email file name in emails folder as an argument (e.g. registration).')
+	console.error('Please provide an email file name in emails folder as an argument (e.g. test).')
 	process.exit(1)
 }
 

@@ -3,7 +3,7 @@
 Extract the DKIM pubkey_hash from an email and check whether it's registered
 in the UserOverrideableDKIMRegistry on Base Sepolia.
 
-bun run scripts/check-dkim-pubkey.ts registration
+bun run scripts/check-dkim-pubkey.ts test
 
 */
 import { Noir } from '@noir-lang/noir_js'
@@ -22,7 +22,7 @@ const FROM_ADDRESS = '0x1472623EDbDD627521691d9E87F9515f65452DA0'
 
 const emailFile = process.argv[2]
 if (!emailFile) {
-	console.error('Please provide an email file name in emails folder as an argument (e.g. registration).')
+	console.error('Please provide an email file name in emails folder as an argument (e.g. test).')
 	process.exit(1)
 }
 
