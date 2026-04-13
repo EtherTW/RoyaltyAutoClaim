@@ -308,6 +308,9 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     function claimRoyalty(string memory title) public nonReentrant {
         if (msg.sender == entryPoint()) {
             _claimRoyalty(title, _getUserOpSigner());
+        } else if (msg.sender == admin()) {
+            require(isSubmissionClaimable(title), SubmissionNotClaimable());
+            _claimRoyalty(title, submissions(title).royaltyRecipient);
         } else {
             _requireClaimable(title, msg.sender);
             _claimRoyalty(title, msg.sender);
@@ -393,13 +396,21 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
             }
             return 0;
         } else if (selector == this.claimRoyalty.selector) {
-            // ========================================= Recipient =========================================
+            // ========================================= Recipient / Admin =========================================
 
             (string memory title) = abi.decode(userOp.callData[4:], (string));
-            _requireClaimable(title, appendedSigner);
 
-            assembly {
-                tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
+            if (appendedSigner == admin()) {
+                require(isSubmissionClaimable(title), SubmissionNotClaimable());
+                address recipientAddr = submissions(title).royaltyRecipient;
+                assembly {
+                    tstore(TRANSIENT_SIGNER_SLOT, recipientAddr)
+                }
+            } else {
+                _requireClaimable(title, appendedSigner);
+                assembly {
+                    tstore(TRANSIENT_SIGNER_SLOT, appendedSigner)
+                }
             }
 
             if (signer != appendedSigner) {
