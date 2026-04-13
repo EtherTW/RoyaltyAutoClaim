@@ -18,6 +18,7 @@ const CHAIN_ID = '84532'
 
 const client = new JsonRpcProvider(RPC_URL[CHAIN_ID])
 const dev = new Wallet(VITE_TEST_PRIVATE_KEY, client) // owner, admin
+console.log('Deployer address:', dev.address)
 
 // Deploy MockToken
 console.log('Deploying MockToken...')
