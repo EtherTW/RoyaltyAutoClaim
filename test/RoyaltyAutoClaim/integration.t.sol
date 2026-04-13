@@ -396,6 +396,32 @@ contract RoyaltyAutoClaim_Integration_Test is BaseTest {
         _handleUserOp(userOp);
     }
 
+    function test_claimRoyalty_by_admin_4337() public {
+        _registerSubmission(testSubmissionTitle, recipient);
+        _reviewSubmission(reviewer1Key, testSubmissionTitle, 20);
+        _reviewSubmission(reviewer2Key, testSubmissionTitle, 40);
+
+        uint256 expectedRoyalty = royaltyAutoClaim.getRoyalty(testSubmissionTitle);
+        uint256 recipientBalanceBefore = token.balanceOf(recipient);
+
+        // Admin claims on behalf of recipient via 4337
+        PackedUserOperation memory userOp = _buildUserOp(
+            adminKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.claimRoyalty, (testSubmissionTitle))
+        );
+        _handleUserOp(userOp);
+
+        // Verify tokens go to recipient, not admin
+        assertEq(
+            token.balanceOf(recipient), recipientBalanceBefore + expectedRoyalty, "Recipient should receive royalty"
+        );
+        assertEq(token.balanceOf(admin), 0, "Admin should not receive any tokens");
+        assertEq(
+            uint256(royaltyAutoClaim.submissions(testSubmissionTitle).status),
+            uint256(IRoyaltyAutoClaim.SubmissionStatus.Claimed),
+            "Status should be Claimed"
+        );
+    }
+
     function _registerSubmission(string memory title, address recipient) public {
         PackedUserOperation memory userOp = _buildUserOp(
             adminKey, address(royaltyAutoClaim), abi.encodeCall(RoyaltyAutoClaim.registerSubmission, (title, recipient))

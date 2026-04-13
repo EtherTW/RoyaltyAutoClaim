@@ -548,6 +548,45 @@ contract RoyaltyAutoClaim_Unit_Test is BaseTest {
         assertEq(token.balanceOf(address(proxy)), initialBalance - expectedRoyalty, "Proxy balance should decrease");
     }
 
+    function test_claimRoyalty_by_admin() public {
+        uint256 initialBalance = token.balanceOf(address(proxy));
+        uint256 expectedRoyalty = 30 ether; // (20 + 40) / 2 = 30
+
+        // Setup submission and reviews
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission("test", recipient);
+        vm.prank(reviewer1);
+        royaltyAutoClaim.reviewSubmission("test", 20);
+        vm.prank(reviewer2);
+        royaltyAutoClaim.reviewSubmission("test", 40);
+
+        // Admin claims on behalf of recipient
+        vm.prank(admin);
+        royaltyAutoClaim.claimRoyalty("test");
+
+        // Verify tokens go to recipient, not admin
+        RoyaltyAutoClaim.Submission memory submission = royaltyAutoClaim.submissions("test");
+        assertEq(
+            uint256(submission.status), uint256(IRoyaltyAutoClaim.SubmissionStatus.Claimed), "Status should be Claimed"
+        );
+        assertEq(token.balanceOf(recipient), expectedRoyalty, "Recipient should receive correct royalty");
+        assertEq(token.balanceOf(admin), 0, "Admin should not receive any tokens");
+        assertEq(token.balanceOf(address(proxy)), initialBalance - expectedRoyalty, "Proxy balance should decrease");
+    }
+
+    function testCannot_claimRoyalty_by_admin_if_not_claimable() public {
+        vm.prank(admin);
+        royaltyAutoClaim.registerSubmission("test", recipient);
+
+        // Only 1 review — not claimable
+        vm.prank(reviewer1);
+        royaltyAutoClaim.reviewSubmission("test", 20);
+
+        vm.prank(admin);
+        vm.expectRevert(abi.encodeWithSelector(IRoyaltyAutoClaim.SubmissionNotClaimable.selector));
+        royaltyAutoClaim.claimRoyalty("test");
+    }
+
     function testCannot_claimRoyalty_if_not_recipient() public {
         vm.prank(admin);
         royaltyAutoClaim.registerSubmission("test", recipient);

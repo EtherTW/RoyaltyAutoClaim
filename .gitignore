@@ -16,3 +16,8 @@ docs/
 report
 lcov.info
 broadcast
+
+# v2
+circuits
+EmailVerifier.json
+RoyaltyAutoClaim.json
