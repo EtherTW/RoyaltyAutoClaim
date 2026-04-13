@@ -255,6 +255,7 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function updateRoyaltyRecipient(string memory title, address newRoyaltyRecipient) public onlyAdminOrEntryPoint {
         require(submissions(title).status == SubmissionStatus.Registered, SubmissionStatusNotRegistered());
+        require(newRoyaltyRecipient != address(0), ZeroAddress());
         require(newRoyaltyRecipient != submissions(title).royaltyRecipient, SameAddress());
         address oldRecipient = _getMainStorage().submissions[title].royaltyRecipient;
         _getMainStorage().submissions[title].royaltyRecipient = newRoyaltyRecipient;
@@ -291,6 +292,11 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
 
     function _reviewSubmission(string memory title, uint16 royaltyLevel, address reviewer) internal {
         MainStorage storage $ = _getMainStorage();
+
+        // Re-check in execution phase: validation and execution are separate loops in handleOps,
+        // so state may have changed between them when multiple UserOps are bundled together
+        require(!$.hasReviewed[title][reviewer], AlreadyReviewed());
+
         $.hasReviewed[title][reviewer] = true;
         $.submissions[title].reviewCount++;
         $.submissions[title].totalRoyaltyLevel += royaltyLevel;
@@ -314,6 +320,10 @@ contract RoyaltyAutoClaim is IRoyaltyAutoClaim, UUPSUpgradeable, OwnableUpgradea
     }
 
     function _claimRoyalty(string memory title, address recipient) internal {
+        // Re-check in execution phase: validation and execution are separate loops in handleOps,
+        // so state may have changed between them when multiple UserOps are bundled together
+        require(isSubmissionClaimable(title), SubmissionNotClaimable());
+
         MainStorage storage $ = _getMainStorage();
         $.submissions[title].status = SubmissionStatus.Claimed;
         uint256 amount = getRoyalty(title);
