@@ -1,0 +1,113 @@
+Delivered-To: twedusuck@gmail.com
+Received: by 2002:a05:612c:290a:b0:5a2:b5c3:af46 with SMTP id ib10csp648484vqb;
+        Fri, 5 Jun 2026 20:31:44 -0700 (PDT)
+X-Received: by 2002:a17:90b:4b:b0:367:bc89:546e with SMTP id 98e67ed59e1d1-370ef2ebe43mr7368191a91.12.1780716704163;
+        Fri, 05 Jun 2026 20:31:44 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1780716704; cv=pass;
+        d=google.com; s=arc-20240605;
+        b=HtH5fT+hbLomhCjfuDM+kuxaam/d8gG09ho21PibdX/CQNTuH/aLQP3ZEEdZrYq494
+         9/D1jPtH2C1lWAJ1DS9b1hUQ6U5uMb3x8nN8n+KzCXdxqGqwVeWeMM5Nps/bk2Vwb2OB
+         L8E66JRnPYxZpMBcJmLYdm1pgtg3ItJjKDe9hsSrtAXI21WzKiIyU9fyWlKrgkdb1cWA
+         iNUhWriI8oMU4UmZhacgXMHnx3b8MQ1LDOzHDGxv9QXkMto96CbaAjfBrMYwsbanxPMK
+         UZtswDUwvxgrANErSR6Cw70VsXCw152LgtpBCHAtzT4azXXrFnHIcLuUKwDF1rKQGkW+
+         urdA==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:sender:mime-version:dkim-signature;
+        bh=Xq0cskkCySm7t8Jxt+mlqPR2IPqr4J5o1VKwDv6AbpQ=;
+        fh=r+U2hPEpYc6ZAR7Od6Ah8b06B4QuK0HzIKCuCLieRys=;
+        b=D5xPg1ZpjNLeLnWH3ZLIihKOE4Fti4t/Ulstn7Vmso9Xzj+reB3LfUC38yjy3abdGa
+         hVV3p1TQ/UTUs1HhuNdsZ+2pULU54Exy8wCrXJEL+peQumxrTxTgOwcG5e4Pkqu59J7v
+         4FMpImY/jCUKG0q75M75IsEWmxn5p1Y0MOKxgEHuJDgziJB7iVUQiHfx6A0DBh5HVQCU
+         J/ZBiY+C626grAJsv6U3K+z8R/7owbjHOvlUQfHMrh9WGEaOy/pMsmr+QD+casj5y1kw
+         n+BEVmKVT723ePvQWCCC6sQf3fr2iGVTdoU4BbXoFDLi0CDFdG3/QxgyHstOwJyYTVNO
+         f1CA==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20251104 header.b=bbsG33Ka;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of eth.taipei@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=eth.taipei@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <eth.taipei@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 98e67ed59e1d1-36e0a26ba36sor5476164a91.5.2026.06.05.20.31.44
+        for <twedusuck@gmail.com>
+        (Google Transport Security);
+        Fri, 05 Jun 2026 20:31:44 -0700 (PDT)
+Received-SPF: pass (google.com: domain of eth.taipei@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20251104 header.b=bbsG33Ka;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of eth.taipei@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=eth.taipei@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+ARC-Seal: i=1; a=rsa-sha256; t=1780716704; cv=none;
+        d=google.com; s=arc-20240605;
+        b=c8Ui3YboBXVoTFd+ooqjKqQs1CeR8EWwT7fsAOTAc1U1/E7CMveXmYNDVtouumb1Z9
+         q5+5ijxENx4sOcHy+1+7VqxF9QlOf++43bNbgrwFY61GcbdpSrvbxuE59dJnfT8mi/AP
+         vtJgtA1HHHawoCzgYbW+ZlRBvcErYua4Lgd6EIgK6WovghZAXxBpXpBUmFKxL4qC3idf
+         h2n6On76eU3JNeP/RWbdU151x4NpoXMO6Ww/mviYZKNKDghx1bLwLPZOOVuetcNwdLBX
+         WMHUQ8npljmgZ56PJtG/OSWCwnOxJ+zlA2BZCM99Z777oEoYctYQHOXQaJiJA6/t8zMr
+         9e2g==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20240605;
+        h=to:subject:message-id:date:from:sender:mime-version:dkim-signature;
+        bh=Xq0cskkCySm7t8Jxt+mlqPR2IPqr4J5o1VKwDv6AbpQ=;
+        fh=r+U2hPEpYc6ZAR7Od6Ah8b06B4QuK0HzIKCuCLieRys=;
+        b=DCXvlB+5gUgvsCPx9kzgnEiiy0Dt4tSMpI08p/BRn5tP89w7z0u9b/yw59J7Osc9l+
+         mOJDukBtT2NbF2h9CiuF76xqPxnpcqpIEl3jTqVK5MhBjbgYcu8tmcDJy0NeMJbz/rbH
+         4vNyrshhdOZO8IXwk+Z+gjZg1UHeZf3Pz7wY7wAOfpBK72mGfQc+THdsPc/S8em3dbV1
+         RFoGxP4A2Or76Vc1Q8gdQHDxdd4YF7ypfBNTtdPljmnDWIbThqX9/A+c6uWJK1JmhAf+
+         Mpt0Lc6o67ub4psSSbKuycrJBuoB2kU4Mg4ClYr7nKiE2F4CaMdhrVPjvpfGjnuFvEyq
+         LEiw==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20251104; t=1780716704; x=1781321504; dara=google.com;
+        h=to:subject:message-id:date:from:sender:mime-version:from:to:cc
+         :subject:date:message-id:reply-to;
+        bh=Xq0cskkCySm7t8Jxt+mlqPR2IPqr4J5o1VKwDv6AbpQ=;
+        b=bbsG33Kaz0eGT4sMjm3tASKllR93vQI86pphsCMrmdiklxMPKhHeHGm3Rfdq1DXYgy
+         94BXaui4koHCzT5/aoioL9LdzOOQFWoSjRwWF0OyN2+2fsmf/i0ekvN4ZDHTYoVdtDcX
+         XSukUmVnvjMu5B9zBSi1QZqiNYqnEcsIxfFhqxIquO7NDXMUhBpQ61vbQn06+eSqF/fO
+         AtrSIPeRBcViXCAvx0lxPS/vJBSkj+ij5p0OYkwoMLb7fOa3asnyqZ/l+qfRBf4rzjI+
+         /qyQ6rBBrq/DEhFA3WPSfsKwArDlrF5IXflDWzE9Kv1GztvjlZ0CwbInbo9ST3MrW368
+         pfag==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20251104; t=1780716704; x=1781321504;
+        h=to:subject:message-id:date:from:x-google-sender-delegation:sender
+         :mime-version:x-gm-gg:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to;
+        bh=Xq0cskkCySm7t8Jxt+mlqPR2IPqr4J5o1VKwDv6AbpQ=;
+        b=kWVtBAY9EtjSXc8562J5NF7eKQ1S4ucL0TTvP21ixHgv0m+IlKPuuxGPlap2pGCbiW
+         XJqvMmS2Qcx9tQo4MfZsfIyO/7MHlsJmjQ/z0C53nTaEG+ncs3EK8/Tn7iHdP3EFbvh4
+         7m/oNS8lPCqRhcMYIbPV1aqsDB7XGo2J6si0lym1609L2QRi5rwH0alWTdTQwlrv+u4r
+         bTgYi4JbIvLfBvrRlOQHee1g7dXasrOjS7AHxvVKGzjrQyEgWcgmPEIOvltlNG55+GEQ
+         G3INaJte9Wirbxd9eFSm+IbkaIu9nq206iQegFG4HKlhvtIn5UfAf7CbUI5R51Yg+PjS
+         eLjg==
+X-Gm-Message-State: AOJu0YzmeDbJD7m71sMndeU0reJxNb4qrUpKKveXsok8xP9/pOiiOrGt
+	KAptnw3UCRmD0QXPa9u9VBnaw6my0uedBm0Q2sm0Pq2FzUpm9KToYsd8rpmgfRb5x9CJdSwn4Dw
+	pM08tGUqvbVIPuAtZskdGrf5e9gqXKPxu3locdY8=
+X-Gm-Gg: Acq92OGUkAXVOrCQ86WsYLYEqs9lpNcePmJbZ5x/6igyI9LXbnC8Y7BSgUE1FU5AwtC
+	xF8UfG0ZuEW1/iUx0a6qqnAqViC6tAx3ZungEw7F6uqno6i1iUbOZsFP5pOLGGahqzDHjsAQ8xQ
+	Lw9Ao8cXn0992lLkerLBXtScT1Ess3o9ZzfTWSghrO50oGzR6pCWu1lG63tiy9b4zIn4tp/ktZ1
+	1vL9x3+YnFWlGLQk1chZnuaMgUQmWTvsFnhc47h1v5kbu2jDt3XRo7cQbFk74xDEwHoP/UdlEUL
+	e/69Msa9FoRthsl/nPg=
+X-Received: by 2002:a17:90b:3a8d:b0:36d:633a:e7e5 with SMTP id
+ 98e67ed59e1d1-370ee54463emr6445269a91.3.1780716703722; Fri, 05 Jun 2026
+ 20:31:43 -0700 (PDT)
+MIME-Version: 1.0
+Sender: twedusuck@gmail.com
+X-Google-Sender-Delegation: twedusuck@gmail.com; h=AUIky//v+rQICBV/iEKF8ri0Fma7t6DnVrXqwXSo/n5LOBv89Q==
+From: Taipei Ethereum Meetup <eth.taipei@gmail.com>
+Date: Sat, 6 Jun 2026 11:31:31 +0800
+X-Google-Sender-Auth: ANl0JTS-dMm_WRc6WzyYSeSqthg
+X-Gm-Features: AVVi8CfIojJftGAniSMztxVUGv7y1RG5uA3VMLn5PXhTg9hir7Qjl4sSevbop6Y
+Message-ID: <CACH19_52xkCzYXuV7W1WdjCF66J-V6rHphBf1dY7=vH1_LXe0w@mail.gmail.com>
+Subject: =?UTF-8?B?56K66KqN5bey5pS25Yiw5oqV56i/OiDljp/nlJ/mir3osaHluLPmiLY6IEVJUC04MTQxIA==?=
+	=?UTF-8?B?RnJhbWUgVHJhbnNhY3Rpb24gLSBwYXJ0IElJIGJ5IEtpbWk=?=
+To: twedusuck@gmail.com
+Content-Type: text/plain; charset="UTF-8"
+
+No: 11
+ID: 0x3546eff6c53a3a4219fc8623b8afbe6b929837bbc9444c03cd3ab4a45644240b
+Recipient: 0x998a30cc97703b862e32b16ec32dba9712a8117a

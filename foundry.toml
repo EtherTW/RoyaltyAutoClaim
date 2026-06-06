@@ -7,6 +7,7 @@ optimizer-runs = 200
 fs_permissions = [
     { access = "read", path = "./RoyaltyAutoClaim.json" },
     { access = "read", path = "./EmailVerifier.json" },
+    { access = "read", path = "./incidents" },
 ]
 
 [lint]

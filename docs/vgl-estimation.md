@@ -42,6 +42,14 @@ make estimate-vgl-base EMAIL=<emailFileName> RAC=<racAddress>
 
 The script outputs both the raw bundler estimate and a 1.5x buffered value. **Always use the 1.5x value**.
 
+> **Warning (2026-06-06):** The bundler estimate can be misleading. Because `validateUserOp` checks the
+> userOpHash *last* and `EmailVerifier` swallows OOG in its `try/catch`, the bundler's binary search may
+> terminate on the cheap "verify OOG'd → SIG_VALIDATION_FAILED" path (observed: raw 1,327,210 on Base —
+> far below the real verify cost). Additionally, Pimlico's send-time simulation has been observed to
+> reject ops with AA24 at a VGL that a faithful EVM replay of `validateUserOp` accepts (3.2M failed at
+> send while a fork replay returned 0; 4M succeeded). **Always confirm a VGL value with a real
+> `eth_sendUserOperation` on the target chain before shipping it.**
+
 ## Base estimation
 
 | Raw estimate | 1.5x buffered | Result |

@@ -15,15 +15,26 @@ const operationTypeOptions: { value: OperationType; label: string }[] = [
 	{ value: 'update-recipient', label: '確認此投稿更改稿費收取地址' },
 ]
 
+// Normalize the title the same way parseEmail does (collapse all Unicode whitespace,
+// e.g. U+200A hair spaces from Medium, into regular spaces) and strip zero-width
+// characters, so the raw subject bytes always match the title extracted by
+// parseEmail and hashed by the circuit.
+const sanitizedTitle = computed(() =>
+	title.value
+		.replace(/[\u200b-\u200d\u2060\ufeff]/g, '')
+		.replace(/\s+/g, ' ')
+		.trim(),
+)
+
 const titleId = computed(() => {
-	if (!title.value) return ''
-	return keccak256(toUtf8Bytes(title.value))
+	if (!sanitizedTitle.value) return ''
+	return keccak256(toUtf8Bytes(sanitizedTitle.value))
 })
 
 // Validation
 const titleError = computed(() => {
-	if (!title.value) return ''
-	if (!title.value.includes(' by ')) return 'Title must contain " by "'
+	if (!sanitizedTitle.value) return ''
+	if (!sanitizedTitle.value.includes(' by ')) return 'Title must contain " by "'
 	return ''
 })
 
@@ -52,11 +63,11 @@ const hasValidationErrors = computed(() => {
 })
 
 const emailSubject = computed(() => {
-	if (!title.value) return ''
+	if (!sanitizedTitle.value) return ''
 	if (operationType.value === 'registration') {
-		return `確認已收到投稿: ${title.value}`
+		return `確認已收到投稿: ${sanitizedTitle.value}`
 	}
-	return `確認此投稿更改稿費收取地址: ${title.value}`
+	return `確認此投稿更改稿費收取地址: ${sanitizedTitle.value}`
 })
 
 const emailBody = computed(() => {

@@ -2,6 +2,13 @@
 
 bun run scripts/register.ts test <rac-address>
 bun run scripts/register.ts test <rac-address> --direct
+bun run scripts/register.ts test <rac-address> 8453 --direct
+bun run scripts/register.ts test <rac-address> 8453 --vgl 4000000
+
+--direct: call registerSubmission from an EOA (PRIVATE_KEY env) instead of the ERC-4337 flow.
+          No userOpHash is involved, so this also works around bundler-side rejections.
+--vgl:    override the predefined verificationGasLimit for the ERC-4337 flow (e.g. when the
+          bundler rejects a valid op with AA24 — see incidents/2026-06-06-email-registration-failures).
 
 */
 import { UltraHonkBackend } from '@aztec/bb.js'
@@ -36,12 +43,24 @@ if (!racAddress) {
 
 const isDirect = process.argv.includes('--direct')
 
+const vglFlagIdx = process.argv.indexOf('--vgl')
+const vglOverride = vglFlagIdx !== -1 ? Number(process.argv[vglFlagIdx + 1]) : undefined
+if (vglFlagIdx !== -1 && (!vglOverride || Number.isNaN(vglOverride))) {
+	console.error('--vgl requires a numeric value, e.g. --vgl 4000000')
+	process.exit(1)
+}
+
 const ARGS = {
 	racAddress,
 	eml: readFileSync(path.join(__dirname, '..', '..', 'emails', `${emailFileName}.eml`)),
 } as const
 
-const CHAIN_ID = '84532'
+const chainIdArg = process.argv[4] && !process.argv[4].startsWith('--') ? process.argv[4] : '84532'
+if (chainIdArg !== '84532' && chainIdArg !== '8453') {
+	console.error('Unsupported chainId. Use 84532 (Base Sepolia) or 8453 (Base)')
+	process.exit(1)
+}
+const CHAIN_ID = chainIdArg
 const CIRCUIT_PATH = path.join(__dirname, '../../circuits/title_hash/target', 'title_hash.json')
 
 const client = new JsonRpcProvider(RPC_URL[CHAIN_ID])
@@ -142,7 +161,12 @@ if (isDirect) {
 		handleUserOpError(e)
 	}
 
-	setPredefinedVglForZkProof(op, CHAIN_ID)
+	if (vglOverride) {
+		op.setGasValue({ verificationGasLimit: vglOverride })
+		console.log('using verificationGasLimit override:', vglOverride)
+	} else {
+		setPredefinedVglForZkProof(op, CHAIN_ID)
+	}
 
 	const opHash = op.hash()
 	console.log('opHash', opHash)
