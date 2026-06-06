@@ -19,6 +19,12 @@ contract DebugUserOpReplayTest is Test {
     // EntryPoint-verified hash of the user's actual op (== hash baked into the proof)
     bytes32 constant USER_OP_HASH = 0x7fc5fece3f13e7934754130bcaaa01afd978d46e5d9f84128a7c188bc8b99647;
 
+    function setUp() public {
+        // Incident replay test — requires a Base mainnet fork pinned before block 46967486
+        // (see contract natspec). Skip in non-forked runs (e.g. CI).
+        if (RAC.code.length == 0) vm.skip(true);
+    }
+
     function _buildUserOp() internal view returns (PackedUserOperation memory op) {
         op.sender = RAC;
         op.nonce = uint256(0x5698f7c2589ef093) << 64;

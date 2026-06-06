@@ -19,6 +19,12 @@ contract DebugEmail3VGLTest is Test {
     // Default userOpHash baked into the locally generated proof (circuit-utils.ts default)
     bytes32 constant USER_OP_HASH = 0x00b917632b69261f21d20e0cabdf9f3fa1255c6e500021997a16cf3a46d80297;
 
+    function setUp() public {
+        // Incident replay test — requires a Base mainnet fork (see contract natspec).
+        // Skip in non-forked runs (e.g. CI).
+        if (RAC.code.length == 0) vm.skip(true);
+    }
+
     function _buildUserOp() internal view returns (PackedUserOperation memory op) {
         op.sender = RAC;
         op.callData = abi.encodeCall(IRoyaltyAutoClaim.registerSubmission4337, (TITLE, RECIPIENT, NULLIFIER));
