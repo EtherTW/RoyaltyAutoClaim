@@ -18,7 +18,7 @@ import {
 import { h } from 'vue'
 import { toast } from 'vue-sonner'
 import { useBlockchainStore } from '../stores/useBlockchain'
-import { getNonceV08, setPredefinedVglForZkProof } from './erc4337-utils'
+import { getNonceV08, getPredefinedVglForZkProof } from './erc4337-utils'
 import { extractAndParseRevert, isUserRejectedError, normalizeError } from './error'
 import {
 	createSemaphoreIdentity,
@@ -120,26 +120,49 @@ export function useContractCallV2<T extends unknown[] = []>(options: {
 					throw e
 				}
 
-				// Set fixed verification gas limit for ZK proof
-				setPredefinedVglForZkProof(op, chainId)
+				// Set fixed verification gas limit for ZK proof. Pimlico's send-time simulation has been
+				// observed to reject valid ops with AA24 at a VGL that a faithful EVM accepts, so retry
+				// once with +1M. The userOpHash commits to verificationGasLimit, so each attempt needs a
+				// freshly generated proof. See incidents/2026-06-06-email-registration-failures.
+				const baseVgl = getPredefinedVglForZkProof(chainId)
+				const vglAttempts = [baseVgl, baseVgl + 1_000_000]
 
-				// Generate proof
-				const genProofToast = toast.info('Generating proof...', {
-					duration: Infinity,
-				})
+				for (let i = 0; i < vglAttempts.length; i++) {
+					op.setGasValue({ verificationGasLimit: vglAttempts[i] })
 
-				const proofStartTime = performance.now()
-				const encodedProof = await generateEmailProof(emailOperation.eml, op.hash())
-				const proofEndTime = performance.now()
-				const proofDuration = Math.ceil((proofEndTime - proofStartTime) / 1000).toString()
-				console.info(`Email proof generation took ${proofDuration}s`)
+					// Generate proof
+					const genProofToast = toast.info(
+						i === 0 ? 'Generating proof...' : 'Retrying with a higher gas limit, regenerating proof...',
+						{
+							duration: Infinity,
+						},
+					)
 
-				op.setSignature(encodedProof)
+					const proofStartTime = performance.now()
+					const encodedProof = await generateEmailProof(emailOperation.eml, op.hash())
+					const proofEndTime = performance.now()
+					const proofDuration = Math.ceil((proofEndTime - proofStartTime) / 1000).toString()
+					console.info(`Email proof generation took ${proofDuration}s`)
 
-				toast.dismiss(genProofToast)
+					op.setSignature(encodedProof)
 
-				// send
-				await sendAndWaitForUserOp(op, options.successTitle, proofDuration, operationStartTime)
+					toast.dismiss(genProofToast)
+
+					// send
+					try {
+						await sendAndWaitForUserOp(op, options.successTitle, proofDuration, operationStartTime)
+						break
+					} catch (e) {
+						const isAA24 = e instanceof Error && e.message.includes('AA24')
+						if (isAA24 && i < vglAttempts.length - 1) {
+							console.warn(
+								`AA24 at verificationGasLimit ${vglAttempts[i]}, retrying with ${vglAttempts[i + 1]}`,
+							)
+							continue
+						}
+						throw e
+					}
+				}
 			} else if (options.getSemaphoreOperation) {
 				/* -------------------------------------------------------------------------- */
 				/*                                  Semaphore                                 */

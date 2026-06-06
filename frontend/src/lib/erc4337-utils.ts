@@ -12,12 +12,14 @@ export async function buildUserOp({ royaltyAutoClaimAddress, chainId, client, bu
 		.setGasPrice(await fetchGasPricePimlico(BUNDLER_URL[chainId]))
 }
 
+export function getPredefinedVglForZkProof(chainId: string): number {
+	if (chainId === CHAIN_ID.BASE_SEPOLIA) return PREDEFINED_VGL_BASE_SEPOLIA
+	if (chainId === CHAIN_ID.BASE) return PREDEFINED_VGL_BASE
+	throw new Error(`No PREDEFINED_VGL for chainId ${chainId}`)
+}
+
 export function setPredefinedVglForZkProof(op: UserOpBuilder, chainId: string) {
-	let vgl: number
-	if (chainId === CHAIN_ID.BASE_SEPOLIA) vgl = PREDEFINED_VGL_BASE_SEPOLIA
-	else if (chainId === CHAIN_ID.BASE) vgl = PREDEFINED_VGL_BASE
-	else throw new Error(`No PREDEFINED_VGL for chainId ${chainId}`)
-	op.setGasValue({ verificationGasLimit: vgl })
+	op.setGasValue({ verificationGasLimit: getPredefinedVglForZkProof(chainId) })
 }
 
 export async function getNonceV08(senderAddress: string, client: JsonRpcProvider) {

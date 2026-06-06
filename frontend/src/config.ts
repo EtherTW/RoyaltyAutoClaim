@@ -56,7 +56,10 @@ export const EXPLORER_URL: { [key: string]: string } = {
 // Predefined verificationGasLimit — re-estimate when the circuit changes.
 // See docs/vgl-estimation.md for details.
 export const PREDEFINED_VGL_BASE_SEPOLIA = 4_000_000
-export const PREDEFINED_VGL_BASE = 3_200_000
+// 2026-06-06: 3.2M passes a faithful-EVM replay of validateUserOp, but Pimlico's
+// send-time simulation rejects valid ops with AA24 at 3.2M; 4M is confirmed working
+// on Base (tx 0x5ecbbc764f0a8adc9dd1e89c6a23f91057f394924f7dfb8aa4b736cbe67b66b7).
+export const PREDEFINED_VGL_BASE = 4_000_000
 
 export const BUNDLER_URL: { [key: string]: string } = {
 	[CHAIN_ID.SEPOLIA]: `https://eth-sepolia.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
