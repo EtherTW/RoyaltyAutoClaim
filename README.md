@@ -152,6 +152,12 @@ make estimate-vgl-base-sepolia EMAIL=test RAC=0xfDDbc7f5D726B20C0F89Aa44C5B03FC7
 make estimate-vgl-base EMAIL=test_prod RAC=0x3991CB2b0744AEDb8F985E0d1C74d8dAe6a30433
 ```
 
+See [docs/vgl-estimation.md](docs/vgl-estimation.md) for caveats — always confirm a new value with a real send.
+
+### Diagnosing Failed Email Operations
+
+When a registration or recipient update fails (e.g. `TitleHashMismatch`, `AA24 signature error`), see [docs/email-op-diagnostics.md](docs/email-op-diagnostics.md) for diagnostic scripts (`verify-email-proof.ts`, `check-userop-hash.ts`, `register.ts --vgl/--direct`) and a decision guide. Past investigations are documented in [incidents/](incidents/).
+
 ### DKIM Public Key Management
 
 For a detailed explanation of how the DKIMRegistry works and how our EmailVerifier interacts with it, see [docs/dkim-registry.md](docs/dkim-registry.md).
